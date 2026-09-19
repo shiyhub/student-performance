@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我们班的在校表现</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/student.css">
+</head>
+<body>
+
+<!-- ================= 视图一：班级头像墙（默认主页） ================= -->
+<div class="container" id="wallView">
+
+  <header class="s-header">
+    <div class="s-mascot">🌈</div>
+    <h1 class="s-title">我们班的星光墙</h1>
+    <div class="s-date" id="wallDate"></div>
+  </header>
+
+  <div id="wallConfigBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能查看，请联系老师完成部署。
+  </div>
+
+  <section class="card">
+    <div class="wall-class-row">
+      <label for="wallClass">我的班级</label>
+      <select class="input" id="wallClass"></select>
+    </div>
+    <p class="field-hint" style="margin:0;">
+      点一点同学的头像，就能看到 TA 的在校表现；点自己的头像，可以查看自己的记录。
+    </p>
+  </section>
+
+  <div id="wallLoading" class="loading-row"><span class="spinner"></span>正在加载同学们…</div>
+  <div id="matesGrid" class="mates" hidden></div>
+  <div id="wallEmpty" class="empty" hidden>
+    这个班还没有同学名单，请让老师先在后台录入学生。
+  </div>
+
+  <div class="submit-wrap">
+    <button class="btn btn-warn" id="btnGoWrite">✏️ 记录我今天的表现</button>
+  </div>
+</div>
+
+<!-- ================= 视图二：学生自评表单 ================= -->
+<div class="container student-view" id="formView" hidden>
+
+  <button class="wall-back" id="btnBackWall">← 返回班级墙</button>
+
+  <header class="s-header">
+    <div class="s-mascot">🪄</div>
+    <h1 class="s-title">我的在校小日记</h1>
+    <div class="s-date" id="todayLabel"></div>
+  </header>
+
+  <div id="configBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能提交，请联系老师完成部署。
+  </div>
+
+  <!-- 身份 -->
+  <section class="card">
+    <div class="card-title">🙋 先告诉我你是谁</div>
+    <div class="field">
+      <label for="inpClass">我的班级</label>
+      <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班"
+             autocomplete="off" maxlength="30">
+    </div>
+    <div class="field">
+      <label for="inpName">我的姓名</label>
+      <input class="input" id="inpName" type="text" placeholder="请写和名单上一样的名字"
+             autocomplete="off" maxlength="20">
+    </div>
+  </section>
+
+  <!-- 星级 -->
+  <section class="card">
+    <div class="card-title">⭐ 今天给自己打几颗星？</div>
+    <div class="stars-row" id="starsRow" role="radiogroup" aria-label="综合自评星级"></div>
+    <div class="star-caption" id="starCaption">点一点上面的小星星</div>
+  </section>
+
+  <!-- 心情 -->
+  <section class="card">
+    <div class="card-title">😉 今天心情怎么样？</div>
+    <div class="mood-row" id="moodRow"></div>
+  </section>
+
+  <!-- 表现标签 -->
+  <section class="card">
+    <div class="card-title">📝 今天的小表现</div>
+    <div id="tagsLoading" class="loading-row"><span class="spinner"></span>正在加载表现项目…</div>
+    <div id="tagsBox" hidden>
+      <div class="tag-chips" id="chipsBox"></div>
+      <div id="textTagsBox"></div>
+      <div class="field-hint">符合的就点一下；需要写字的项目填一填（全部选填）。</div>
+    </div>
+    <div id="tagsFailed" class="banner banner-info" hidden>
+      表现项目暂时加载失败，不影响提交星级和心情。
+    </div>
+  </section>
+
+  <div class="submit-wrap">
+    <button class="btn btn-warn" id="btnSubmit">提交今天的表现 🎈</button>
+  </div>
+</div>
+
+<!-- ================= 某位同学的表现详情弹窗 ================= -->
+<div class="modal-mask" id="detailModal">
+  <div class="modal detail-modal">
+    <div class="detail-head">
+      <div class="detail-avatar" id="detailAvatar">🐯</div>
+      <div class="detail-who">
+        <h3 id="detailName">同学</h3>
+        <div class="text-muted" id="detailSub">在校表现记录</div>
+      </div>
+      <button class="detail-close" id="btnDetailClose" aria-label="关闭">✕</button>
+    </div>
+    <div id="detailBody" class="detail-body"></div>
+  </div>
+</div>
+
+<!-- 提交成功鼓励层 -->
+<div class="success-overlay" id="successOverlay" aria-live="polite">
+  <div id="confettiBox"></div>
+  <div class="success-box">
+    <div class="success-emoji">🎉</div>
+    <h2>提交成功！</h2>
+    <p id="successMsg">你今天真棒，继续保持哦！</p>
+    <button class="btn btn-warn" id="btnWallFromSuccess">回到班级墙看看 🌈</button>
+    <button class="btn btn-ghost" id="btnAgain" style="margin-top:10px;">再记录一条 ✏️</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/vendor/supabase.js"></script>
+<script src="js/student.js"></script>
+</body>
+</html>

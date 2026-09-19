@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>教师后台 · 在校表现记录</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/teacher.css">
+</head>
+<body>
+
+<!-- ========== 登录视图 ========== -->
+<div id="loginView">
+  <div class="login-wrap">
+    <div class="login-emoji">🍎</div>
+    <h1>教师后台登录</h1>
+    <div class="card">
+      <form id="loginForm">
+        <div class="field">
+          <label for="inpEmail">教师邮箱</label>
+          <input class="input" id="inpEmail" type="email" autocomplete="username"
+                 placeholder="teacher@example.com">
+        </div>
+        <div class="field">
+          <label for="inpPassword">密码</label>
+          <input class="input" id="inpPassword" type="password" autocomplete="current-password"
+                 placeholder="登录密码">
+        </div>
+        <div id="loginError" class="banner banner-error" hidden></div>
+        <button class="btn btn-primary" id="btnLogin" type="submit">登录</button>
+      </form>
+    </div>
+    <p class="text-muted" style="text-align:center;">
+      教师账号由管理员在 Supabase 控制台邀请创建，不开放自助注册。
+    </p>
+  </div>
+</div>
+
+<!-- ========== 后台主视图 ========== -->
+<div id="appView" hidden>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <div class="topbar-title">在校表现 · 教师后台</div>
+        <div class="topbar-email" id="userEmail"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">退出登录</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="records">📒 表现记录</button>
+      <button class="tab-btn" data-tab="students">👥 学生名单</button>
+      <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
+    </nav>
+
+    <!-- ===== 表现记录 ===== -->
+    <section id="tabRecords">
+      <div class="card">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="filterClass">班级</label>
+            <select class="input" id="filterClass"><option value="">全部班级</option></select>
+          </div>
+          <div class="field">
+            <label for="filterDate">日期</label>
+            <input class="input" id="filterDate" type="date">
+          </div>
+          <div class="field full">
+            <label for="filterKeyword">学生姓名</label>
+            <input class="input" id="filterKeyword" type="text" placeholder="输入姓名关键字（可留空）" maxlength="20">
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="btnSearch">查询</button>
+          <button class="btn btn-ghost" id="btnClearFilter">清空条件</button>
+        </div>
+      </div>
+      <div id="recordBox"></div>
+    </section>
+
+    <!-- ===== 学生名单 ===== -->
+    <section id="tabStudents" hidden>
+      <div class="card">
+        <div class="card-title">➕ 录入学生</div>
+        <form id="addStudentForm">
+          <div class="add-form-grid">
+            <div class="field">
+              <label for="addClass">班级</label>
+              <input class="input" id="addClass" type="text" placeholder="三年级2班" maxlength="30" list="classOptions">
+              <datalist id="classOptions"></datalist>
+            </div>
+            <div class="field">
+              <label for="addStudent">学生姓名</label>
+              <input class="input" id="addStudent" type="text" placeholder="学生姓名" maxlength="20">
+            </div>
+            <div class="field full">
+              <label for="addParent">家长姓名</label>
+              <input class="input" id="addParent" type="text" placeholder="用于家长查询时校验" maxlength="20">
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">添加学生</button>
+        </form>
+      </div>
+      <div id="studentBox"></div>
+    </section>
+
+    <!-- ===== 表现标签 ===== -->
+    <section id="tabTags" hidden>
+      <div class="card">
+        <div class="card-title">➕ 新增表现标签</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          勾选型：学生直接点选，如「优秀数学作业」；填写型：学生需要补充文字，如「今日背诵了什么古诗」。
+        </p>
+        <form id="addTagForm">
+          <div class="add-form-grid">
+            <div class="field">
+              <label for="addTagLabel">标签文字</label>
+              <input class="input" id="addTagLabel" type="text" placeholder="例如：优秀数学作业" maxlength="30">
+            </div>
+            <div class="field">
+              <label for="addTagType">类型</label>
+              <select class="input" id="addTagType">
+                <option value="check">勾选型</option>
+                <option value="text">填写型</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">添加标签</button>
+        </form>
+      </div>
+
+      <div class="sec-label">已有标签（修改后即时生效）</div>
+      <div id="tagBox"></div>
+      <p class="text-muted" style="margin-top:6px;">
+        停用或删除标签不会影响已经提交的历史记录（历史记录中保存了标签文字快照）。
+      </p>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/vendor/supabase.js"></script>
+<script src="js/teacher.js"></script>
+</body>
+</html>

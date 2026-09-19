@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>在校表现 · 家长查询</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/parent.css">
+</head>
+<body>
+<div class="container">
+
+  <header class="p-header">
+    <div class="p-emoji">🏡</div>
+    <h1>孩子在校表现查询</h1>
+    <p>输入班级、学生姓名、家长姓名，三项一致即可查看全部历史记录</p>
+  </header>
+
+  <div id="configBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能查询，请联系老师。
+  </div>
+
+  <!-- 查询表单 -->
+  <section class="card" id="queryCard">
+    <div class="field">
+      <label for="inpClass">班级</label>
+      <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班" maxlength="30" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="inpStudent">学生姓名</label>
+      <input class="input" id="inpStudent" type="text" placeholder="学生姓名" maxlength="20" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="inpParent">家长姓名</label>
+      <input class="input" id="inpParent" type="text" placeholder="与老师登记的家长姓名一致" maxlength="20" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="btnQuery">查询记录</button>
+    <div class="qr-entry">
+      <button id="btnQrEntry" type="button">📱 老师点这里：生成查询二维码 / 复制查询链接</button>
+    </div>
+  </section>
+
+  <!-- 查询失败 -->
+  <div id="mismatchBanner" class="banner banner-warn" hidden>
+    三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。
+  </div>
+
+  <!-- 查询结果 -->
+  <section id="resultCard" hidden>
+    <div class="result-head">
+      <h2 id="resultTitle">在校表现记录</h2>
+      <span class="count" id="resultCount"></span>
+    </div>
+    <div id="recordList"></div>
+    <button class="btn btn-ghost" id="btnBack" style="margin-top:12px;">返回重新查询</button>
+  </section>
+</div>
+
+<!-- 二维码弹窗 -->
+<div class="modal-mask" id="qrModal">
+  <div class="modal">
+    <h3>家长查询二维码</h3>
+    <div class="field">
+      <label for="qrClass">班级</label>
+      <input class="input" id="qrClass" type="text" maxlength="30">
+    </div>
+    <div class="field">
+      <label for="qrStudent">学生姓名</label>
+      <input class="input" id="qrStudent" type="text" maxlength="20">
+    </div>
+    <div id="qrLoading" class="loading-row" hidden><span class="spinner"></span>正在生成二维码…</div>
+    <div id="qrImage" class="qr-box" hidden></div>
+    <div class="qr-link" id="qrLink"></div>
+    <p class="qr-tip">二维码和链接只包含班级和学生姓名；<br>家长打开后还须输入「家长姓名」才能查看。</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCopyLink">复制链接</button>
+      <button class="btn btn-primary" id="btnQrClose">完成</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/vendor/supabase.js"></script>
+<script src="js/vendor/qrcode.min.js"></script>
+<script src="js/parent.js"></script>
+</body>
+</html>

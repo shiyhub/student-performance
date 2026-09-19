@@ -1,0 +1,64 @@
+/* ========== 家长查询页：安心、清爽的青绿色 ========== */
+.p-header { text-align: center; padding: 8px 0 16px; }
+.p-header .p-emoji { font-size: 42px; }
+.p-header h1 { font-size: 22px; color: var(--primary-d); margin-top: 2px; }
+.p-header p { font-size: 13px; color: var(--ink-2); }
+
+.qr-entry { text-align: center; margin-top: 10px; }
+.qr-entry button {
+  font-size: 13.5px; color: var(--ink-2); text-decoration: underline;
+  text-underline-offset: 3px; padding: 4px;
+  width: 100%; white-space: normal; line-height: 1.5;
+}
+
+/* 查询结果 */
+.result-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 4px; gap: 10px; flex-wrap: wrap;
+}
+.result-head h2 { font-size: 19px; color: var(--primary-d); }
+.result-head .count { font-size: 13px; color: var(--ink-2); }
+
+.day-head {
+  font-weight: 700; font-size: 15px; margin: 18px 2px 8px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.day-head .day-count { font-size: 12.5px; color: var(--ink-2); font-weight: 400; }
+
+.rec-card {
+  background: #fff; border-radius: 14px; box-shadow: var(--shadow);
+  padding: 14px; margin-bottom: 10px;
+}
+.rec-topline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.rec-topline .rec-time { margin-left: auto; }
+.rec-main { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.stars-mini { color: #f5b945; letter-spacing: 2px; font-size: 17px; }
+.mood-mini { font-size: 22px; }
+
+.item-list { list-style: none; margin-top: 8px; }
+.item-list li {
+  background: #f5faf8; border-radius: 10px;
+  padding: 7px 11px; font-size: 13.5px; margin-bottom: 6px;
+  word-break: break-word;
+}
+.item-list .tick { color: var(--primary); font-weight: 800; margin-right: 6px; }
+.item-list b { color: var(--ink); font-weight: 600; }
+
+.comment-box {
+  margin-top: 10px; background: #fff8ea;
+  border: 1px dashed #f0cd8d; border-radius: 10px;
+  padding: 9px 12px; font-size: 13.5px; word-break: break-word;
+}
+.comment-label { color: #b5791b; font-weight: 700; margin-right: 4px; }
+
+/* 二维码弹窗 */
+.qr-box {
+  width: 260px; height: 260px; margin: 6px auto 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-box canvas, .qr-box img { width: 260px !important; height: 260px !important; }
+.qr-link {
+  font-size: 12px; color: var(--ink-2); word-break: break-all;
+  background: #f4f7f6; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;
+}
+.qr-tip { font-size: 12.5px; color: var(--ink-2); text-align: center; }
