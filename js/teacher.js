@@ -50,6 +50,14 @@ const els = {
   btnAddParentField: $('#btnAddParentField'),
   classOptions: $('#classOptions'),
   studentBox: $('#studentBox'),
+  // 班级家长查询二维码
+  classQrModal: $('#classQrModal'),
+  classQrTitle: $('#classQrTitle'),
+  classQrImage: $('#classQrImage'),
+  classQrLink: $('#classQrLink'),
+  btnClassQrClose: $('#btnClassQrClose'),
+  btnClassQrCopy: $('#btnClassQrCopy'),
+  btnClassQrDownload: $('#btnClassQrDownload'),
   // 批量录入
   batchClass: $('#batchClass'),
   batchText: $('#batchText'),
@@ -113,6 +121,11 @@ function init() {
   els.btnBatchCheck.addEventListener('click', onBatchCheck);
   els.btnBatchImport.addEventListener('click', onBatchImport);
   els.btnBatchClear.addEventListener('click', onBatchClear);
+  // 班级家长查询二维码弹窗
+  els.btnClassQrClose.addEventListener('click', closeClassQr);
+  els.classQrModal.addEventListener('click', e => { if (e.target === els.classQrModal) closeClassQr(); });
+  els.btnClassQrCopy.addEventListener('click', copyClassQrLink);
+  els.btnClassQrDownload.addEventListener('click', downloadClassQr);
   // 修改统一班级或文本后，旧预览作废，需重新检查
   [els.batchClass, els.batchText].forEach(el => {
     el.addEventListener('input', () => {
@@ -360,7 +373,10 @@ async function loadStudents() {
   let html = '';
   Array.from(groups.keys()).sort().forEach(cls => {
     html += `<div class="roster-group">
-               <h4>${esc(cls)} <span class="n">${groups.get(cls).length} 人</span></h4>`;
+               <h4>
+                 <span class="rg-title">${esc(cls)} <span class="n">${groups.get(cls).length} 人</span></span>
+                 <button type="button" class="btn btn-ghost btn-sm class-qr-btn" data-qr-class="${esc(cls)}">📱 本班家长查询码</button>
+               </h4>`;
     groups.get(cls).forEach(s => {
       const parents = (s.student_parent || [])
         .slice()
@@ -379,7 +395,6 @@ async function loadStudents() {
                      <button type="button" class="pchip-add" data-add-parent="${s.id}">＋家长</button>
                    </div>
                  </div>
-                 <button class="icon-btn" title="生成家长查询二维码" data-qr-id="${s.id}">🔗</button>
                  <button class="icon-btn danger" title="删除学生" data-del-id="${s.id}">🗑️</button>
                </div>`;
     });
@@ -387,12 +402,9 @@ async function loadStudents() {
   });
   els.studentBox.innerHTML = html;
 
-  // 二维码
-  $$('[data-qr-id]', els.studentBox).forEach(btn => {
-    btn.addEventListener('click', () => {
-      const s = data.find(x => x.id === btn.dataset.qrId);
-      if (s) openStudentQr(s);
-    });
+  // 班级家长查询二维码（一个班一个，全班通用）
+  $$('[data-qr-class]', els.studentBox).forEach(btn => {
+    btn.addEventListener('click', () => openClassQr(btn.dataset.qrClass));
   });
   // 删除学生（家长关联由数据库级联删除）
   $$('[data-del-id]', els.studentBox).forEach(btn => {
@@ -543,12 +555,71 @@ async function onAddStudent(e) {
   loadClassesAndRecords();
 }
 
-function openStudentQr(s) {
+/* ---------- 本班家长查询二维码（一个班一个，全班家长通用） ---------- */
+
+function classParentLink(cls) {
   const url = new URL('parent.html', location.href);
-  url.searchParams.set('class', s.class);
-  url.searchParams.set('student', s.student_name);
-  url.hash = 'qr';
-  window.open(url.toString(), '_blank');
+  url.searchParams.set('class', cls);
+  return url.toString();
+}
+
+function openClassQr(cls) {
+  if (!cls) { toast('班级名称为空，无法生成'); return; }
+  els.classQrTitle.textContent = `「${cls}」家长查询二维码`;
+  els.classQrImage.innerHTML = '';
+  const link = classParentLink(cls);
+  els.classQrLink.textContent = link;
+  try {
+    new window.QRCode(els.classQrImage, {
+      text: link,
+      width: 480,
+      height: 480,
+      colorDark: '#26332e',
+      colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.M
+    });
+  } catch (e) {
+    toast('二维码生成失败，可直接复制链接');
+  }
+  els.classQrModal.classList.add('show');
+}
+
+function closeClassQr() {
+  els.classQrModal.classList.remove('show');
+}
+
+async function copyClassQrLink() {
+  const text = els.classQrLink.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('链接已复制，可发到家长群');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('链接已复制，可发到家长群'); }
+    catch (err) { window.prompt('请手动复制链接：', text); }
+    document.body.removeChild(ta);
+  }
+}
+
+function downloadClassQr() {
+  const cls = (els.classQrTitle.textContent || '').replace(/[「」]/g, '').replace('家长查询二维码', '').trim() || '班级';
+  const canvas = els.classQrImage.querySelector('canvas');
+  if (!canvas) { toast('二维码还没生成好，请稍候再试'); return; }
+  try {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `家长查询二维码-${cls}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    window.open(canvas.toDataURL('image/png'), '_blank');
+  }
 }
 
 /* ---------------- 批量录入学生（每位学生家长数量不限） ---------------- */

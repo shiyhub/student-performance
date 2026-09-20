@@ -23,6 +23,10 @@ const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
 const els = {
   configBanner: $('#configBanner'),
+  headerHint: $('#headerHint'),
+  classLockBar: $('#classLockBar'),
+  classLockName: $('#classLockName'),
+  classField: $('#classField'),
   inpClass: $('#inpClass'),
   inpStudent: $('#inpStudent'),
   inpParent: $('#inpParent'),
@@ -37,13 +41,16 @@ const els = {
   btnQrEntry: $('#btnQrEntry'),
   qrModal: $('#qrModal'),
   qrClass: $('#qrClass'),
-  qrStudent: $('#qrStudent'),
   qrImage: $('#qrImage'),
   qrLoading: $('#qrLoading'),
   qrLink: $('#qrLink'),
   btnCopyLink: $('#btnCopyLink'),
+  btnDownloadQr: $('#btnDownloadQr'),
   btnQrClose: $('#btnQrClose')
 };
+
+// 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
+let lockedClass = '';
 
 init();
 
@@ -54,10 +61,17 @@ function init() {
     return;
   }
 
-  // 老师转发的链接可预填班级、学生姓名（家长姓名必须当场手输）
+  // 链接里带 class 即视为"班级二维码"扫码进入：锁定班级
   const params = new URLSearchParams(location.search);
-  if (params.get('class')) els.inpClass.value = params.get('class').trim();
-  if (params.get('student')) els.inpStudent.value = params.get('student').trim();
+  const c = (params.get('class') || '').trim();
+  if (c) {
+    lockedClass = c;
+    els.inpClass.value = c;
+    els.classField.hidden = true;
+    els.classLockName.textContent = c;
+    els.classLockBar.hidden = false;
+    els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和家长姓名';
+  }
 
   els.btnQuery.addEventListener('click', onQuery);
   els.btnBack.addEventListener('click', () => {
@@ -72,8 +86,8 @@ function init() {
   els.btnQrClose.addEventListener('click', closeQrModal);
   els.qrModal.addEventListener('click', e => { if (e.target === els.qrModal) closeQrModal(); });
   els.qrClass.addEventListener('input', refreshQrDebounced);
-  els.qrStudent.addEventListener('input', refreshQrDebounced);
   els.btnCopyLink.addEventListener('click', copyQrLink);
+  els.btnDownloadQr.addEventListener('click', downloadQr);
 
   // 教师后台跳转过来时（#qr）自动弹出生成窗
   if (location.hash === '#qr') {
@@ -84,11 +98,11 @@ function init() {
 /* ---------------- 查询 ---------------- */
 
 async function onQuery() {
-  const cls = els.inpClass.value.trim();
+  const cls = (lockedClass || els.inpClass.value || '').trim();
   const student = els.inpStudent.value.trim();
   const parent = els.inpParent.value.trim();
   if (!cls || !student || !parent) {
-    toast('班级、学生姓名、家长姓名都要填写哦');
+    toast(lockedClass ? '学生姓名和家长姓名都要填写哦' : '班级、学生姓名、家长姓名都要填写哦');
     return;
   }
 
@@ -103,6 +117,9 @@ async function onQuery() {
     });
     if (error) throw error;
     if (!data || data.length === 0) {
+      els.mismatchBanner.textContent = lockedClass
+        ? '信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。'
+        : '三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。';
       els.mismatchBanner.hidden = false;
       return;
     }
@@ -193,8 +210,7 @@ function renderRecordCard(r) {
 
 let qrRefreshTimer;
 function openQrModal() {
-  els.qrClass.value = els.inpClass.value.trim();
-  els.qrStudent.value = els.inpStudent.value.trim();
+  els.qrClass.value = (lockedClass || els.inpClass.value || '').trim();
   els.qrModal.classList.add('show');
   refreshQr();
 }
@@ -203,33 +219,32 @@ function closeQrModal() {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
+// 班级级链接：只带 class，全班家长通用
 function buildQrLink() {
   const url = new URL(location.href);
   url.hash = '';
   url.search = '';
   url.searchParams.set('class', els.qrClass.value.trim());
-  url.searchParams.set('student', els.qrStudent.value.trim());
   return url.toString();
 }
 
 function refreshQr() {
   const cls = els.qrClass.value.trim();
-  const student = els.qrStudent.value.trim();
   els.qrImage.innerHTML = '';
-  if (!cls || !student) {
+  if (!cls) {
     els.qrImage.hidden = true;
-    els.qrLink.textContent = '请先填写班级和学生姓名';
+    els.qrLink.textContent = '请先填写班级';
     return;
   }
   const link = buildQrLink();
   els.qrLink.textContent = link;
   els.qrImage.hidden = false;
   try {
-    // 本地二维码库（MIT 许可）：向容器内插入 canvas
+    // 本地二维码库（MIT 许可）：向容器内插入 canvas；480px 便于打印/放大
     new window.QRCode(els.qrImage, {
       text: link,
-      width: 260,
-      height: 260,
+      width: 480,
+      height: 480,
       colorDark: '#26332e',
       colorLight: '#ffffff',
       correctLevel: window.QRCode.CorrectLevel.M
@@ -246,10 +261,10 @@ function refreshQrDebounced() {
 
 async function copyQrLink() {
   const text = els.qrLink.textContent;
-  if (!text.startsWith('http')) { toast('请先填写班级和学生姓名'); return; }
+  if (!text.startsWith('http')) { toast('请先填写班级'); return; }
   try {
     await navigator.clipboard.writeText(text);
-    toast('链接已复制，可发给家长');
+    toast('链接已复制，可发到家长群');
   } catch (e) {
     // 旧浏览器兜底
     const ta = document.createElement('textarea');
@@ -258,9 +273,27 @@ async function copyQrLink() {
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); toast('链接已复制，可发给家长'); }
+    try { document.execCommand('copy'); toast('链接已复制，可发到家长群'); }
     catch (err) { window.prompt('请手动复制链接：', text); }
     document.body.removeChild(ta);
+  }
+}
+
+// 下载二维码为 PNG（可打印张贴）
+function downloadQr() {
+  const cls = els.qrClass.value.trim();
+  if (!cls) { toast('请先填写班级'); return; }
+  const canvas = els.qrImage.querySelector('canvas');
+  if (!canvas) { toast('二维码还没生成好，请稍候再试'); return; }
+  try {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `家长查询二维码-${cls}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    window.open(canvas.toDataURL('image/png'), '_blank');
   }
 }
 

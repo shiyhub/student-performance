@@ -13,16 +13,22 @@
   <header class="p-header">
     <div class="p-emoji">🏡</div>
     <h1>孩子在校表现查询</h1>
-    <p>输入班级、学生姓名、家长姓名，三项一致即可查看全部历史记录</p>
+    <p id="headerHint">输入班级、学生姓名、家长姓名，三项一致即可查看全部历史记录</p>
   </header>
 
   <div id="configBanner" class="banner banner-error" hidden>
     系统还没有连接数据库（Supabase 未配置），暂时不能查询，请联系老师。
   </div>
 
+  <!-- 扫码进入：班级锁定条 -->
+  <div id="classLockBar" class="class-lock" hidden>
+    <span class="class-lock-icon">🔒</span>
+    <span class="class-lock-text">班级：<b id="classLockName"></b></span>
+  </div>
+
   <!-- 查询表单 -->
   <section class="card" id="queryCard">
-    <div class="field">
+    <div class="field" id="classField">
       <label for="inpClass">班级</label>
       <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班" maxlength="30" autocomplete="off">
     </div>
@@ -36,13 +42,13 @@
     </div>
     <button class="btn btn-primary" id="btnQuery">查询记录</button>
     <div class="qr-entry">
-      <button id="btnQrEntry" type="button">📱 老师点这里：生成查询二维码 / 复制查询链接</button>
+      <button id="btnQrEntry" type="button">📱 老师点这里：生成本班查询二维码 / 复制链接</button>
     </div>
   </section>
 
   <!-- 查询失败 -->
   <div id="mismatchBanner" class="banner banner-warn" hidden>
-    三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。
+    信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。
   </div>
 
   <!-- 查询结果 -->
@@ -59,20 +65,17 @@
 <!-- 二维码弹窗 -->
 <div class="modal-mask" id="qrModal">
   <div class="modal">
-    <h3>家长查询二维码</h3>
+    <h3>本班家长查询二维码</h3>
     <div class="field">
-      <label for="qrClass">班级</label>
-      <input class="input" id="qrClass" type="text" maxlength="30">
-    </div>
-    <div class="field">
-      <label for="qrStudent">学生姓名</label>
-      <input class="input" id="qrStudent" type="text" maxlength="20">
+      <label for="qrClass">班级（一个班只需一个码，全班家长通用）</label>
+      <input class="input" id="qrClass" type="text" placeholder="例如：六年级一班" maxlength="30">
     </div>
     <div id="qrLoading" class="loading-row" hidden><span class="spinner"></span>正在生成二维码…</div>
     <div id="qrImage" class="qr-box" hidden></div>
     <div class="qr-link" id="qrLink"></div>
-    <p class="qr-tip">二维码和链接只包含班级和学生姓名；<br>家长打开后还须输入「家长姓名」才能查看。</p>
+    <p class="qr-tip">把这个二维码发到家长群或打印贴在教室：<br>家长扫码后只需填写「学生姓名 + 家长姓名」即可查看。</p>
     <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnDownloadQr">⬇️ 下载二维码</button>
       <button class="btn btn-ghost" id="btnCopyLink">复制链接</button>
       <button class="btn btn-primary" id="btnQrClose">完成</button>
     </div>

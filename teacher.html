@@ -178,10 +178,26 @@
   </main>
 </div>
 
+<!-- 本班家长查询二维码 -->
+<div class="modal-mask" id="classQrModal">
+  <div class="modal t-qr-modal">
+    <h3 id="classQrTitle">本班家长查询二维码</h3>
+    <p class="text-muted t-qr-sub">一个班只需一个码，全班家长通用。<br>家长扫码后填写「学生姓名 + 家长姓名」即可查看孩子表现。</p>
+    <div id="classQrImage" class="t-qr-box"></div>
+    <div class="t-qr-link" id="classQrLink"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnClassQrDownload" type="button">⬇️ 下载二维码</button>
+      <button class="btn btn-ghost" id="btnClassQrCopy" type="button">复制链接</button>
+      <button class="btn btn-primary" id="btnClassQrClose" type="button">完成</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
+<script src="js/vendor/qrcode.min.js"></script>
 <script src="js/teacher.js"></script>
 </body>
 </html>
