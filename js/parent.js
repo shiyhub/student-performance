@@ -46,11 +46,31 @@ const els = {
   qrLink: $('#qrLink'),
   btnCopyLink: $('#btnCopyLink'),
   btnDownloadQr: $('#btnDownloadQr'),
-  btnQrClose: $('#btnQrClose')
+  btnQrClose: $('#btnQrClose'),
+  // 时间筛选 + 汇总
+  quickSeg: $('#quickSeg'),
+  dateChips: $('#dateChips'),
+  viewDetail: $('#viewDetail'),
+  viewSummary: $('#viewSummary'),
+  summaryBox: $('#summaryBox'),
+  emptyRange: $('#emptyRange'),
+  // 在家表现
+  homeDate: $('#homeDate'),
+  homeContent: $('#homeContent'),
+  btnHomeSubmit: $('#btnHomeSubmit')
 };
 
 // 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
 let lockedClass = '';
+
+// 查询与会话状态
+const state = {
+  ctx: { cls: '', student: '', parent: '' },
+  allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
+  quick: 'all',         // all | week | lastweek | 4w | custom
+  picked: null,         // 自选日期 Set（null=未启用自选）
+  viewMode: 'detail'    // detail | summary
+};
 
 init();
 
@@ -89,6 +109,18 @@ function init() {
   els.btnCopyLink.addEventListener('click', copyQrLink);
   els.btnDownloadQr.addEventListener('click', downloadQr);
 
+  // 时间筛选 / 视图切换
+  els.quickSeg.addEventListener('click', e => {
+    const b = e.target.closest('.seg-btn');
+    if (!b) return;
+    setQuick(b.dataset.quick);
+  });
+  els.viewDetail.addEventListener('click', () => setView('detail'));
+  els.viewSummary.addEventListener('click', () => setView('summary'));
+
+  // 在家表现
+  els.btnHomeSubmit.addEventListener('click', onSubmitHome);
+
   // 教师后台跳转过来时（#qr）自动弹出生成窗
   if (location.hash === '#qr') {
     setTimeout(openQrModal, 300);
@@ -123,6 +155,7 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
+    state.ctx = { cls, student, parent };
     renderResults(student, data);
   } catch (e) {
     toast('查询失败：' + ((e && e.message) || '请稍后再试'));
@@ -132,15 +165,186 @@ async function onQuery() {
   }
 }
 
-/* ---------------- 渲染历史记录 ---------------- */
+/* ---------------- 在家表现提交（仅老师可见） ---------------- */
+
+async function onSubmitHome() {
+  const content = els.homeContent.value.trim();
+  if (!content) { toast('先写一点孩子在家的表现吧'); return; }
+  const date = els.homeDate.value || todayStr();
+  els.btnHomeSubmit.disabled = true;
+  els.btnHomeSubmit.textContent = '提交中…';
+  try {
+    const { data, error } = await supabase.rpc('add_home_note', {
+      p_class: state.ctx.cls,
+      p_student: state.ctx.student,
+      p_parent: state.ctx.parent,
+      p_content: content.slice(0, 500),
+      p_date: date
+    });
+    if (error) throw error;
+    if (data !== true) {
+      toast('身份信息未通过校验，请返回重新查询后再提交');
+      return;
+    }
+    els.homeContent.value = '';
+    toast('已提交，只有老师能看到哦 🏠');
+  } catch (e) {
+    toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+  } finally {
+    els.btnHomeSubmit.disabled = false;
+    els.btnHomeSubmit.textContent = '提交在家表现';
+  }
+}
+
+/* ---------------- 时间筛选 + 视图 ---------------- */
+
+function todayStr() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 解析 YYYY-MM-DD 为本地日期
+function parseDate(ymd) {
+  const [y, m, d] = String(ymd).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function toYmd(dt) {
+  const p = n => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+}
+// 该日期所在周的周一（中国习惯：周一为一周起点）
+function mondayOf(ymd) {
+  const dt = parseDate(ymd);
+  const wd = (dt.getDay() + 6) % 7; // 周一=0 … 周日=6
+  dt.setDate(dt.getDate() - wd);
+  return dt;
+}
+function addDays(dt, n) {
+  const d = new Date(dt);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+// 快捷时间段对应的日期集合（Set<YYYY-MM-DD>）
+function quickDateSet(quick, validDates) {
+  const today = todayStr();
+  const mon = mondayOf(today);
+  let from = null, to = today;
+  if (quick === 'week') {
+    from = toYmd(mon);
+  } else if (quick === 'lastweek') {
+    const lm = addDays(mon, -7);
+    from = toYmd(lm);
+    to = toYmd(addDays(lm, 6));
+  } else if (quick === '4w') {
+    from = toYmd(addDays(mon, -21)); // 含本周共 4 周
+  } else {
+    return null;
+  }
+  const set = new Set();
+  validDates.forEach(d => { if (d >= from && d <= to) set.add(d); });
+  return set;
+}
 
 function renderResults(studentName, rows) {
   els.queryCard.hidden = true;
   els.resultCard.hidden = false;
   els.resultTitle.textContent = `${esc(studentName)} 的在校表现`;
-  els.resultCount.textContent = `共 ${rows.length} 条记录`;
 
-  // 按日期分组（RPC 已按日期、时间倒序返回）
+  state.allRows = rows;
+  state.quick = 'all';
+  state.picked = null;
+  state.viewMode = 'detail';
+
+  // 在家表现日期默认今天
+  els.homeDate.value = todayStr();
+  els.homeContent.value = '';
+
+  renderDateChips();
+  updateSegActive();
+  applyFilter();
+  window.scrollTo({ top: 0 });
+}
+
+// 顶部"有记录的日期"多选条
+function renderDateChips() {
+  const dates = Array.from(new Set(state.allRows.map(r => r.record_date))).sort().reverse();
+  els.dateChips.innerHTML = dates.map(d =>
+    `<button type="button" class="date-chip" data-date="${d}">${chipDateLabel(d)}</button>`
+  ).join('');
+  els.dateChips.querySelectorAll('.date-chip').forEach(b => {
+    b.addEventListener('click', () => toggleDate(b.dataset.date));
+  });
+}
+function chipDateLabel(ymd) {
+  const [, m, d] = String(ymd).split('-').map(Number);
+  const dt = parseDate(ymd);
+  return `${m}/${d} 周${'一二三四五六日'[(dt.getDay() + 6) % 7]}`;
+}
+
+function setQuick(quick) {
+  state.quick = quick;
+  state.picked = null;
+  // 周/近4周默认看汇总；全部默认看明细
+  state.viewMode = (quick === 'all') ? 'detail' : 'summary';
+  updateSegActive();
+  applyFilter();
+}
+function toggleDate(ymd) {
+  if (!state.picked) state.picked = new Set();
+  if (state.picked.has(ymd)) state.picked.delete(ymd);
+  else state.picked.add(ymd);
+  state.quick = state.picked.size ? 'custom' : 'all';
+  state.viewMode = state.picked.size >= 2 ? 'summary' : 'detail';
+  updateSegActive();
+  applyFilter();
+}
+function setView(mode) {
+  state.viewMode = mode;
+  updateSegActive();
+  applyFilter();
+}
+function updateSegActive() {
+  els.quickSeg.querySelectorAll('.seg-btn').forEach(b =>
+    b.classList.toggle('active', state.quick === b.dataset.quick));
+  els.viewDetail.classList.toggle('active', state.viewMode === 'detail');
+  els.viewSummary.classList.toggle('active', state.viewMode === 'summary');
+  els.dateChips.querySelectorAll('.date-chip').forEach(b =>
+    b.classList.toggle('active', !!(state.picked && state.picked.has(b.dataset.date))));
+}
+
+// 计算当前筛选命中的记录（仍保持日期倒序）
+function filteredRows() {
+  let set = null;
+  if (state.quick === 'custom' && state.picked && state.picked.size) {
+    set = state.picked;
+  } else if (state.quick !== 'all') {
+    const valid = new Set(state.allRows.map(r => r.record_date));
+    set = quickDateSet(state.quick, valid);
+  }
+  if (!set) return state.allRows;
+  return state.allRows.filter(r => set.has(r.record_date));
+}
+
+function applyFilter() {
+  const rows = filteredRows();
+  els.resultCount.textContent = state.quick === 'all' && !state.picked
+    ? `共 ${state.allRows.length} 条记录`
+    : `已选 ${rows.length} 条 / 共 ${state.allRows.length} 条`;
+  els.emptyRange.hidden = rows.length > 0;
+
+  if (state.viewMode === 'summary') {
+    els.summaryBox.hidden = false;
+    els.recordList.hidden = true;
+    els.summaryBox.innerHTML = renderSummary(rows);
+  } else {
+    els.summaryBox.hidden = true;
+    els.recordList.hidden = false;
+    els.recordList.innerHTML = renderDetailList(rows);
+  }
+}
+
+function renderDetailList(rows) {
   const groups = [];
   const map = new Map();
   rows.forEach(r => {
@@ -151,7 +355,6 @@ function renderResults(studentName, rows) {
     }
     map.get(r.record_date).rows.push(r);
   });
-
   let html = '';
   groups.forEach(g => {
     html += `<div class="day-head">
@@ -160,8 +363,91 @@ function renderResults(studentName, rows) {
              </div>`;
     g.rows.forEach(r => { html += renderRecordCard(r); });
   });
-  els.recordList.innerHTML = html;
-  window.scrollTo({ top: 0 });
+  return html;
+}
+
+/* ---------------- 分类汇总 ---------------- */
+
+function renderSummary(rows) {
+  if (!rows.length) return '';
+
+  // 平均星级
+  const avg = rows.reduce((s, r) => s + (r.self_evaluation || 0), 0) / rows.length;
+  const dates = Array.from(new Set(rows.map(r => r.record_date))).sort();
+  const rangeTxt = dates.length === 1
+    ? formatDate(dates[0])
+    : `${formatDate(dates[0]).replace(/ 星期.*/, '')} ~ ${formatDate(dates[dates.length - 1]).replace(/ 星期.*/, '')}（${dates.length} 天）`;
+
+  // 心情分布
+  const moodCount = { happy: 0, good: 0, normal: 0, down: 0, sad: 0 };
+  // 积极/消极：key = label 或 label·二级项
+  const posMap = new Map();
+  const negMap = new Map();
+  // 填写型内容
+  const textItems = [];
+  let commentCount = 0;
+
+  rows.forEach(r => {
+    const mood = r.behavior && r.behavior.mood;
+    if (moodCount[mood] !== undefined) moodCount[mood]++;
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    items.forEach(it => {
+      const label = it.label || '';
+      const neg = it.category === 'negative';
+      const target = neg ? negMap : posMap;
+      if (it.type === 'text') {
+        textItems.push({ label, value: it.value || '', date: r.record_date, neg });
+        const k = '✏️ ' + label;
+        target.set(k, (target.get(k) || 0) + 1);
+      } else {
+        const k = it.value ? `${label} · ${it.value}` : label;
+        target.set(k, (target.get(k) || 0) + 1);
+      }
+    });
+    if ((r.teacher_comment || '').trim()) commentCount++;
+  });
+
+  const moodLine = ['happy', 'good', 'normal', 'down', 'sad']
+    .filter(k => moodCount[k] > 0)
+    .map(k => `<span class="sm-item">${MOOD_MAP[k].emoji} ×${moodCount[k]}</span>`)
+    .join('');
+
+  const groupHtml = (title, icon, map, cls) => {
+    const arr = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    if (!arr.length) return '';
+    return `<div class="sum-group ${cls}">
+              <div class="sum-group-title">${icon} ${title}</div>
+              ${arr.map(([k, n]) => `<div class="sum-line"><span class="sum-k">${esc(k)}</span><span class="sum-n">×${n}</span></div>`).join('')}
+            </div>`;
+  };
+
+  // 填写型明细（最多展示全部，按日期倒序）
+  const textHtml = textItems.length
+    ? `<div class="sum-texts">
+         <div class="sum-group-title">📝 填写内容</div>
+         ${textItems.map(t =>
+           `<div class="sum-text ${t.neg ? 'neg' : ''}"><b>${esc(t.label)}（${shortDate(t.date)}）：</b>${esc(t.value)}</div>`
+         ).join('')}
+       </div>`
+    : '';
+
+  return `<div class="sum-card">
+            <div class="sum-overview">
+              <div><span class="sum-big">${rows.length}</span><span class="sum-sub">条记录</span></div>
+              <div><span class="sum-big">★${avg.toFixed(1)}</span><span class="sum-sub">平均星级</span></div>
+              <div class="sum-range">${rangeTxt}</div>
+            </div>
+            <div class="sum-moods">${moodLine || '<span class="text-muted">暂无心情数据</span>'}</div>
+            ${groupHtml('积极表现', '🌟', posMap, 'pos')}
+            ${groupHtml('需要加油', '💧', negMap, 'neg')}
+            ${textHtml}
+            <div class="sum-comment-n">老师评语 <b>${commentCount}</b> 条（见逐日明细）</div>
+          </div>`;
+}
+
+function shortDate(ymd) {
+  const [, m, d] = String(ymd).split('-').map(Number);
+  return `${m}/${d}`;
 }
 
 function renderRecordCard(r) {

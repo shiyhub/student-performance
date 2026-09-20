@@ -57,7 +57,48 @@
       <h2 id="resultTitle">在校表现记录</h2>
       <span class="count" id="resultCount"></span>
     </div>
+
+    <!-- 时间筛选 -->
+    <div class="filter-card">
+      <div class="filter-row">
+        <span class="filter-label">时间</span>
+        <div class="seg" id="quickSeg">
+          <button type="button" class="seg-btn active" data-quick="all">全部</button>
+          <button type="button" class="seg-btn" data-quick="week">本周</button>
+          <button type="button" class="seg-btn" data-quick="lastweek">上周</button>
+          <button type="button" class="seg-btn" data-quick="4w">近4周</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">自选日期</span>
+        <div class="date-chips" id="dateChips"></div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">看法</span>
+        <div class="seg">
+          <button type="button" class="seg-btn" id="viewDetail">逐日明细</button>
+          <button type="button" class="seg-btn" id="viewSummary">分类汇总</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="summaryBox"></div>
     <div id="recordList"></div>
+    <div id="emptyRange" class="banner banner-warn" hidden>所选时间内还没有记录。</div>
+
+    <!-- 家长填写在家表现（仅老师可见） -->
+    <div class="home-card">
+      <div class="home-head">🏠 给老师留言 · 孩子在家表现</div>
+      <p class="home-note-tip">内容仅班主任在教师后台可见，孩子和其他家长看不到。</p>
+      <div class="home-row">
+        <label for="homeDate">日期</label>
+        <input type="date" id="homeDate" class="input">
+      </div>
+      <textarea id="homeContent" class="input home-text" rows="3" maxlength="500"
+        placeholder="例如：今晚主动读了20分钟课外书；周末帮忙做了家务……"></textarea>
+      <button class="btn btn-primary" id="btnHomeSubmit">提交在家表现</button>
+    </div>
+
     <button class="btn btn-ghost" id="btnBack" style="margin-top:12px;">返回重新查询</button>
   </section>
 </div>

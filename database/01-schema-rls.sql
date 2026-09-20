@@ -79,7 +79,22 @@ create table if not exists public.behavior_tags (
 
 comment on table public.behavior_tags is '教师自定义表现标签：老师全权；学生仅可读启用中的标签';
 
--- 1.5 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
+-- 1.5 家长填写的"在家表现"表（内容仅老师可见；家长只能经校验 RPC 写入）------
+create table if not exists public.home_note (
+  id          uuid primary key default gen_random_uuid(),
+  student_id  uuid not null references public.student_info(id) on delete cascade,
+  parent_name text not null,
+  content     text not null,
+  record_date date not null default current_date,
+  create_at   timestamptz not null default now()
+);
+
+create index if not exists idx_home_note_student
+  on public.home_note (student_id, record_date desc);
+
+comment on table public.home_note is '家长填写的学生在家表现：匿名端只能经校验RPC写入、不能读取；仅老师可查看与管理';
+
+-- 1.6 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
 create or replace view public.student_directory as
   select id, class, student_name, avatar
   from public.student_info;
@@ -95,6 +110,7 @@ alter table public.student_info   enable row level security;
 alter table public.student_parent enable row level security;
 alter table public.daily_record   enable row level security;
 alter table public.behavior_tags  enable row level security;
+alter table public.home_note      enable row level security;
 
 
 -- ============================================================================
@@ -174,6 +190,53 @@ begin
 end;
 $$;
 
+-- 3.4 家长提交在家表现：班级 + 学生 + 任一家长姓名 匹配成功才写入 home_note
+create or replace function public.add_home_note(
+  p_class   text,
+  p_student text,
+  p_parent  text,
+  p_content text,
+  p_date    date default null
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sid     uuid;
+  v_content text;
+  v_parent  text;
+  v_date    date;
+begin
+  v_content := nullif(left(btrim(coalesce(p_content, '')), 500), '');
+  if v_content is null then
+    return false;
+  end if;
+
+  v_parent := btrim(coalesce(p_parent, ''));
+  v_date   := coalesce(p_date, current_date);
+
+  select si.id
+    into v_sid
+  from public.student_info si
+  join public.student_parent sp on sp.student_id = si.id
+  where si.class        = btrim(coalesce(p_class, ''))
+    and si.student_name = btrim(coalesce(p_student, ''))
+    and sp.parent_name  = v_parent
+  limit 1;
+
+  if v_sid is null then
+    return false;
+  end if;
+
+  insert into public.home_note (student_id, parent_name, content, record_date)
+  values (v_sid, v_parent, v_content, v_date);
+
+  return true;
+end;
+$$;
+
 
 -- ============================================================================
 -- 第 4 部分：RLS 策略（白名单制）
@@ -215,13 +278,18 @@ drop policy if exists teacher_all_tags on public.behavior_tags;
 create policy teacher_all_tags on public.behavior_tags
   for all to authenticated using (true) with check (true);
 
+-- home_note —— 仅登录老师；匿名端无策略 = 完全不可直连（家长只能经 add_home_note RPC 写入）
+drop policy if exists home_note_teacher_all on public.home_note;
+create policy home_note_teacher_all on public.home_note
+  for all to authenticated using (true) with check (true);
+
 
 -- ============================================================================
 -- 第 5 部分：SQL 层显式授权
 -- ============================================================================
 
-revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags from anon;
-revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags from authenticated;
+revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note from anon;
+revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note from authenticated;
 revoke all on public.student_directory from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 
@@ -234,7 +302,7 @@ grant select on public.student_directory to anon;
 grant select on public.behavior_tags to anon;
 
 -- 老师（authenticated）
-grant all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags to authenticated;
+grant all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note to authenticated;
 grant select on public.student_directory to authenticated;
 
 -- 函数执行权限
@@ -246,6 +314,11 @@ grant  execute on function public.get_student_records(text, text, text) to anon,
 
 revoke execute on function public.set_student_avatar(text, text, text) from public;
 grant  execute on function public.set_student_avatar(text, text, text) to anon, authenticated;
+
+revoke execute on function public.add_home_note(text, text, text, text, date) from public;
+grant  execute on function public.add_home_note(text, text, text, text, date) to anon, authenticated;
+
+notify pgrst, 'reload schema';
 
 
 -- ============================================================================

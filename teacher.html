@@ -75,6 +75,7 @@
         <div class="filter-actions">
           <button class="btn btn-primary" id="btnSearch">查询</button>
           <button class="btn btn-ghost" id="btnClearFilter">清空条件</button>
+          <button class="btn btn-warn" id="btnAddRecord" type="button">➕ 帮学生记录一条</button>
         </div>
       </div>
       <div id="recordBox"></div>
@@ -176,6 +177,48 @@
       </p>
     </section>
   </main>
+</div>
+
+<!-- 新增 / 修改 表现记录 -->
+<div class="modal-mask" id="recordModal">
+  <div class="modal t-rec-modal">
+    <h3 id="recordModalTitle">帮学生记录一条</h3>
+    <div class="t-rec-form">
+      <div class="field" id="recClassField">
+        <label for="recClass">班级</label>
+        <select class="input" id="recClass"></select>
+      </div>
+      <div class="field" id="recStudentField">
+        <label for="recStudent">学生</label>
+        <select class="input" id="recStudent"></select>
+      </div>
+      <div class="field">
+        <label for="recDate">日期</label>
+        <input class="input" id="recDate" type="date">
+      </div>
+      <div class="field full">
+        <label>综合星级</label>
+        <div class="rec-stars" id="recStars"></div>
+      </div>
+      <div class="field full">
+        <label>今日心情（根据表现自动计算）</label>
+        <div id="recMood" class="rec-mood">😐 一般</div>
+      </div>
+      <div class="field full">
+        <label>表现标签</label>
+        <div id="recTags" class="rec-tags"><span class="text-muted">标签加载中…</span></div>
+      </div>
+      <div class="field full">
+        <label for="recComment">教师评语</label>
+        <textarea class="input" id="recComment" rows="2" maxlength="300" placeholder="可留空"></textarea>
+      </div>
+    </div>
+    <div id="recError" class="banner banner-error" hidden></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnRecCancel" type="button">取消</button>
+      <button class="btn btn-primary" id="btnRecSave" type="button">保存</button>
+    </div>
+  </div>
 </div>
 
 <!-- 本班家长查询二维码 -->

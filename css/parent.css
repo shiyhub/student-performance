@@ -80,3 +80,72 @@
 }
 .class-lock-icon { font-size: 20px; }
 .class-lock b { color: #14805b; font-size: 18px; }
+
+/* 时间筛选卡片 */
+.filter-card {
+  background: #f7faf8; border: 1px solid #e2ede7; border-radius: 14px;
+  padding: 10px 12px; margin: 12px 0;
+}
+.filter-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; }
+.filter-row + .filter-row { border-top: 1px dashed #e2ede7; }
+.filter-label { flex: 0 0 56px; font-size: 13.5px; font-weight: 700; color: #556b61; padding-top: 7px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.seg-btn {
+  border: 1.5px solid #cfe0d7; background: #fff; color: #456053;
+  border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600;
+}
+.seg-btn.active { background: #2f9e72; border-color: #2f9e72; color: #fff; }
+.date-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.date-chip {
+  border: 1.5px solid #d7e6de; background: #fff; border-radius: 10px;
+  padding: 5px 9px; font-size: 12.5px; color: #456053;
+}
+.date-chip.active { background: #fff1df; border-color: #f0a94e; color: #b56a12; font-weight: 700; }
+
+/* 分类汇总卡 */
+.sum-card {
+  background: linear-gradient(180deg, #fffdf6, #f6fbf8);
+  border: 2px solid #e7e1d2; border-radius: 16px; padding: 14px; margin: 12px 0;
+}
+.sum-overview {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding-bottom: 10px; border-bottom: 1px dashed #e4ddc9;
+}
+.sum-big { font-size: 26px; font-weight: 800; color: #e07a3f; margin-right: 4px; }
+.sum-sub { color: #7a8a81; font-size: 13px; }
+.sum-range { margin-left: auto; color: #556b61; font-size: 13px; font-weight: 600; }
+.sum-moods { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0; }
+.sm-item {
+  background: #fff; border: 1px solid #e2ede7; border-radius: 999px;
+  padding: 4px 12px; font-size: 14px; font-weight: 700;
+}
+.sum-group { border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.sum-group.pos { background: #eef8f2; border: 1px solid #cfeadd; }
+.sum-group.neg { background: #fdf0f0; border: 1px solid #f4d4d4; }
+.sum-group-title { font-weight: 800; margin-bottom: 6px; color: #33483e; }
+.sum-group.neg .sum-group-title { color: #b04545; }
+.sum-line {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 4px 0; font-size: 14px; color: #3a4f45;
+}
+.sum-n { font-weight: 800; color: #2f9e72; white-space: nowrap; }
+.sum-group.neg .sum-n { color: #c25656; }
+.sum-texts { margin: 8px 0; }
+.sum-text {
+  background: #fff; border: 1px solid #e2ede7; border-radius: 10px;
+  padding: 7px 10px; margin: 6px 0; font-size: 13.5px; line-height: 1.5;
+}
+.sum-text.neg { background: #fdf5f5; border-color: #f0d6d6; }
+.sum-comment-n { margin-top: 10px; font-size: 13px; color: #7a8a81; text-align: right; }
+
+/* 在家表现填写 */
+.home-card {
+  background: #fff; border: 2px dashed #f0b071; border-radius: 16px;
+  padding: 14px; margin: 16px 0 4px;
+}
+.home-head { font-size: 16px; font-weight: 800; color: #d9772f; }
+.home-note-tip { font-size: 12.5px; color: #9a8a76; margin: 4px 0 10px; }
+.home-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.home-row label { font-size: 13.5px; font-weight: 700; color: #556b61; }
+.home-row .input { width: 170px; }
+.home-text { width: 100%; box-sizing: border-box; resize: vertical; margin-bottom: 10px; }

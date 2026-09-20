@@ -71,10 +71,28 @@ const els = {
   addTagType: $('#addTagType'),
   addTagCategory: $('#addTagCategory'),
   addTagOptions: $('#addTagOptions'),
-  tagBox: $('#tagBox')
+  tagBox: $('#tagBox'),
+  // 新增 / 修改记录
+  btnAddRecord: $('#btnAddRecord'),
+  recordModal: $('#recordModal'),
+  recordModalTitle: $('#recordModalTitle'),
+  recClassField: $('#recClassField'),
+  recClass: $('#recClass'),
+  recStudentField: $('#recStudentField'),
+  recStudent: $('#recStudent'),
+  recDate: $('#recDate'),
+  recStars: $('#recStars'),
+  recMood: $('#recMood'),
+  recTags: $('#recTags'),
+  recComment: $('#recComment'),
+  recError: $('#recError'),
+  btnRecCancel: $('#btnRecCancel'),
+  btnRecSave: $('#btnRecSave')
 };
 
 const loaded = { students: false, tags: false };
+// 供"帮学生记录"弹窗复用的缓存
+const cache = { students: [], tags: [] };
 let batchParsed = [];   // 批量录入：检查通过、待导入的行
 
 init();
@@ -101,6 +119,11 @@ function init() {
     els.filterKeyword.value = '';
     loadRecords();
   });
+  els.btnAddRecord.addEventListener('click', () => openRecordModal('create'));
+  els.btnRecCancel.addEventListener('click', closeRecordModal);
+  els.recordModal.addEventListener('click', e => { if (e.target === els.recordModal) closeRecordModal(); });
+  els.btnRecSave.addEventListener('click', saveRecordModal);
+  els.recClass.addEventListener('change', fillRecStudents);
   els.addStudentForm.addEventListener('submit', onAddStudent);
   els.addTagForm.addEventListener('submit', onAddTag);
   // 填写型标签固定为积极分类
@@ -211,32 +234,60 @@ async function loadClassesAndRecords() {
 async function loadRecords() {
   els.recordBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载记录…</div>';
 
+  const cls = els.filterClass.value;
+  const date = els.filterDate.value;
+  const kw = els.filterKeyword.value.trim();
+
   let q = supabase
     .from('daily_record')
     .select('*')
     .order('record_date', { ascending: false })
     .order('create_at', { ascending: false })
     .limit(500);
-  const cls = els.filterClass.value;
-  const date = els.filterDate.value;
-  const kw = els.filterKeyword.value.trim();
   if (cls) q = q.eq('class', cls);
   if (date) q = q.eq('record_date', date);
   if (kw) q = q.ilike('student_name', '%' + kw + '%');
 
-  const { data, error } = await q;
-  if (error) {
-    els.recordBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}</div>`;
-    return;
-  }
-  if (!data.length) {
-    els.recordBox.innerHTML = '<div class="empty">还没有符合条件的记录。</div>';
-    return;
+  // 在家表现（家长提交，仅老师可见）
+  let hq = supabase
+    .from('home_note')
+    .select('*, student_info:student_id(class, student_name)')
+    .order('record_date', { ascending: false })
+    .order('create_at', { ascending: false })
+    .limit(500);
+  if (date) hq = hq.eq('record_date', date);
+  if (kw) {
+    // 关键字同时匹配内容 / 家长姓名；班级与学生在拿到数据后过滤（embed 字段不便直接过滤）
+    hq = hq.or(`content.ilike.%${kw}%,parent_name.ilike.%${kw}%`);
   }
 
-  els.recordBox.innerHTML = data.map(r => renderRecordCard(r)).join('');
+  const [recRes, homeRes] = await Promise.all([q, hq]);
+  if (recRes.error) {
+    els.recordBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(recRes.error.message)}</div>`;
+    return;
+  }
+  const data = recRes.data || [];
 
-  // 绑定评语编辑
+  // 在家表现按班级 / 学生关键字二次过滤（embed 字段）
+  let notes = (homeRes.data || []).filter(n => {
+    const info = n.student_info || {};
+    if (cls && info.class !== cls) return false;
+    if (kw && !(info.student_name || '').includes(kw)) return false;
+    return true;
+  });
+
+  let html = '';
+  if (notes.length) html += renderHomeNotes(notes);
+  if (data.length) {
+    html += '<div class="rec-section-title">📒 在校表现记录</div>';
+    html += data.map(r => renderRecordCard(r)).join('');
+  }
+  if (!notes.length && !data.length) {
+    html = '<div class="empty">还没有符合条件的记录。</div>';
+  }
+  els.recordBox.innerHTML = html;
+
+  // 评语内联编辑
   $$('[data-edit-comment]', els.recordBox).forEach(btn => {
     btn.addEventListener('click', () => startEditComment(btn.dataset.editComment));
   });
@@ -246,6 +297,348 @@ async function loadRecords() {
   $$('[data-cancel-comment]', els.recordBox).forEach(btn => {
     btn.addEventListener('click', () => cancelEditComment(btn.dataset.cancelComment));
   });
+  // 修改整单 / 删除
+  $$('[data-edit-rec]', els.recordBox).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = data.find(x => x.id === btn.dataset.editRec);
+      if (r) openRecordModal('edit', r);
+    });
+  });
+  $$('[data-del-rec]', els.recordBox).forEach(btn => {
+    btn.addEventListener('click', () => deleteRecord(btn.dataset.delRec));
+  });
+  $$('[data-del-note]', els.recordBox).forEach(btn => {
+    btn.addEventListener('click', () => deleteHomeNote(btn.dataset.delNote));
+  });
+}
+
+function renderHomeNotes(notes) {
+  let html = '<div class="rec-section-title home">🏠 家长留言 · 在家表现<span class="n">仅老师可见</span></div>';
+  notes.forEach(n => {
+    const info = n.student_info || {};
+    html += `<div class="rec-card home-card-row">
+              <div class="rec-meta">
+                <span class="class-pill">${esc(info.class || '')}</span>
+                <b>${esc(info.student_name || '')}</b>
+                <span class="home-who">👪 ${esc(n.parent_name)}</span>
+                <span class="rec-when">${formatDate(n.record_date)} ${formatTime(n.create_at)}</span>
+                <span class="rec-tools">
+                  <button class="btn btn-ghost btn-sm danger-text" data-del-note="${n.id}">🗑️ 删除</button>
+                </span>
+              </div>
+              <div class="home-content">${esc(n.content || '')}</div>
+            </div>`;
+  });
+  return html;
+}
+
+async function deleteRecord(id) {
+  if (!confirm('确定删除这条在校表现记录吗？删除后不可恢复。')) return;
+  const { error } = await supabase.from('daily_record').delete().eq('id', id);
+  if (error) { toast('删除失败：' + error.message); return; }
+  toast('已删除');
+  loadRecords();
+}
+
+async function deleteHomeNote(id) {
+  if (!confirm('确定删除这条家长留言吗？删除后不可恢复。')) return;
+  const { error } = await supabase.from('home_note').delete().eq('id', id);
+  if (error) { toast('删除失败：' + error.message); return; }
+  toast('已删除');
+  loadRecords();
+}
+
+/* ---------------- 新增 / 修改记录弹窗 ---------------- */
+
+const MOOD_LEVELS_T = [
+  { key: 'sad',    emoji: '😢', label: '需要加油' },
+  { key: 'down',   emoji: '😟', label: '有点低落' },
+  { key: 'normal', emoji: '😐', label: '一般' },
+  { key: 'good',   emoji: '🙂', label: '不错' },
+  { key: 'happy',  emoji: '😄', label: '很棒' }
+];
+let recState = null;
+
+function todayStrLocal() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function openRecordModal(mode, record) {
+  els.recError.hidden = true;
+  els.recError.textContent = '';
+  recState = {
+    mode,
+    id: record ? record.id : null,
+    cls: record ? record.class : (els.filterClass.value || ''),
+    student: record ? record.student_name : '',
+    date: record ? record.record_date : todayStrLocal(),
+    stars: record ? (record.self_evaluation || 5) : 5,
+    tags: [],
+    chosen: {},   // {tagId: true}
+    option: {},   // {tagId: 二级选项}
+    text: {},     // {tagId: 文本}
+    preserved: [] // 编辑时：当前标签表里已不存在的历史 items，原样保留
+  };
+
+  // 确保名单 / 标签已加载
+  await Promise.all([
+    cache.students.length ? null : ensureStudents(),
+    cache.tags.length ? null : ensureTags()
+  ]);
+
+  els.recordModalTitle.textContent = mode === 'edit' ? '修改这条表现记录' : '帮学生记录一条';
+  els.recClassField.hidden = mode === 'edit';
+  els.recStudentField.hidden = mode === 'edit';
+
+  // 班级 / 学生下拉
+  const classes = Array.from(new Set(cache.students.map(s => s.class))).sort();
+  els.recClass.innerHTML = classes.map(c =>
+    `<option value="${esc(c)}"${c === recState.cls ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  if (!recState.cls && classes.length) recState.cls = classes[0];
+  els.recClass.value = recState.cls;
+  fillRecStudents();
+  if (mode === 'edit') {
+    // 编辑态用静态文本展示学生
+    els.recStudent.innerHTML = `<option>${esc(record.class)} · ${esc(record.student_name)}</option>`;
+  } else if (recState.student) {
+    els.recStudent.value = recState.student;
+  }
+
+  els.recDate.value = recState.date;
+  els.recComment.value = record ? (record.teacher_comment || '') : '';
+
+  // 预填历史 items
+  if (record && record.behavior && Array.isArray(record.behavior.items)) {
+    const liveIds = new Set(cache.tags.map(t => t.id));
+    record.behavior.items.forEach(it => {
+      if (!liveIds.has(it.id)) { recState.preserved.push(it); return; }
+      if (it.type === 'text') {
+        recState.chosen[it.id] = true;
+        recState.text[it.id] = it.value || '';
+      } else {
+        recState.chosen[it.id] = true;
+        if (it.value) recState.option[it.id] = it.value;
+      }
+    });
+  }
+
+  renderRecStars();
+  renderRecTags();
+  updateRecMood();
+  els.recordModal.classList.add('show');
+}
+
+function closeRecordModal() {
+  els.recordModal.classList.remove('show');
+  recState = null;
+}
+
+async function ensureStudents() {
+  const { data, error } = await supabase
+    .from('student_info').select('id, class, student_name').order('class').order('student_name');
+  if (!error) cache.students = data || [];
+}
+async function ensureTags() {
+  const { data, error } = await supabase
+    .from('behavior_tags').select('*').eq('is_active', true)
+    .order('sort_order').order('created_at');
+  if (!error) {
+    cache.tags = (data || []).map(t => {
+      if (!Array.isArray(t.options)) t.options = [];
+      if (t.category !== 'negative') t.category = 'positive';
+      return t;
+    });
+  }
+}
+
+function fillRecStudents() {
+  if (!recState) return;
+  recState.cls = els.recClass.value;
+  const list = cache.students.filter(s => s.class === recState.cls);
+  els.recStudent.innerHTML = list.map(s =>
+    `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
+  if (recState.student && list.some(s => s.student_name === recState.student)) {
+    els.recStudent.value = recState.student;
+  } else {
+    recState.student = list.length ? list[0].student_name : '';
+  }
+}
+
+function renderRecStars() {
+  els.recStars.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rec-star' + (i <= recState.stars ? '' : ' off');
+    b.textContent = '★';
+    b.addEventListener('click', () => { recState.stars = i; renderRecStars(); });
+    els.recStars.appendChild(b);
+  }
+}
+
+function recMoodLevel() {
+  let lv = 3;
+  recState.tags.forEach(t => {
+    if (!recState.chosen[t.id]) return;
+    if (t.tag_type === 'text' && !(recState.text[t.id] || '').trim()) return;
+    lv += Number(t.score) || (t.category === 'negative' ? -1 : 1);
+  });
+  return Math.min(5, Math.max(1, lv));
+}
+function updateRecMood() {
+  const m = MOOD_LEVELS_T[recMoodLevel() - 1];
+  els.recMood.textContent = `${m.emoji} ${m.label}`;
+  els.recMood.className = 'rec-mood lv' + recMoodLevel();
+}
+
+function renderRecTags() {
+  const tags = cache.tags.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  recState.tags = tags;
+  const pos = tags.filter(t => t.category !== 'negative');
+  const neg = tags.filter(t => t.category === 'negative');
+
+  const group = (title, list, cls) => {
+    if (!list.length) return '';
+    let h = `<div class="rec-tag-group ${cls}"><div class="rec-tag-title">${title}</div><div class="rec-tag-grid">`;
+    list.forEach(t => {
+      const active = !!recState.chosen[t.id];
+      h += `<button type="button" class="rec-chip${active ? ' active' : ''} ${cls}" data-rec-tag="${t.id}">${esc(t.label)}</button>`;
+    });
+    h += '</div>';
+    // 二级选项 + 文本框
+    list.forEach(t => {
+      if (!recState.chosen[t.id]) return;
+      if (t.tag_type === 'text') {
+        h += `<div class="rec-subblock" data-subfor="${t.id}">
+                <input class="input rec-text-in" data-rec-text="${t.id}" maxlength="100"
+                       value="${esc(recState.text[t.id] || '')}" placeholder="${esc(t.label)}：填写内容">
+              </div>`;
+      } else if (t.options && t.options.length) {
+        h += `<div class="rec-subblock" data-subfor="${t.id}">
+                <div class="rec-subrow">${t.options.map(o =>
+                  `<button type="button" class="rec-subchip${recState.option[t.id] === o ? ' active' : ''}"
+                    data-rec-opt="${t.id}" data-opt-val="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+              </div>`;
+      }
+    });
+    h += '</div>';
+    return h;
+  };
+
+  let extra = '';
+  if (recState.preserved.length) {
+    extra = '<div class="rec-tag-group"><div class="rec-tag-title">历史标签（标签表中已停用/删除，将原样保留）</div><div class="rec-preserved">' +
+      recState.preserved.map(it => {
+        if (it.type === 'text') return `<span class="rec-chip active">${esc(it.label)}：${esc(it.value || '')}</span>`;
+        return `<span class="rec-chip active ${it.category === 'negative' ? 'neg' : ''}">${esc(it.label)}${it.value ? ' · ' + esc(it.value) : ''}</span>`;
+      }).join('') + '</div></div>';
+  }
+
+  els.recTags.innerHTML = group('🌟 积极表现', pos, 'pos') + group('💧 需要加油', neg, 'neg') + extra;
+
+  $$('[data-rec-tag]', els.recTags).forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.dataset.recTag;
+      if (recState.chosen[id]) {
+        delete recState.chosen[id];
+        delete recState.option[id];
+        delete recState.text[id];
+      } else {
+        recState.chosen[id] = true;
+      }
+      renderRecTags();
+      updateRecMood();
+    });
+  });
+  $$('[data-rec-opt]', els.recTags).forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.dataset.recOpt;
+      recState.option[id] = b.dataset.optVal;
+      renderRecTags();
+    });
+  });
+  $$('[data-rec-text]', els.recTags).forEach(inp => {
+    inp.addEventListener('input', () => {
+      recState.text[inp.dataset.recText] = inp.value;
+      updateRecMood();
+    });
+  });
+}
+
+function buildBehavior() {
+  const items = [];
+  recState.tags.forEach(t => {
+    if (!recState.chosen[t.id]) return;
+    if (t.tag_type === 'text') {
+      const v = (recState.text[t.id] || '').trim();
+      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive' });
+    } else {
+      const v = (recState.option[t.id] || '').trim();
+      if (t.options && t.options.length && !v) return; // 二级选项必填（保存前另有拦截）
+      items.push({ id: t.id, label: t.label, type: 'check', value: v || null, category: t.category || 'positive' });
+    }
+  });
+  recState.preserved.forEach(it => items.push(it));
+  const lv = recMoodLevel();
+  return { mood: MOOD_LEVELS_T[lv - 1].key, items };
+}
+
+async function saveRecordModal() {
+  // 校验
+  if (recState.mode === 'create') {
+    recState.cls = els.recClass.value;
+    recState.student = els.recStudent.value;
+    if (!recState.cls || !recState.student) {
+      return showRecError('请选择班级和学生');
+    }
+  }
+  if (!els.recDate.value) return showRecError('请选择日期');
+
+  // 二级选项缺漏检查
+  const missing = recState.tags.find(t =>
+    recState.chosen[t.id] && t.tag_type === 'check' &&
+    Array.isArray(t.options) && t.options.length && !(recState.option[t.id] || '').trim());
+  if (missing) return showRecError(`请为「${missing.label}」选择一个具体项目`);
+
+  const behavior = buildBehavior();
+
+  const payload = {
+    record_date: els.recDate.value,
+    self_evaluation: recState.stars,
+    behavior,
+    teacher_comment: els.recComment.value.trim() || null
+  };
+
+  els.btnRecSave.disabled = true;
+  els.btnRecSave.textContent = '保存中…';
+  try {
+    if (recState.mode === 'create') {
+      payload.class = recState.cls;
+      payload.student_name = recState.student;
+      const { error } = await supabase.from('daily_record').insert(payload);
+      if (error) throw error;
+      toast('已新增记录');
+    } else {
+      const { error } = await supabase.from('daily_record').update(payload).eq('id', recState.id);
+      if (error) throw error;
+      toast('修改已保存');
+    }
+    closeRecordModal();
+    loadRecords();
+    loadClassesAndRecords();
+  } catch (e) {
+    showRecError('保存失败：' + ((e && e.message) || '请稍后再试'));
+  } finally {
+    els.btnRecSave.disabled = false;
+    els.btnRecSave.textContent = '保存';
+  }
+}
+
+function showRecError(msg) {
+  els.recError.textContent = msg;
+  els.recError.hidden = false;
 }
 
 function renderRecordCard(r) {
@@ -306,6 +699,10 @@ function renderRecordCard(r) {
               <b>${esc(r.student_name)}</b>
               <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
               <span class="rec-when">${formatDate(r.record_date)} ${formatTime(r.create_at)}</span>
+              <span class="rec-tools">
+                <button class="btn btn-ghost btn-sm" data-edit-rec="${r.id}">✏️ 修改</button>
+                <button class="btn btn-ghost btn-sm danger-text" data-del-rec="${r.id}">🗑️ 删除</button>
+              </span>
             </div>
             <div class="rec-body">
               <span class="stars-mini" style="color:#f5b945;letter-spacing:2px;">${stars}</span>
@@ -359,6 +756,7 @@ async function loadStudents() {
     els.studentBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}</div>`;
     return;
   }
+  cache.students = data || [];
   if (!data.length) {
     els.studentBox.innerHTML = '<div class="empty">名单还是空的，先在上方录入第一个学生吧。</div>';
     return;
@@ -829,6 +1227,7 @@ async function renderTags() {
     if (!Array.isArray(t.options)) t.options = [];
     if (t.category !== 'negative') t.category = 'positive';
   });
+  cache.tags = data;
 
   els.tagBox.innerHTML = data.map(t => `
     <div class="tag-edit-row${t.category === 'negative' ? ' row-neg' : ''}" data-tag-id="${t.id}">
