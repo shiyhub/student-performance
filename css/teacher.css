@@ -140,6 +140,7 @@ body { background: #f3f6f5; }
 }
 .tag-edit-row .tag-label { grid-column: 1 / -1; order: 1; }
 .tag-edit-row .tag-options { grid-column: 1 / -1; order: 2; }
+.tag-edit-row .tag-cat { order: 3; }
 .tag-edit-row .tag-type { order: 3; }
 .tag-edit-row .tag-sort { order: 3; }
 .tag-edit-row .tag-off-toggle {
@@ -149,14 +150,19 @@ body { background: #f3f6f5; }
 }
 .tag-edit-row .tag-row-actions { display: flex; gap: 6px; grid-column: 1 / -1; order: 5; }
 .tag-edit-row .tag-row-actions .btn { flex: 1; }
-.tag-edit-row .tag-options:disabled { opacity: .45; background: #f2f4f3; }
+.tag-edit-row .tag-options:disabled,
+.tag-edit-row .tag-cat:disabled { opacity: .45; background: #f2f4f3; }
+.tag-edit-row.row-neg { background: #fff8f8; box-shadow: 0 1px 6px rgba(208,82,82,.12); }
 .item-list .item-sub { color: var(--primary-d, #1f7a66); font-weight: 700; }
+.item-list .item-neg { background: #fdf1f1; }
+.item-list .neg-tick { color: #d05252; font-weight: 800; margin-right: 6px; }
 .sec-label { font-size: 14px; font-weight: 700; margin: 16px 2px 8px; color: var(--ink); }
 
 @media (min-width: 720px) {
-  .tag-edit-row { grid-template-columns: 1.1fr 1.7fr 104px 76px 62px auto; }
+  .tag-edit-row { grid-template-columns: 1.1fr 1.7fr 92px 92px 72px 58px auto; }
   .tag-edit-row .tag-label,
   .tag-edit-row .tag-options,
+  .tag-edit-row .tag-cat,
   .tag-edit-row .tag-type,
   .tag-edit-row .tag-sort,
   .tag-edit-row .tag-off-toggle,

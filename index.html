@@ -80,10 +80,18 @@
     <div class="star-caption" id="starCaption">点一点上面的小星星</div>
   </section>
 
-  <!-- 心情 -->
-  <section class="card">
-    <div class="card-title">😉 今天心情怎么样？</div>
-    <div class="mood-row" id="moodRow"></div>
+  <!-- 今日心情（由勾选项自动算出，5 档） -->
+  <section class="card mood-preview-card" id="moodPreviewCard">
+    <div class="mood-preview" id="moodPreview">
+      <span class="mp-avatar" id="mpAvatar">🐯<span class="mp-badge" id="mpBadge">😐</span></span>
+      <div class="mp-text">
+        <div class="mp-title">今日心情</div>
+        <div class="mp-level" id="mpLevel">😐 一般</div>
+      </div>
+    </div>
+    <div class="mood-meter" id="moodMeter" aria-hidden="true">
+      <span data-l="1">😢</span><span data-l="2">😟</span><span data-l="3">😐</span><span data-l="4">🙂</span><span data-l="5">😄</span>
+    </div>
   </section>
 
   <!-- 表现标签 -->
@@ -91,12 +99,18 @@
     <div class="card-title">📝 今天的小表现</div>
     <div id="tagsLoading" class="loading-row"><span class="spinner"></span>正在加载表现项目…</div>
     <div id="tagsBox" hidden>
-      <div class="tag-chips" id="chipsBox"></div>
-      <div id="textTagsBox"></div>
-      <div class="field-hint">符合的就点一下；需要写字的项目填一填（全部选填）。</div>
+      <div class="tag-group">
+        <div class="tag-group-title pos">🌟 积极表现</div>
+        <div class="tag-grid" id="posGrid"></div>
+        <div id="textTagsBox"></div>
+      </div>
+      <div class="tag-group" id="negGroup">
+        <div class="tag-group-title neg">💧 需要加油</div>
+        <div class="tag-grid" id="negGrid"></div>
+      </div>
     </div>
     <div id="tagsFailed" class="banner banner-info" hidden>
-      表现项目暂时加载失败，不影响提交星级和心情。
+      表现项目暂时加载失败，不影响提交星级。
     </div>
   </section>
 

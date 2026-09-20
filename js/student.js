@@ -14,18 +14,22 @@ const ready = !!supabase &&
 
 const $ = (sel, root) => (root || document).querySelector(sel);
 
-const MOODS = [
-  { key: 'happy',  emoji: '😄', label: '很棒' },
-  { key: 'good',   emoji: '🙂', label: '不错' },
-  { key: 'normal', emoji: '😐', label: '一般' },
-  { key: 'sad',    emoji: '😢', label: '加油' }
-];
-const MOOD_MAP = Object.fromEntries(MOODS.map(m => [m.key, m]));
+// 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
+const MOOD_LEVELS = {
+  1: { key: 'sad',    emoji: '😢', label: '需要加油' },
+  2: { key: 'down',   emoji: '😟', label: '有点低落' },
+  3: { key: 'normal', emoji: '😐', label: '一般' },
+  4: { key: 'good',   emoji: '🙂', label: '不错' },
+  5: { key: 'happy',  emoji: '😄', label: '很棒' }
+};
+const MOOD_MAP = Object.fromEntries(Object.values(MOOD_LEVELS).map(m => [m.key, m]));
+const MOOD_BY_LEVEL = l => MOOD_LEVELS[Math.min(5, Math.max(1, l))];
 const STAR_TEXT = ['', '还需加油', '继续努力', '还不错', '很棒', '超级棒'];
 const PRAISE = {
   happy:  ['太棒啦！明天也要保持好心情！', '你今天闪闪发光，继续加油！'],
   good:   ['做得不错，为你点赞！', '稳稳进步中，明天会更好！'],
   normal: ['记录下来就是进步，明天加油！', '没关系，每天进步一点点！'],
+  down:   ['明天试着多做一个积极的小表现吧！', '有一点小低落很正常，老师陪着你！'],
   sad:    ['愿意说出来就很勇敢，老师和家长都爱你！', '明天会是新的一天，陪你一起加油！']
 };
 const AVATARS = ['🐯','🦁','🐼','🐰','🐨','🐮','🐸','🦊','🐷','🐵','🐔','🐧','🐹','🦄','🐶','🐱','🦉','🐙'];
@@ -60,11 +64,16 @@ const els = {
   inpName: $('#inpName'),
   starsRow: $('#starsRow'),
   starCaption: $('#starCaption'),
-  moodRow: $('#moodRow'),
+  mpAvatar: $('#mpAvatar'),
+  mpBadge: $('#mpBadge'),
+  mpLevel: $('#mpLevel'),
+  moodMeter: $('#moodMeter'),
   tagsLoading: $('#tagsLoading'),
   tagsBox: $('#tagsBox'),
   tagsFailed: $('#tagsFailed'),
-  chipsBox: $('#chipsBox'),
+  posGrid: $('#posGrid'),
+  negGrid: $('#negGrid'),
+  negGroup: $('#negGroup'),
   textTagsBox: $('#textTagsBox'),
   btnSubmit: $('#btnSubmit'),
   successOverlay: $('#successOverlay'),
@@ -83,7 +92,7 @@ const state = {
   detailName: '',
   // 表单
   stars: 0,
-  mood: null,
+  moodLevel: 3,
   tags: [],
   checkChosen: {},   // 勾选型标签：{ [tagId]: true }
   checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
@@ -96,9 +105,10 @@ function init() {
   els.wallDate.textContent = todayLabel();
   els.todayLabel.textContent = todayLabel();
   renderStars();
-  renderMoods();
+  renderMoodPreview();
   bindEvents();
   prefillIdentity();
+  updateMood();
 
   if (!ready) {
     els.wallConfigBanner.hidden = false;
@@ -208,15 +218,19 @@ function renderWall() {
     const avg = mine.length
       ? (mine.reduce((sum, r) => sum + (r.self_evaluation || 0), 0) / mine.length).toFixed(1)
       : null;
-    const todayRec = mine.find(r => r.record_date === today);
+    const todayRecs = mine.filter(r => r.record_date === today);
+    const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
     const todayMood = todayRec && todayRec.behavior ? MOOD_MAP[todayRec.behavior.mood] : null;
+    const todayLevel = todayMood
+      ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
+      : 0;
 
-    const bg = AVATAR_BG[hashCode(s.id) % AVATAR_BG.length];
-    const emoji = AVATARS[hashCode(s.id) % AVATARS.length];
+    const av = avatarForName(s.student_name);
+    const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
-        <span class="mate-avatar" style="background:${bg}">${emoji}</span>
-        ${todayMood ? `<span class="mate-today" title="今天已记录">${todayMood.emoji}</span>` : ''}
+        <span class="mate-avatar${ringCls}" style="background:${av.bg}">${av.emoji}</span>
+        ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         ${avg ? `<span class="mate-badge">⭐${avg}</span>` : `<span class="mate-badge count-badge">未记录</span>`}
         <span class="mate-name">${esc(s.student_name)}</span>
       </button>`;
@@ -239,11 +253,9 @@ function openStudentDetail(name) {
     .filter(r => r.student_name === name)
     .sort((a, b) => (a.record_date < b.record_date ? 1 : a.record_date > b.record_date ? -1 :
                       (a.create_at < b.create_at ? 1 : -1)));
-  const rosterRow = state.roster.find(s => s.student_name === name);
-  const emoji = rosterRow ? AVATARS[hashCode(rosterRow.id) % AVATARS.length] : '🐯';
-  const bg = rosterRow ? AVATAR_BG[hashCode(rosterRow.id) % AVATAR_BG.length] : '#fdf0dd';
-  els.detailAvatar.textContent = emoji;
-  els.detailAvatar.style.background = bg;
+  const av = avatarForName(name);
+  els.detailAvatar.textContent = av.emoji;
+  els.detailAvatar.style.background = av.bg;
   els.detailName.textContent = name;
   const avg = rows.length
     ? (rows.reduce((s, r) => s + (r.self_evaluation || 0), 0) / rows.length).toFixed(1)
@@ -320,12 +332,17 @@ function renderRecordTimeline(rows) {
       if (items.length) {
         itemsHtml = '<ul class="detail-items">';
         items.forEach(it => {
+          const neg = it.category === 'negative';
+          const liCls = neg ? ' class="is-neg"' : '';
+          const tick = neg
+            ? '<span class="neg-tick">!</span>'
+            : '<span class="tick">✓</span>';
           if (it.type === 'text') {
-            itemsHtml += `<li><b>${esc(it.label || '')}：</b>${esc(it.value || '')}</li>`;
+            itemsHtml += `<li${liCls}><b>${esc(it.label || '')}：</b>${esc(it.value || '')}</li>`;
           } else if (it.value) {
-            itemsHtml += `<li><span class="tick">✓</span>${esc(it.label || '')} <span class="sub-val">· ${esc(it.value)}</span></li>`;
+            itemsHtml += `<li${liCls}>${tick}${esc(it.label || '')} <span class="sub-val">· ${esc(it.value)}</span></li>`;
           } else {
-            itemsHtml += `<li><span class="tick">✓</span>${esc(it.label || '')}</li>`;
+            itemsHtml += `<li${liCls}>${tick}${esc(it.label || '')}</li>`;
           }
         });
         itemsHtml += '</ul>';
@@ -375,25 +392,55 @@ function renderStars() {
   }
 }
 
-function renderMoods() {
-  els.moodRow.innerHTML = '';
-  MOODS.forEach(m => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'mood-btn' + (state.mood === m.key ? ' active' : '');
-    b.innerHTML = `<span class="mood-emoji">${m.emoji}</span><span class="mood-label">${m.label}</span>`;
-    b.addEventListener('click', () => {
-      state.mood = m.key;
-      renderMoods();
-    });
-    els.moodRow.appendChild(b);
-  });
+/* ---------- 头像（按姓名稳定取卡通动物 + 底色） ---------- */
+function avatarForName(name) {
+  const h = hashCode(String(name || ''));
+  const mod = n => ((h % n) + n) % n;
+  return { emoji: AVATARS[mod(AVATARS.length)], bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+}
+
+/* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */
+function calcMoodLevel() {
+  let delta = 0;
+  for (const t of state.tags) {
+    const score = Number(t.score) || (t.category === 'negative' ? -1 : 1);
+    if (t.tag_type === 'check') {
+      if (state.checkChosen[t.id]) delta += score;
+    } else if ((state.textValues[t.id] || '').trim()) {
+      delta += score;
+    }
+  }
+  return Math.min(5, Math.max(1, 3 + delta));
+}
+
+function updateMood() {
+  state.moodLevel = calcMoodLevel();
+  renderMoodPreview();
+}
+
+function renderMoodPreview() {
+  const level = state.moodLevel || 3;
+  const m = MOOD_BY_LEVEL(level);
+  const name = (els.inpName && els.inpName.value || '').trim();
+  const av = avatarForName(name || '我');
+  els.mpAvatar.innerHTML = `${av.emoji}<span class="mp-badge">${m.emoji}</span>`;
+  els.mpAvatar.style.background = av.bg;
+  els.mpLevel.textContent = `${m.emoji} ${m.label}`;
+  const card = document.getElementById('moodPreviewCard');
+  if (card) {
+    card.classList.remove('lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5');
+    card.classList.add('lvl' + level);
+  }
+  if (els.moodMeter) {
+    els.moodMeter.querySelectorAll('span').forEach(s =>
+      s.classList.toggle('on', Number(s.dataset.l) <= level));
+  }
 }
 
 async function loadTags() {
   const { data, error } = await supabase
     .from('behavior_tags')
-    .select('id, label, tag_type, options, sort_order')
+    .select('id, label, tag_type, options, category, score, sort_order')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
@@ -402,71 +449,89 @@ async function loadTags() {
     els.tagsFailed.hidden = false;
     return;
   }
-  // 兼容旧数据：options 可能为 null
-  data.forEach(t => { if (!Array.isArray(t.options)) t.options = []; });
+  // 兼容旧数据
+  data.forEach(t => {
+    if (!Array.isArray(t.options)) t.options = [];
+    if (t.category !== 'negative') t.category = 'positive';
+    if (typeof t.score !== 'number') t.score = t.category === 'negative' ? -1 : 1;
+  });
   state.tags = data;
-  els.chipsBox.innerHTML = '';
+  els.posGrid.innerHTML = '';
+  els.negGrid.innerHTML = '';
   els.textTagsBox.innerHTML = '';
 
+  let hasNeg = false;
   data.forEach(t => {
     if (t.tag_type === 'check') {
-      const wrap = document.createElement('div');
-      wrap.className = 'opt-tag';
-
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chip';
-      chip.textContent = t.label;
-      chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
-      wrap.appendChild(chip);
-
-      if (t.options.length) {
-        const sub = document.createElement('div');
-        sub.className = 'sub-options';
-        sub.hidden = true;
-        const hint = document.createElement('div');
-        hint.className = 'sub-hint';
-        hint.textContent = '再选一个具体的 👇';
-        sub.appendChild(hint);
-        t.options.forEach(opt => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'sub-chip';
-          b.textContent = opt;
-          b.addEventListener('click', () => {
-            state.checkOption[t.id] = opt;
-            sub.querySelectorAll('.sub-chip').forEach(x =>
-              x.classList.toggle('active', x === b));
-          });
-          sub.appendChild(b);
-        });
-        wrap.appendChild(sub);
-      }
-      els.chipsBox.appendChild(wrap);
+      const node = buildCheckTag(t);
+      if (t.category === 'negative') { els.negGrid.appendChild(node); hasNeg = true; }
+      else els.posGrid.appendChild(node);
     } else {
-      const wrap = document.createElement('div');
-      wrap.className = 'text-tag';
-      const label = document.createElement('label');
-      label.textContent = t.label;
-      const input = document.createElement('input');
-      input.className = 'input';
-      input.type = 'text';
-      input.maxLength = 100;
-      input.placeholder = '填写今天的内容（选填）';
-      input.addEventListener('input', () => { state.textValues[t.id] = input.value; });
-      wrap.appendChild(label);
-      wrap.appendChild(input);
-      els.textTagsBox.appendChild(wrap);
+      els.textTagsBox.appendChild(buildTextTag(t));
     }
   });
+  els.negGroup.hidden = !hasNeg;
 
   if (!data.length) {
-    els.chipsBox.innerHTML = '<span class="text-muted">老师还没有设置表现标签。</span>';
+    els.posGrid.innerHTML = '<span class="text-muted">老师还没有设置表现标签。</span>';
   }
   els.tagsBox.hidden = false;
+  updateMood();
 }
 
-// 勾选 / 取消勾选一个"勾选型"标签；带二级选项的要联动展开/收起
+function buildCheckTag(t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'opt-tag' + (t.category === 'negative' ? ' is-neg' : '');
+
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip' + (t.category === 'negative' ? ' chip-neg' : '');
+  chip.textContent = t.label;
+  chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
+  wrap.appendChild(chip);
+
+  if (t.options.length) {
+    const sub = document.createElement('div');
+    sub.className = 'sub-options';
+    sub.hidden = true;
+    const hint = document.createElement('div');
+    hint.className = 'sub-hint';
+    hint.textContent = '再选一个具体的 👇';
+    sub.appendChild(hint);
+    t.options.forEach(opt => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sub-chip';
+      b.textContent = opt;
+      b.addEventListener('click', () => {
+        state.checkOption[t.id] = opt;
+        sub.querySelectorAll('.sub-chip').forEach(x =>
+          x.classList.toggle('active', x === b));
+      });
+      sub.appendChild(b);
+    });
+    wrap.appendChild(sub);
+  }
+  return wrap;
+}
+
+function buildTextTag(t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'text-tag';
+  const label = document.createElement('label');
+  label.textContent = t.label;
+  const input = document.createElement('input');
+  input.className = 'input';
+  input.type = 'text';
+  input.maxLength = 100;
+  input.placeholder = '填写今天的内容（选填）';
+  input.addEventListener('input', () => { state.textValues[t.id] = input.value; updateMood(); });
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+// 勾选 / 取消勾选；带二级选项的联动展开/收起；随后重算心情
 function toggleCheckTag(tag, chip, wrap) {
   const sub = wrap.querySelector('.sub-options');
   if (state.checkChosen[tag.id]) {
@@ -482,6 +547,7 @@ function toggleCheckTag(tag, chip, wrap) {
     chip.classList.add('active');
     if (sub) sub.hidden = false;
   }
+  updateMood();
 }
 
 function bindEvents() {
@@ -506,6 +572,8 @@ function bindEvents() {
     closeDetail();
     showForm(name);
   });
+  // 姓名变化时同步头像
+  els.inpName.addEventListener('input', renderMoodPreview);
   // 提交
   els.btnSubmit.addEventListener('click', onSubmit);
   els.btnAgain.addEventListener('click', () => els.successOverlay.classList.remove('show'));
@@ -528,6 +596,7 @@ function showForm(presetName) {
   els.wallView.hidden = true;
   els.formView.hidden = false;
   window.scrollTo({ top: 0 });
+  updateMood();
   if (!els.inpName.value) els.inpName.focus();
 }
 function showWall() {
@@ -545,7 +614,7 @@ async function onSubmit() {
   if (!cls) return toast('请先填写班级');
   if (!name) return toast('请先填写姓名');
   if (state.stars < 1) return toast('给自己打个星吧～');
-  if (!state.mood) return toast('选一个今天的心情吧～');
+  updateMood();
 
   const items = [];
   for (const t of state.tags) {
@@ -555,11 +624,11 @@ async function onSubmit() {
         if (Array.isArray(t.options) && t.options.length && !subVal) {
           return toast(`请为「${t.label}」再选一个具体项目`);
         }
-        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null });
+        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive' });
       }
     } else {
       const v = (state.textValues[t.id] || '').trim();
-      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100) });
+      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive' });
     }
   }
 
@@ -581,7 +650,7 @@ async function onSubmit() {
       student_name: name,
       record_date: todayStr(),
       self_evaluation: state.stars,
-      behavior: { mood: state.mood, items }
+      behavior: { mood: MOOD_BY_LEVEL(state.moodLevel).key, items }
     });
     if (insertError) {
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -605,17 +674,18 @@ async function onSubmit() {
 
 function resetSelections() {
   state.stars = 0;
-  state.mood = null;
   state.checkChosen = {};
   state.checkOption = {};
   state.textValues = {};
   renderStars();
-  renderMoods();
   els.starCaption.textContent = '点一点上面的小星星';
-  els.chipsBox.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
-  els.chipsBox.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));
-  els.chipsBox.querySelectorAll('.sub-options').forEach(s => { s.hidden = true; });
+  [els.posGrid, els.negGrid].forEach(grid => {
+    grid.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+    grid.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));
+    grid.querySelectorAll('.sub-options').forEach(s => { s.hidden = true; });
+  });
   els.textTagsBox.querySelectorAll('input').forEach(i => { i.value = ''; });
+  updateMood();
 }
 
 function prefillIdentity() {
@@ -643,7 +713,7 @@ function celebrate() {
     piece.style.animationDelay = (Math.random() * 0.7) + 's';
     els.confettiBox.appendChild(piece);
   }
-  const pool = PRAISE[state.mood] || PRAISE.good;
+  const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
   els.successMsg.textContent = pool[Math.floor(Math.random() * pool.length)];
   els.successOverlay.classList.add('show');
   setTimeout(() => { els.confettiBox.innerHTML = ''; }, 5200);

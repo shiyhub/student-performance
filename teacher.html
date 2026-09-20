@@ -137,13 +137,20 @@
       <div class="card">
         <div class="card-title">➕ 新增表现标签</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          勾选型：学生直接点选，如「优秀数学作业」；填写型：学生需要补充文字，如「今日背诵了什么古诗」。
+          积极表现会让学生今日心情上升，消极表现会让心情下降。勾选型：学生直接点选；填写型：学生补充文字。
         </p>
         <form id="addTagForm">
           <div class="add-form-grid">
             <div class="field">
               <label for="addTagLabel">标签文字</label>
               <input class="input" id="addTagLabel" type="text" placeholder="例如：优秀数学作业" maxlength="30">
+            </div>
+            <div class="field">
+              <label for="addTagCategory">分类（影响心情）</label>
+              <select class="input" id="addTagCategory">
+                <option value="positive">🌟 积极表现（心情 +1）</option>
+                <option value="negative">💧 消极表现（心情 -1）</option>
+              </select>
             </div>
             <div class="field">
               <label for="addTagType">类型</label>

@@ -65,12 +65,15 @@ create table if not exists public.behavior_tags (
   label      text not null,
   tag_type   text not null default 'check',     -- check=勾选型；text=填写型
   options    jsonb not null default '[]'::jsonb, -- 勾选型二级选项（如科目），字符串数组；空数组=无二级
+  category   text not null default 'positive',  -- positive=积极(+1)；negative=消极(-1)
+  score      int  not null default 1,            -- 对心情的分值（积极 +1 / 消极 -1）
   is_active  boolean not null default true,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
   constraint uq_tag_label unique (label),
   constraint chk_tag_type check (tag_type in ('check', 'text')),
-  constraint chk_tag_options_array check (jsonb_typeof(options) = 'array')
+  constraint chk_tag_options_array check (jsonb_typeof(options) = 'array'),
+  constraint chk_tag_category check (category in ('positive', 'negative'))
 );
 
 comment on table public.behavior_tags is '教师自定义表现标签：老师全权；学生仅可读启用中的标签';
@@ -222,17 +225,22 @@ grant  execute on function public.get_student_records(text, text, text) to anon,
 -- 第 6 部分：预置默认标签
 -- ============================================================================
 
-insert into public.behavior_tags (label, tag_type, options, sort_order) values
-  ('认真听讲',           'check', '[]'::jsonb, 10),
-  ('积极发言',           'check', '[]'::jsonb, 20),
-  ('完成作业',           'check', '[]'::jsonb, 30),
-  ('乐于助人',           'check', '[]'::jsonb, 40),
-  ('遵守纪律',           'check', '[]'::jsonb, 50),
+insert into public.behavior_tags (label, tag_type, options, category, score, sort_order) values
+  ('认真听讲',           'check', '[]'::jsonb, 'positive',  1,  10),
+  ('积极发言',           'check', '[]'::jsonb, 'positive',  1,  20),
+  ('完成作业',           'check', '[]'::jsonb, 'positive',  1,  30),
+  ('乐于助人',           'check', '[]'::jsonb, 'positive',  1,  40),
+  ('遵守纪律',           'check', '[]'::jsonb, 'positive',  1,  50),
   ('优秀作业',           'check',
-    '["语文课堂作业","语文家庭作业","数学课堂作业","数学家庭作业","英语课堂作业","英语家庭作业"]'::jsonb, 55),
-  ('优秀数学作业',       'check', '[]'::jsonb, 60),
-  ('今日背了什么单词',   'text',  '[]'::jsonb, 70),
-  ('今日背诵了什么古诗', 'text',  '[]'::jsonb, 80)
+    '["语文课堂作业","语文家庭作业","数学课堂作业","数学家庭作业","英语课堂作业","英语家庭作业"]'::jsonb,
+    'positive', 1, 55),
+  ('优秀数学作业',       'check', '[]'::jsonb, 'positive',  1,  60),
+  ('今日背了什么单词',   'text',  '[]'::jsonb, 'positive',  1,  70),
+  ('今日背诵了什么古诗', 'text',  '[]'::jsonb, 'positive',  1,  80),
+  ('上课走神',           'check', '[]'::jsonb, 'negative', -1, 110),
+  ('未完成作业',         'check', '[]'::jsonb, 'negative', -1, 120),
+  ('扰乱课堂',           'check', '[]'::jsonb, 'negative', -1, 130),
+  ('忘记带学具',         'check', '[]'::jsonb, 'negative', -1, 140)
 on conflict do nothing;
 
 -- 让 PostgREST 立即识别新结构

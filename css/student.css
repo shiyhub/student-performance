@@ -21,39 +21,79 @@ body {
 }
 .star-caption { text-align: center; color: var(--warn-d); font-weight: 700; font-size: 15px; min-height: 22px; }
 
-/* 心情表情 */
-.mood-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.mood-btn {
-  background: #fbfdfc; border: 2px solid var(--line); border-radius: 14px;
-  padding: 12px 4px; text-align: center; transition: transform .12s, border-color .12s, background .12s;
+/* 今日心情（自动计算） */
+.mood-preview-card { transition: box-shadow .2s; }
+.mood-preview { display: flex; align-items: center; gap: 16px; }
+.mp-avatar {
+  position: relative; width: 76px; height: 76px; flex: 0 0 76px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 44px; background: #fdf0dd;
+  box-shadow: 0 0 0 5px rgba(0,0,0,.04);
+  transition: box-shadow .2s;
 }
-.mood-btn .mood-emoji { font-size: 30px; display: block; line-height: 1.2; }
-.mood-btn .mood-label { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; display: block; }
-.mood-btn.active { border-color: #f3a14d; background: #fff4e3; transform: translateY(-2px); }
+.mp-badge {
+  position: absolute; right: -4px; bottom: -4px;
+  width: 30px; height: 30px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+.mp-text { flex: 1; }
+.mp-title { font-size: 13px; color: var(--ink-2); }
+.mp-level { font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1.25; }
+.mood-meter { display: flex; gap: 6px; margin-top: 12px; }
+.mood-meter span {
+  flex: 1; text-align: center; font-size: 22px; padding: 6px 0;
+  background: #f1f4f2; border-radius: 10px; filter: grayscale(1); opacity: .55;
+  transition: all .15s;
+}
+.mood-meter span.on { filter: none; opacity: 1; background: #fff4e3; box-shadow: inset 0 0 0 2px #f3c57d; }
+/* 各档光圈 */
+.mood-preview-card.lvl5 .mp-avatar { box-shadow: 0 0 0 6px rgba(245,185,69,.45); }
+.mood-preview-card.lvl4 .mp-avatar { box-shadow: 0 0 0 6px rgba(63,178,129,.4); }
+.mood-preview-card.lvl3 .mp-avatar { box-shadow: 0 0 0 6px rgba(150,160,156,.3); }
+.mood-preview-card.lvl2 .mp-avatar { box-shadow: 0 0 0 6px rgba(234,153,96,.4); }
+.mood-preview-card.lvl1 .mp-avatar { box-shadow: 0 0 0 6px rgba(229,96,96,.4); }
+.mood-preview-card.lvl5 .mp-level { color: #d98a12; }
+.mood-preview-card.lvl4 .mp-level { color: #1f9d6b; }
+.mood-preview-card.lvl2 .mp-level { color: #c9742f; }
+.mood-preview-card.lvl1 .mp-level { color: #d05252; }
 
-/* 表现标签 */
-.tag-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 表现标签：分积极 / 需加油两组，一行五个 */
+.tag-group { margin-bottom: 14px; }
+.tag-group-title { font-size: 15px; font-weight: 800; margin: 2px 2px 9px; }
+.tag-group-title.pos { color: #1f9d6b; }
+.tag-group-title.neg { color: #d05252; }
+.tag-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.opt-tag { min-width: 0; }
+.opt-tag:has(.sub-options:not([hidden])) { grid-column: 1 / -1; }
 .chip {
-  border: 2px solid var(--line); background: #fbfdfc; border-radius: 999px;
-  padding: 8px 15px; font-size: 14px; font-weight: 600; color: var(--ink-2);
-  transition: all .12s;
+  width: 100%; min-height: 46px; padding: 7px 4px;
+  border: 2px solid var(--line); background: #fbfdfc; border-radius: 13px;
+  font-size: 12.5px; font-weight: 700; line-height: 1.25; color: var(--ink-2);
+  transition: all .12s; word-break: break-word;
 }
-.chip.active { border-color: var(--primary); background: var(--primary-soft); color: #1f7a66; }
+.chip.active { border-color: var(--primary); background: var(--primary-soft); color: #1f7a66; box-shadow: 0 2px 8px rgba(31,157,107,.18); }
+.chip-neg { border-color: #f0d2d2; background: #fffafa; color: #c05a5a; }
+.chip-neg.active { border-color: #e07a7a; background: #fdeeee; color: #c64848; box-shadow: 0 2px 8px rgba(208,82,82,.18); }
 
-/* 勾选型标签 + 二级选项（如 优秀作业 → 数学课堂作业） */
-.opt-tag { flex: 0 0 100%; }
+/* 二级选项（如 优秀作业 → 数学课堂作业） */
 .sub-options {
   display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
-  margin: 8px 0 4px; padding: 10px 12px;
+  margin: 8px 0 2px; padding: 10px 12px;
   background: #f3f8f6; border: 1.5px dashed #b9d9cf; border-radius: 12px;
 }
+.opt-tag.is-neg .sub-options { background: #fdf3f3; border-color: #ecd0d0; }
 .sub-hint { flex: 0 0 100%; font-size: 12.5px; color: var(--ink-2); margin-bottom: 1px; }
 .sub-chip {
   border: 1.5px solid #b9d9cf; background: #fff; color: var(--primary-d);
-  border-radius: 999px; padding: 5px 13px; font-size: 13px; font-weight: 600;
+  border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600;
 }
+.opt-tag.is-neg .sub-chip { border-color: #e6c0c0; color: #c05a5a; }
 .sub-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.opt-tag.is-neg .sub-chip.active { background: #e07a7a; border-color: #e07a7a; color: #fff; }
 .detail-items .sub-val { color: var(--primary-d); font-weight: 700; }
+.detail-items li.is-neg, .item-list .item-neg { background: #fdf1f1; }
+.detail-items .neg-tick, .item-list .neg-tick { color: #d05252; font-weight: 800; margin-right: 5px; }
 .detail-foot { padding: 10px 2px 12px; border-top: 1px dashed var(--line); }
 .detail-foot .btn { width: 100%; }
 .text-tag {
@@ -135,6 +175,12 @@ body {
 .mate-class-all .mate-avatar {
   background: linear-gradient(135deg, #ffe6c9, #d8f0e2) !important;
 }
+/* 头像今日心情光圈（1~5 档） */
+.mate-avatar.mood-l5 { box-shadow: 0 0 0 4px rgba(245,185,69,.55); }
+.mate-avatar.mood-l4 { box-shadow: 0 0 0 4px rgba(63,178,129,.5); }
+.mate-avatar.mood-l3 { box-shadow: 0 0 0 4px rgba(150,160,156,.4); }
+.mate-avatar.mood-l2 { box-shadow: 0 0 0 4px rgba(234,153,96,.5); }
+.mate-avatar.mood-l1 { box-shadow: 0 0 0 4px rgba(229,96,96,.55); }
 
 /* ========== 同学表现详情弹窗 ========== */
 .detail-modal { max-width: 460px; padding: 16px 16px 8px; }
@@ -182,4 +228,68 @@ body {
   .mate-avatar { width: 68px; height: 68px; font-size: 36px; }
   .mate-badge { top: 60px; }
   .mate-today { right: calc(50% - 36px); }
+  #formView { max-width: 720px; }
+}
+
+/* 大屏投影 / 教室电视（约 1080p 及以上） */
+@media (min-width: 1400px) {
+  #wallView { max-width: 1320px; }
+  .s-title { font-size: 34px; }
+  .s-mascot { font-size: 40px; }
+  .s-date { font-size: 17px; }
+  .mates { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 22px 14px; }
+  .mate { border-radius: 20px; padding: 16px 6px 14px; }
+  .mate-avatar { width: 92px; height: 92px; font-size: 50px; }
+  .mate-name { font-size: 16px; margin-top: 28px; }
+  .mate-badge { top: 80px; font-size: 13px; padding: 2px 10px; }
+  .mate-today { width: 30px; height: 30px; font-size: 19px; right: calc(50% - 48px); top: -5px; }
+  #formView { max-width: 820px; }
+  .card-title, .card .card-title { font-size: 20px; }
+  .tag-grid { gap: 10px; }
+  .chip { min-height: 60px; font-size: 16px; border-radius: 15px; }
+  .mp-avatar { width: 96px; height: 96px; flex-basis: 96px; font-size: 56px; }
+  .mp-level { font-size: 32px; }
+  .mood-meter span { font-size: 27px; }
+  .sub-chip { font-size: 15px; padding: 8px 18px; }
+  .submit-wrap .btn { min-height: 62px; font-size: 20px; }
+}
+
+/* 4K 大屏（教室主屏 2560p / 3840p） */
+@media (min-width: 2400px) {
+  #wallView { max-width: 2200px; }
+  .s-title { font-size: 52px; }
+  .s-mascot { font-size: 62px; }
+  .s-date, .field-hint { font-size: 24px; }
+  .mates { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 34px 22px; }
+  .mate { border-radius: 28px; padding: 24px 8px 20px; }
+  .mate-avatar { width: 142px; height: 142px; font-size: 78px; }
+  .mate-name { font-size: 25px; margin-top: 40px; }
+  .mate-badge { top: 124px; font-size: 19px; padding: 3px 14px; }
+  .mate-today { width: 46px; height: 46px; font-size: 30px; right: calc(50% - 74px); top: -8px; }
+  #formView { max-width: 1240px; }
+  .card { border-radius: 24px; padding: 26px 28px; }
+  .card-title, .card .card-title { font-size: 32px; }
+  .field label, .text-tag > label { font-size: 24px; }
+  .input { font-size: 24px; min-height: 60px; }
+  .tag-group-title { font-size: 28px; }
+  .tag-grid { gap: 16px; }
+  .chip { min-height: 96px; font-size: 25px; border-radius: 20px; border-width: 3px; }
+  .sub-options { padding: 18px 20px; gap: 12px; }
+  .sub-hint { font-size: 22px; }
+  .sub-chip { font-size: 24px; padding: 12px 28px; }
+  .text-tag { padding: 18px 20px; }
+  .text-tag .input { font-size: 24px; }
+  .mp-avatar { width: 148px; height: 148px; flex-basis: 148px; font-size: 88px; }
+  .mp-badge { width: 52px; height: 52px; font-size: 34px; }
+  .mp-title { font-size: 22px; }
+  .mp-level { font-size: 50px; }
+  .mood-meter span { font-size: 42px; padding: 12px 0; }
+  .star-shape { font-size: 60px !important; }
+  .star-caption { font-size: 26px; }
+  .submit-wrap .btn { min-height: 96px; font-size: 32px; border-radius: 22px; }
+  .detail-modal { max-width: 900px; }
+  .detail-avatar { width: 92px; height: 92px; flex-basis: 92px; font-size: 52px; }
+  .detail-who h3 { font-size: 34px; }
+  .detail-rec, .detail-items li, .detail-comment { font-size: 24px; }
+  .detail-stars { font-size: 30px; }
 }

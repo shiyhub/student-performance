@@ -20,7 +20,8 @@ const MOOD_MAP = {
   happy:  { emoji: '😄', label: '很棒' },
   good:   { emoji: '🙂', label: '不错' },
   normal: { emoji: '😐', label: '一般' },
-  sad:    { emoji: '😢', label: '加油' }
+  down:   { emoji: '😟', label: '有点低落' },
+  sad:    { emoji: '😢', label: '需要加油' }
 };
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -60,6 +61,7 @@ const els = {
   addTagForm: $('#addTagForm'),
   addTagLabel: $('#addTagLabel'),
   addTagType: $('#addTagType'),
+  addTagCategory: $('#addTagCategory'),
   addTagOptions: $('#addTagOptions'),
   tagBox: $('#tagBox')
 };
@@ -93,6 +95,11 @@ function init() {
   });
   els.addStudentForm.addEventListener('submit', onAddStudent);
   els.addTagForm.addEventListener('submit', onAddTag);
+  // 填写型标签固定为积极分类
+  els.addTagType.addEventListener('change', () => {
+    if (els.addTagType.value === 'text') els.addTagCategory.value = 'positive';
+    els.addTagCategory.disabled = els.addTagType.value === 'text';
+  });
 
   // 单个录入：动态家长输入（至少 1 位，最多 10 位）
   renderParentFields(['']);
@@ -238,12 +245,15 @@ function renderRecordCard(r) {
     itemsHtml = '<ul class="item-list">';
     items.forEach(it => {
       const label = esc(it.label || '');
+      const neg = it.category === 'negative';
+      const liCls = neg ? ' class="item-neg"' : '';
+      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
       if (it.type === 'text') {
-        itemsHtml += `<li><b>${label}：</b>${esc(it.value || '')}</li>`;
+        itemsHtml += `<li${liCls}><b>${label}：</b>${esc(it.value || '')}</li>`;
       } else if (it.value) {
-        itemsHtml += `<li><span class="tick">✓</span>${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
+        itemsHtml += `<li${liCls}>${tick}${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
       } else {
-        itemsHtml += `<li><span class="tick">✓</span>${label}</li>`;
+        itemsHtml += `<li${liCls}>${tick}${label}</li>`;
       }
     });
     itemsHtml += '</ul>';
@@ -744,13 +754,20 @@ async function renderTags() {
   }
 
   // 兼容旧数据
-  data.forEach(t => { if (!Array.isArray(t.options)) t.options = []; });
+  data.forEach(t => {
+    if (!Array.isArray(t.options)) t.options = [];
+    if (t.category !== 'negative') t.category = 'positive';
+  });
 
   els.tagBox.innerHTML = data.map(t => `
-    <div class="tag-edit-row" data-tag-id="${t.id}">
+    <div class="tag-edit-row${t.category === 'negative' ? ' row-neg' : ''}" data-tag-id="${t.id}">
       <input type="text" class="tag-label" value="${esc(t.label)}" maxlength="30" placeholder="标签文字">
       <input type="text" class="tag-options" value="${esc((t.options || []).join(','))}"
              maxlength="200" placeholder="二级选项，逗号分隔（选填），如：数学课堂作业,语文课堂作业">
+      <select class="tag-cat" title="分类（影响学生心情）">
+        <option value="positive"${t.category === 'positive' ? ' selected' : ''}>积极</option>
+        <option value="negative"${t.category === 'negative' ? ' selected' : ''}>消极</option>
+      </select>
       <select class="tag-type">
         <option value="check"${t.tag_type === 'check' ? ' selected' : ''}>勾选型</option>
         <option value="text"${t.tag_type === 'text' ? ' selected' : ''}>填写型</option>
@@ -767,6 +784,14 @@ async function renderTags() {
 
   $$('.tag-edit-row', els.tagBox).forEach(row => {
     const id = row.dataset.tagId;
+    const syncControls = () => {
+      const isText = $('.tag-type', row).value === 'text';
+      $('.tag-options', row).disabled = ($('.tag-type', row).value !== 'check');
+      // 填写型固定为积极
+      $('.tag-cat', row).disabled = isText;
+      if (isText) $('.tag-cat', row).value = 'positive';
+      row.classList.toggle('row-neg', $('.tag-cat', row).value === 'negative');
+    };
     $('.tag-save', row).addEventListener('click', async () => {
       const label = $('.tag-label', row).value.trim();
       if (!label) return toast('标签文字不能为空');
@@ -774,6 +799,9 @@ async function renderTags() {
       const options = tagType === 'check'
         ? parseTagOptions($('.tag-options', row).value)
         : [];
+      let category = $('.tag-cat', row).value === 'negative' ? 'negative' : 'positive';
+      if (tagType === 'text') category = 'positive';
+      const score = category === 'negative' ? -1 : 1;
       const btn = $('.tag-save', row);
       btn.disabled = true;
       btn.textContent = '…';
@@ -781,6 +809,8 @@ async function renderTags() {
         label,
         tag_type: tagType,
         options,
+        category,
+        score,
         is_active: $('.tag-active', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
       }).eq('id', id);
@@ -789,11 +819,10 @@ async function renderTags() {
       if (error) { toast('保存失败：' + error.message); return; }
       toast('标签已更新');
     });
-    // 类型切换：填写型时二级选项无意义
-    $('.tag-type', row).addEventListener('change', e => {
-      $('.tag-options', row).disabled = (e.target.value !== 'check');
-    });
-    $('.tag-options', row).disabled = ($('.tag-type', row).value !== 'check');
+    // 类型 / 分类切换联动
+    $('.tag-type', row).addEventListener('change', syncControls);
+    $('.tag-cat', row).addEventListener('change', syncControls);
+    syncControls();
     $('.tag-delete', row).addEventListener('click', async () => {
       const label = $('.tag-label', row).value.trim();
       if (!confirm(`确定删除标签「${label}」吗？\n历史记录中已经使用的内容不受影响。`)) return;
@@ -829,12 +858,17 @@ async function onAddTag(e) {
   btn.textContent = '添加中…';
   const tagType = els.addTagType.value;
   const options = tagType === 'check' ? parseTagOptions(els.addTagOptions.value) : [];
+  let category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
+  if (tagType === 'text') category = 'positive';
+  const score = category === 'negative' ? -1 : 1;
   const { data, error } = await supabase
     .from('behavior_tags')
     .insert({
       label,
       tag_type: tagType,
       options,
+      category,
+      score,
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
     .select('id');
@@ -844,6 +878,7 @@ async function onAddTag(e) {
   toast('已添加标签：' + label);
   els.addTagLabel.value = '';
   els.addTagOptions.value = '';
+  els.addTagCategory.value = 'positive';
   els.addTagLabel.focus();
   if (loaded.tags) renderTags();
 }

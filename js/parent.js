@@ -16,7 +16,8 @@ const MOOD_MAP = {
   happy:  { emoji: '😄', label: '很棒' },
   good:   { emoji: '🙂', label: '不错' },
   normal: { emoji: '😐', label: '一般' },
-  sad:    { emoji: '😢', label: '加油' }
+  down:   { emoji: '😟', label: '有点低落' },
+  sad:    { emoji: '😢', label: '需要加油' }
 };
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -156,12 +157,15 @@ function renderRecordCard(r) {
     itemsHtml = '<ul class="item-list">';
     items.forEach(it => {
       const label = esc(it.label || '');
+      const neg = it.category === 'negative';
+      const liCls = neg ? ' class="item-neg"' : '';
+      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
       if (it.type === 'text') {
-        itemsHtml += `<li><b>${label}：</b>${esc(it.value || '')}</li>`;
+        itemsHtml += `<li${liCls}><b>${label}：</b>${esc(it.value || '')}</li>`;
       } else if (it.value) {
-        itemsHtml += `<li><span class="tick">✓</span>${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
+        itemsHtml += `<li${liCls}>${tick}${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
       } else {
-        itemsHtml += `<li><span class="tick">✓</span>${label}</li>`;
+        itemsHtml += `<li${liCls}>${tick}${label}</li>`;
       }
     });
     itemsHtml += '</ul>';
