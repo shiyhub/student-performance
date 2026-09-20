@@ -20,6 +20,7 @@ create table if not exists public.student_info (
   id           uuid primary key default gen_random_uuid(),
   class        text not null,                   -- 班级，如：三年级2班
   student_name text not null,                   -- 学生姓名
+  avatar       text,                            -- 学生自选头像(emoji)，空=按姓名自动分配
   created_at   timestamptz not null default now(),
   constraint uq_student unique (class, student_name)   -- 同班不允许重名重复录入
 );
@@ -80,7 +81,7 @@ comment on table public.behavior_tags is '教师自定义表现标签：老师�
 
 -- 1.5 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
 create or replace view public.student_directory as
-  select id, class, student_name
+  select id, class, student_name, avatar
   from public.student_info;
 
 comment on view public.student_directory is '学生端班级墙只读视图：仅含班级与学生姓名';
@@ -148,6 +149,29 @@ as $$
         and p.parent_name  = p_parent
     )
   order by r.record_date desc, r.create_at desc;
+$$;
+
+-- 3.3 学生保存自选头像：仅能改"班级+姓名"匹配到的名单记录
+create or replace function public.set_student_avatar(
+  p_class  text,
+  p_student text,
+  p_avatar  text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v text;
+begin
+  v := nullif(left(btrim(coalesce(p_avatar, '')), 8), '');
+  update public.student_info
+     set avatar = v
+   where class = btrim(coalesce(p_class, ''))
+     and student_name = btrim(coalesce(p_student, ''));
+  return found;
+end;
 $$;
 
 
@@ -219,6 +243,9 @@ grant  execute on function public.is_valid_student(text, text) to anon, authenti
 
 revoke execute on function public.get_student_records(text, text, text) from public;
 grant  execute on function public.get_student_records(text, text, text) to anon, authenticated;
+
+revoke execute on function public.set_student_avatar(text, text, text) from public;
+grant  execute on function public.set_student_avatar(text, text, text) to anon, authenticated;
 
 
 -- ============================================================================

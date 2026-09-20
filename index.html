@@ -61,6 +61,10 @@
   <!-- 身份 -->
   <section class="card">
     <div class="card-title">🙋 先告诉我你是谁</div>
+    <button type="button" class="identity-avatar" id="btnPickAvatar">
+      <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
+      <span class="identity-avatar-hint">点我换头像 ✨</span>
+    </button>
     <div class="field">
       <label for="inpClass">我的班级</label>
       <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班"
@@ -149,10 +153,29 @@
   </div>
 </div>
 
+<!-- 头像选择弹窗 -->
+<div class="modal-mask" id="avatarModal">
+  <div class="modal avatar-modal">
+    <div class="detail-head">
+      <div class="detail-avatar" id="avatarModalEmoji">🐯</div>
+      <div class="detail-who">
+        <h3>选一个喜欢的头像</h3>
+        <div class="text-muted">点一下就保存好啦</div>
+      </div>
+      <button class="detail-close" id="btnAvatarClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="avatar-picker" id="avatarPicker"></div>
+  </div>
+</div>
+
+<!-- 音效开关 -->
+<button type="button" id="btnSound" class="sound-toggle" aria-label="开关声音">🔊</button>
+
 <div id="toast"></div>
 
 <script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
+<script src="js/sound.js"></script>
 <script src="js/student.js"></script>
 </body>
 </html>

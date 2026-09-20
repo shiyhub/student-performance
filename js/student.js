@@ -32,8 +32,13 @@ const PRAISE = {
   down:   ['明天试着多做一个积极的小表现吧！', '有一点小低落很正常，老师陪着你！'],
   sad:    ['愿意说出来就很勇敢，老师和家长都爱你！', '明天会是新的一天，陪你一起加油！']
 };
-const AVATARS = ['🐯','🦁','🐼','🐰','🐨','🐮','🐸','🦊','🐷','🐵','🐔','🐧','🐹','🦄','🐶','🐱','🦉','🐙'];
+const AVATARS = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔',
+  '🐧','🐦','🐤','🦆','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🦎','🐙','🦑',
+  '🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🦖','🦕'];
 const AVATAR_BG = ['#fdecc8','#d8f0e2','#dcecfb','#f6e0f1','#fdf3c9','#e6e2fb','#d9f2f5','#ffe3dd','#e8f6dc','#fae3ef'];
+const sfx = window.SFX || {
+  tap(){}, back(){}, star(){}, tagOn(){}, tagOff(){}, sub(){}, moodUp(){}, moodDown(){}, pick(){}, success(){}, oops(){}
+};
 
 /* ---------- 页面元素 ---------- */
 const els = {
@@ -57,6 +62,14 @@ const els = {
   detailFoot: $('#detailFoot'),
   btnDetailWrite: $('#btnDetailWrite'),
   btnDetailClose: $('#btnDetailClose'),
+  // 头像选择
+  btnPickAvatar: $('#btnPickAvatar'),
+  identityAvatarEmoji: $('#identityAvatarEmoji'),
+  avatarModal: $('#avatarModal'),
+  avatarModalEmoji: $('#avatarModalEmoji'),
+  avatarPicker: $('#avatarPicker'),
+  btnAvatarClose: $('#btnAvatarClose'),
+  btnSound: $('#btnSound'),
   // 表单
   todayLabel: $('#todayLabel'),
   configBanner: $('#configBanner'),
@@ -93,6 +106,7 @@ const state = {
   // 表单
   stars: 0,
   moodLevel: 3,
+  myAvatar: null,    // 学生本次选择/已保存的头像 emoji（null 时按姓名自动分配）
   tags: [],
   checkChosen: {},   // 勾选型标签：{ [tagId]: true }
   checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
@@ -168,7 +182,7 @@ async function loadWall() {
   const cls = state.currentClass;
   const [rosterRes, recordRes] = await Promise.all([
     supabase.from('student_directory')
-      .select('id, class, student_name')
+      .select('*')
       .eq('class', cls)
       .order('student_name'),
     supabase.from('daily_record')
@@ -225,7 +239,7 @@ function renderWall() {
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
 
-    const av = avatarForName(s.student_name);
+    const av = avatarForName(s.student_name, s.avatar);
     const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
@@ -241,6 +255,7 @@ function renderWall() {
 
   $$('.mate', els.matesGrid).forEach(btn => {
     btn.addEventListener('click', () => {
+      sfx.tap();
       const key = btn.dataset.detail;
       if (key === '__all__') openClassDetail(classAvg, classToday);
       else openStudentDetail(key);
@@ -253,7 +268,8 @@ function openStudentDetail(name) {
     .filter(r => r.student_name === name)
     .sort((a, b) => (a.record_date < b.record_date ? 1 : a.record_date > b.record_date ? -1 :
                       (a.create_at < b.create_at ? 1 : -1)));
-  const av = avatarForName(name);
+  const rosterRow = state.roster.find(s => s.student_name === name);
+  const av = avatarForName(name, rosterRow && rosterRow.avatar);
   els.detailAvatar.textContent = av.emoji;
   els.detailAvatar.style.background = av.bg;
   els.detailName.textContent = name;
@@ -382,6 +398,7 @@ function renderStars() {
     b.innerHTML = '<span class="star-shape">★</span>';
     b.addEventListener('click', () => {
       state.stars = i;
+      sfx.star(i);
       renderStars();
       b.classList.remove('pop');
       void b.offsetWidth;
@@ -393,10 +410,20 @@ function renderStars() {
 }
 
 /* ---------- 头像（按姓名稳定取卡通动物 + 底色） ---------- */
-function avatarForName(name) {
+function avatarForName(name, saved) {
   const h = hashCode(String(name || ''));
   const mod = n => ((h % n) + n) % n;
-  return { emoji: AVATARS[mod(AVATARS.length)], bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+  const emoji = (saved && String(saved).trim()) ? String(saved).trim() : AVATARS[mod(AVATARS.length)];
+  return { emoji, bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+}
+
+// 当前表单里"这个学生"的头像：优先本次选择，其次名单里已保存的，最后按姓名分配
+function currentAvatar() {
+  const name = (els.inpName && els.inpName.value || '').trim();
+  if (state.myAvatar) return avatarForName(name || '我', state.myAvatar);
+  const row = state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  return avatarForName(name || '我', row && row.avatar);
 }
 
 /* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */
@@ -421,10 +448,14 @@ function updateMood() {
 function renderMoodPreview() {
   const level = state.moodLevel || 3;
   const m = MOOD_BY_LEVEL(level);
-  const name = (els.inpName && els.inpName.value || '').trim();
-  const av = avatarForName(name || '我');
+  const av = currentAvatar();
   els.mpAvatar.innerHTML = `${av.emoji}<span class="mp-badge">${m.emoji}</span>`;
   els.mpAvatar.style.background = av.bg;
+  if (els.identityAvatarEmoji) els.identityAvatarEmoji.textContent = av.emoji;
+  if (els.avatarModalEmoji) {
+    els.avatarModalEmoji.textContent = av.emoji;
+    els.avatarModalEmoji.style.background = av.bg;
+  }
   els.mpLevel.textContent = `${m.emoji} ${m.label}`;
   const card = document.getElementById('moodPreviewCard');
   if (card) {
@@ -504,6 +535,7 @@ function buildCheckTag(t) {
       b.className = 'sub-chip';
       b.textContent = opt;
       b.addEventListener('click', () => {
+        sfx.sub();
         state.checkOption[t.id] = opt;
         sub.querySelectorAll('.sub-chip').forEach(x =>
           x.classList.toggle('active', x === b));
@@ -531,10 +563,12 @@ function buildTextTag(t) {
   return wrap;
 }
 
-// 勾选 / 取消勾选；带二级选项的联动展开/收起；随后重算心情
+// 勾选 / 取消勾选；带二级选项的联动展开/收起；随后重算心情并播放音效
 function toggleCheckTag(tag, chip, wrap) {
   const sub = wrap.querySelector('.sub-options');
-  if (state.checkChosen[tag.id]) {
+  const wasLevel = state.moodLevel;
+  const turningOn = !state.checkChosen[tag.id];
+  if (!turningOn) {
     delete state.checkChosen[tag.id];
     delete state.checkOption[tag.id];
     chip.classList.remove('active');
@@ -542,18 +576,22 @@ function toggleCheckTag(tag, chip, wrap) {
       sub.hidden = true;
       sub.querySelectorAll('.sub-chip.active').forEach(x => x.classList.remove('active'));
     }
+    sfx.tagOff();
   } else {
     state.checkChosen[tag.id] = true;
     chip.classList.add('active');
     if (sub) sub.hidden = false;
+    sfx.tagOn(tag.category !== 'negative');
   }
   updateMood();
+  if (state.moodLevel > wasLevel) sfx.moodUp();
+  else if (state.moodLevel < wasLevel) sfx.moodDown();
 }
 
 function bindEvents() {
   // 墙 ↔ 表单
-  els.btnGoWrite.addEventListener('click', showForm);
-  els.btnBackWall.addEventListener('click', showWall);
+  els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
+  els.btnBackWall.addEventListener('click', () => { sfx.back(); showWall(); });
   els.wallClass.addEventListener('change', () => {
     state.currentClass = els.wallClass.value;
     try {
@@ -564,23 +602,93 @@ function bindEvents() {
     loadWall();
   });
   // 详情弹窗
-  els.btnDetailClose.addEventListener('click', closeDetail);
-  els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeDetail(); });
+  els.btnDetailClose.addEventListener('click', () => { sfx.back(); closeDetail(); });
+  els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) { sfx.back(); closeDetail(); } });
   els.btnDetailWrite.addEventListener('click', () => {
     if (!state.detailName) return;
     const name = state.detailName;
+    sfx.tap();
     closeDetail();
     showForm(name);
   });
-  // 姓名变化时同步头像
-  els.inpName.addEventListener('input', renderMoodPreview);
+  // 姓名变化时回到该姓名已保存的头像（手动改名场景）
+  els.inpName.addEventListener('input', () => { state.myAvatar = null; renderMoodPreview(); });
+
+  // 头像选择
+  els.btnPickAvatar.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
+  els.btnAvatarClose.addEventListener('click', () => { sfx.back(); els.avatarModal.classList.remove('show'); });
+  els.avatarModal.addEventListener('click', e => {
+    if (e.target === els.avatarModal) { sfx.back(); els.avatarModal.classList.remove('show'); }
+  });
+
+  // 音效开关
+  updateSoundButton();
+  els.btnSound.addEventListener('click', () => {
+    const next = !sfx.muted;
+    sfx.setMuted(next);
+    updateSoundButton();
+    if (!next) sfx.pick();
+  });
+
   // 提交
   els.btnSubmit.addEventListener('click', onSubmit);
-  els.btnAgain.addEventListener('click', () => els.successOverlay.classList.remove('show'));
-  els.btnWallFromSuccess.addEventListener('click', () => {
-    els.successOverlay.classList.remove('show');
-    showWall();
+  els.btnAgain.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); });
+  els.btnWallFromSuccess.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); showWall(); });
+}
+
+function updateSoundButton() {
+  if (!els.btnSound) return;
+  els.btnSound.textContent = sfx.muted ? '🔇' : '🔊';
+  els.btnSound.classList.toggle('is-off', !!sfx.muted);
+}
+
+/* ---------------- 头像选择 ---------------- */
+
+function openAvatarPicker() {
+  const cur = currentAvatar().emoji;
+  els.avatarPicker.innerHTML = '';
+  AVATARS.forEach(emoji => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'avatar-choice' + (emoji === cur ? ' selected' : '');
+    b.textContent = emoji;
+    b.addEventListener('click', () => chooseAvatar(emoji, b));
+    els.avatarPicker.appendChild(b);
   });
+  renderMoodPreview();
+  els.avatarModal.classList.add('show');
+}
+
+async function chooseAvatar(emoji, btn) {
+  sfx.pick();
+  state.myAvatar = emoji;
+  els.avatarPicker.querySelectorAll('.avatar-choice').forEach(x =>
+    x.classList.toggle('selected', x === btn));
+  renderMoodPreview();
+  await persistAvatar(emoji);
+  // 稍作停留让孩子看到"选中"反馈，再关闭
+  setTimeout(() => els.avatarModal.classList.remove('show'), 220);
+}
+
+// 经 RPC 保存头像；成功后同步本地名单，头像墙立即生效
+async function persistAvatar(emoji) {
+  if (!ready) return false;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) return false;
+  try {
+    const { data, error } = await supabase.rpc('set_student_avatar', {
+      p_class: cls,
+      p_student: name,
+      p_avatar: emoji
+    });
+    if (error) return false;
+    const row = state.roster.find(s => s.class === cls && s.student_name === name);
+    if (row) row.avatar = emoji;
+    return data === true;
+  } catch (e) {
+    return false;
+  }
 }
 
 function showForm(presetName) {
@@ -593,6 +701,7 @@ function showForm(presetName) {
         JSON.stringify({ class: state.currentClass, studentName: presetName }));
     } catch (e) {}
   }
+  state.myAvatar = null;   // 进入表单先显示该学生已保存的头像
   els.wallView.hidden = true;
   els.formView.hidden = false;
   window.scrollTo({ top: 0 });
@@ -611,9 +720,9 @@ async function onSubmit() {
   if (!ready) return toast('系统尚未配置完成，请联系老师');
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!cls) return toast('请先填写班级');
-  if (!name) return toast('请先填写姓名');
-  if (state.stars < 1) return toast('给自己打个星吧～');
+  if (!cls) { sfx.oops(); return toast('请先填写班级'); }
+  if (!name) { sfx.oops(); return toast('请先填写姓名'); }
+  if (state.stars < 1) { sfx.oops(); return toast('给自己打个星吧～'); }
   updateMood();
 
   const items = [];
@@ -622,6 +731,7 @@ async function onSubmit() {
       if (state.checkChosen[t.id]) {
         const subVal = (state.checkOption[t.id] || '').trim();
         if (Array.isArray(t.options) && t.options.length && !subVal) {
+          sfx.oops();
           return toast(`请为「${t.label}」再选一个具体项目`);
         }
         items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive' });
@@ -641,9 +751,13 @@ async function onSubmit() {
     });
     if (rpcError) throw rpcError;
     if (!valid) {
+      sfx.oops();
       toast('没有找到你的名字哦，请检查班级和姓名，或请老师确认名单');
       return;
     }
+
+    // 顺手把本次选的头像保存好（失败也不影响记录提交）
+    if (state.myAvatar) await persistAvatar(state.myAvatar);
 
     const { error: insertError } = await supabase.from('daily_record').insert({
       class: cls,
@@ -653,6 +767,7 @@ async function onSubmit() {
       behavior: { mood: MOOD_BY_LEVEL(state.moodLevel).key, items }
     });
     if (insertError) {
+      sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
         toast('名单中没有找到对应班级和姓名，请请老师确认');
       } else {
@@ -662,9 +777,11 @@ async function onSubmit() {
     }
 
     try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
+    sfx.success();
     celebrate();
     resetSelections();
   } catch (e) {
+    sfx.oops();
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
     els.btnSubmit.disabled = false;
