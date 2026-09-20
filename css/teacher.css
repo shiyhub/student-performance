@@ -84,6 +84,18 @@ body { background: #f3f6f5; }
 }
 .icon-btn.danger { background: var(--danger-soft); }
 
+/* 批量录入 */
+.batch-textarea {
+  width: 100%; min-height: 170px; resize: vertical;
+  line-height: 1.8; font-family: inherit; font-size: 14.5px;
+}
+.batch-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.batch-actions .btn { flex: 1 1 auto; min-width: 130px; }
+.batch-result { margin-top: 12px; }
+.batch-preview ul, .batch-bad ul { margin: 8px 0 2px; padding-left: 20px; }
+.batch-preview li, .batch-bad li { margin-bottom: 4px; font-size: 13.5px; }
+.batch-bad { margin-top: 10px; }
+
 /* 标签管理 */
 .tag-edit-row {
   background: #fff; border-radius: 12px; box-shadow: var(--shadow);

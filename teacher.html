@@ -103,6 +103,30 @@
           <button class="btn btn-primary" type="submit">添加学生</button>
         </form>
       </div>
+
+      <div class="card">
+        <div class="card-title">📋 批量录入（一次粘贴全班名单）</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          <b>同班最省事：</b>先在下面填一次"统一班级"，然后每行写 <b>学生姓名,家长姓名</b>（用逗号、空格分隔都行；也可以直接从 Excel 复制两列粘贴，会自动按表格列识别）。<br>
+          <b>多个班混排：</b>统一班级留空，每行写 <b>班级,学生姓名,家长姓名</b> 三列即可。空行会自动忽略，重复的学生自动跳过。
+        </p>
+        <div class="field">
+          <label for="batchClass">统一班级（每行只有"学生+家长"两列时生效）</label>
+          <input class="input" id="batchClass" type="text" placeholder="例如：三年级2班" maxlength="30" list="classOptions">
+        </div>
+        <div class="field">
+          <label for="batchText">名单内容（每行一个学生）</label>
+          <textarea class="input batch-textarea" id="batchText" rows="9"
+            placeholder="李小明,李大明&#10;王小红 王建国&#10;张三&#9;张父   ← 也可以是 Excel 复制来的两列"></textarea>
+        </div>
+        <div class="batch-actions">
+          <button class="btn btn-ghost" id="btnBatchCheck" type="button">① 检查内容</button>
+          <button class="btn btn-primary" id="btnBatchImport" type="button" disabled>② 确认导入</button>
+          <button class="btn btn-ghost" id="btnBatchClear" type="button">清空重填</button>
+        </div>
+        <div id="batchResult"></div>
+      </div>
+
       <div id="studentBox"></div>
     </section>
 

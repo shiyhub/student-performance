@@ -48,6 +48,13 @@ const els = {
   addParent: $('#addParent'),
   classOptions: $('#classOptions'),
   studentBox: $('#studentBox'),
+  // 批量录入
+  batchClass: $('#batchClass'),
+  batchText: $('#batchText'),
+  batchResult: $('#batchResult'),
+  btnBatchCheck: $('#btnBatchCheck'),
+  btnBatchImport: $('#btnBatchImport'),
+  btnBatchClear: $('#btnBatchClear'),
   // 标签
   addTagForm: $('#addTagForm'),
   addTagLabel: $('#addTagLabel'),
@@ -56,6 +63,7 @@ const els = {
 };
 
 const loaded = { students: false, tags: false };
+let batchParsed = [];   // 批量录入：检查通过、待导入的行
 
 init();
 
@@ -83,6 +91,18 @@ function init() {
   });
   els.addStudentForm.addEventListener('submit', onAddStudent);
   els.addTagForm.addEventListener('submit', onAddTag);
+  els.btnBatchCheck.addEventListener('click', onBatchCheck);
+  els.btnBatchImport.addEventListener('click', onBatchImport);
+  els.btnBatchClear.addEventListener('click', onBatchClear);
+  // 修改统一班级或文本后，旧预览作废，需重新检查
+  [els.batchClass, els.batchText].forEach(el => {
+    el.addEventListener('input', () => {
+      batchParsed = [];
+      els.btnBatchImport.disabled = true;
+      els.btnBatchImport.textContent = '② 确认导入';
+      els.batchResult.innerHTML = '';
+    });
+  });
 
   // 恢复登录会话
   supabase.auth.getSession().then(({ data }) => {
@@ -388,6 +408,150 @@ function openStudentQr(s) {
   url.searchParams.set('student', s.student_name);
   url.hash = 'qr';
   window.open(url.toString(), '_blank');
+}
+
+/* ---------------- 批量录入学生 ---------------- */
+
+// 把粘贴文本解析成行：支持 Excel 制表符、中英文逗号、空白分隔；
+// 每行 2 列 = 学生+家长（用统一班级），3 列 = 班级+学生+家长。
+function parseBatchText(text, defaultClass) {
+  const rows = [];
+  const bad = [];
+  const seen = new Set();
+  const cls = (defaultClass || '').trim();
+
+  text.split(/\r?\n/).forEach((line, idx) => {
+    const lineNo = idx + 1;
+    const raw = line.trim();
+    if (!raw) return;  // 空行跳过
+
+    // 依次按 制表符 / 中英文逗号 / 连续空白 切分
+    const parts = raw.split(/\t|[，,]|\s+/).map(s => s.trim()).filter(Boolean);
+    let rowClass, name, parent;
+
+    if (parts.length === 2) {
+      if (!cls) {
+        bad.push({ lineNo, raw, reason: '只有"学生 家长"两列，但上面没有填写统一班级' });
+        return;
+      }
+      rowClass = cls; name = parts[0]; parent = parts[1];
+    } else if (parts.length === 3) {
+      rowClass = parts[0]; name = parts[1]; parent = parts[2];
+    } else {
+      bad.push({ lineNo, raw, reason: `识别出 ${parts.length} 列，应为 2 列（学生 家长）或 3 列（班级 学生 家长）` });
+      return;
+    }
+
+    const key = `${rowClass}|${name}|${parent}`;
+    if (seen.has(key)) {
+      bad.push({ lineNo, raw, reason: '与本次粘贴中的另一行完全重复' });
+      return;
+    }
+    seen.add(key);
+    rows.push({ class: rowClass, student_name: name, parent_name: parent });
+  });
+
+  return { rows, bad };
+}
+
+function onBatchCheck() {
+  const { rows, bad } = parseBatchText(els.batchText.value || '', els.batchClass.value);
+  batchParsed = rows;
+  els.btnBatchImport.disabled = rows.length === 0;
+
+  // 按班级分组统计
+  const groups = new Map();
+  rows.forEach(r => {
+    if (!groups.has(r.class)) groups.set(r.class, []);
+    groups.get(r.class).push(r);
+  });
+
+  let html = '';
+  if (rows.length) {
+    const groupHtml = Array.from(groups.keys()).sort().map(c => {
+      const list = groups.get(c);
+      const preview = list.slice(0, 5).map(r => esc(r.student_name)).join('、');
+      const more = list.length > 5 ? ` 等 ${list.length} 人` : '';
+      return `<li><b>${esc(c)}</b>：${list.length} 人 —— ${preview}${more}</li>`;
+    }).join('');
+    html += `<div class="banner banner-success batch-preview">
+               ✅ 检查通过，本次将导入 <b>${rows.length}</b> 名学生：
+               <ul>${groupHtml}</ul>
+               确认无误后点「② 确认导入」；名单中已存在的学生会自动跳过。
+             </div>`;
+  } else {
+    html += '<div class="banner banner-error">没有可导入的有效行，请按格式粘贴名单。</div>';
+  }
+  if (bad.length) {
+    html += `<div class="banner banner-error batch-bad">
+               ⚠️ 有 <b>${bad.length}</b> 行无法识别，已排除（不影响其他行导入）：
+               <ul>${bad.map(b => `<li>第 ${b.lineNo} 行「${esc(b.raw)}」——${esc(b.reason)}</li>`).join('')}</ul>
+             </div>`;
+  }
+  els.batchResult.innerHTML = html;
+}
+
+async function onBatchImport() {
+  if (!batchParsed.length) return;
+  const btn = els.btnBatchImport;
+  btn.disabled = true;
+  btn.textContent = '导入中…';
+
+  // 先取现有名单，用于提示"新增多少 / 跳过多少重复"
+  const { data: existing, error: qerr } = await supabase
+    .from('student_info')
+    .select('class,student_name,parent_name');
+  if (qerr) {
+    toast('导入失败：' + qerr.message);
+    btn.disabled = false;
+    btn.textContent = '② 确认导入';
+    return;
+  }
+  const exSet = new Set((existing || []).map(
+    s => `${s.class}|${s.student_name}|${s.parent_name}`
+  ));
+  const fresh = batchParsed.filter(r =>
+    !exSet.has(`${r.class}|${r.student_name}|${r.parent_name}`)
+  );
+  const dupCount = batchParsed.length - fresh.length;
+
+  let lastError = null;
+  if (fresh.length) {
+    // 分块写入（每块 200 条）；onConflict 命中唯一约束，ignoreDuplicates 双保险
+    for (let i = 0; i < fresh.length; i += 200) {
+      const chunk = fresh.slice(i, i + 200);
+      const { error } = await supabase
+        .from('student_info')
+        .upsert(chunk, {
+          onConflict: 'class,student_name,parent_name',
+          ignoreDuplicates: true
+        });
+      if (error) { lastError = error; break; }
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '② 确认导入';
+  if (lastError) {
+    toast('部分导入失败：' + lastError.message);
+    return;
+  }
+
+  toast(`导入完成：新增 ${fresh.length} 人，跳过重复 ${dupCount} 人`);
+  els.batchText.value = '';
+  els.batchResult.innerHTML = '';
+  batchParsed = [];
+  els.btnBatchImport.disabled = true;
+  if (loaded.students) loadStudents();
+  loadClassesAndRecords();
+}
+
+function onBatchClear() {
+  els.batchText.value = '';
+  els.batchResult.innerHTML = '';
+  batchParsed = [];
+  els.btnBatchImport.disabled = true;
+  els.btnBatchImport.textContent = '② 确认导入';
 }
 
 /* ---------------- 表现标签管理 ---------------- */
