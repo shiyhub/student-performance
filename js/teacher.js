@@ -60,6 +60,7 @@ const els = {
   addTagForm: $('#addTagForm'),
   addTagLabel: $('#addTagLabel'),
   addTagType: $('#addTagType'),
+  addTagOptions: $('#addTagOptions'),
   tagBox: $('#tagBox')
 };
 
@@ -239,6 +240,8 @@ function renderRecordCard(r) {
       const label = esc(it.label || '');
       if (it.type === 'text') {
         itemsHtml += `<li><b>${label}：</b>${esc(it.value || '')}</li>`;
+      } else if (it.value) {
+        itemsHtml += `<li><span class="tick">✓</span>${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
       } else {
         itemsHtml += `<li><span class="tick">✓</span>${label}</li>`;
       }
@@ -740,9 +743,14 @@ async function renderTags() {
     return;
   }
 
+  // 兼容旧数据
+  data.forEach(t => { if (!Array.isArray(t.options)) t.options = []; });
+
   els.tagBox.innerHTML = data.map(t => `
     <div class="tag-edit-row" data-tag-id="${t.id}">
       <input type="text" class="tag-label" value="${esc(t.label)}" maxlength="30" placeholder="标签文字">
+      <input type="text" class="tag-options" value="${esc((t.options || []).join(','))}"
+             maxlength="200" placeholder="二级选项，逗号分隔（选填），如：数学课堂作业,语文课堂作业">
       <select class="tag-type">
         <option value="check"${t.tag_type === 'check' ? ' selected' : ''}>勾选型</option>
         <option value="text"${t.tag_type === 'text' ? ' selected' : ''}>填写型</option>
@@ -762,12 +770,17 @@ async function renderTags() {
     $('.tag-save', row).addEventListener('click', async () => {
       const label = $('.tag-label', row).value.trim();
       if (!label) return toast('标签文字不能为空');
+      const tagType = $('.tag-type', row).value;
+      const options = tagType === 'check'
+        ? parseTagOptions($('.tag-options', row).value)
+        : [];
       const btn = $('.tag-save', row);
       btn.disabled = true;
       btn.textContent = '…';
       const { error } = await supabase.from('behavior_tags').update({
         label,
-        tag_type: $('.tag-type', row).value,
+        tag_type: tagType,
+        options,
         is_active: $('.tag-active', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
       }).eq('id', id);
@@ -776,6 +789,11 @@ async function renderTags() {
       if (error) { toast('保存失败：' + error.message); return; }
       toast('标签已更新');
     });
+    // 类型切换：填写型时二级选项无意义
+    $('.tag-type', row).addEventListener('change', e => {
+      $('.tag-options', row).disabled = (e.target.value !== 'check');
+    });
+    $('.tag-options', row).disabled = ($('.tag-type', row).value !== 'check');
     $('.tag-delete', row).addEventListener('click', async () => {
       const label = $('.tag-label', row).value.trim();
       if (!confirm(`确定删除标签「${label}」吗？\n历史记录中已经使用的内容不受影响。`)) return;
@@ -787,6 +805,21 @@ async function renderTags() {
   });
 }
 
+// 解析二级选项文本：支持中英文逗号、顿号、换行/空格分隔；去重、限量、限长
+function parseTagOptions(text) {
+  const arr = String(text || '')
+    .split(/[,，、\n\r;；\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  const out = [];
+  arr.forEach(s => {
+    if (out.length >= 20) return;
+    const v = s.slice(0, 20);
+    if (!out.includes(v)) out.push(v);
+  });
+  return out;
+}
+
 async function onAddTag(e) {
   e.preventDefault();
   const label = els.addTagLabel.value.trim();
@@ -794,15 +827,23 @@ async function onAddTag(e) {
   const btn = els.addTagForm.querySelector('button[type=submit]');
   btn.disabled = true;
   btn.textContent = '添加中…';
+  const tagType = els.addTagType.value;
+  const options = tagType === 'check' ? parseTagOptions(els.addTagOptions.value) : [];
   const { data, error } = await supabase
     .from('behavior_tags')
-    .insert({ label, tag_type: els.addTagType.value, sort_order: Math.floor(Date.now() / 1000) % 1000 })
+    .insert({
+      label,
+      tag_type: tagType,
+      options,
+      sort_order: Math.floor(Date.now() / 1000) % 1000
+    })
     .select('id');
   btn.disabled = false;
   btn.textContent = '添加标签';
   if (error) { toast('添加失败：' + error.message); return; }
   toast('已添加标签：' + label);
   els.addTagLabel.value = '';
+  els.addTagOptions.value = '';
   els.addTagLabel.focus();
   if (loaded.tags) renderTags();
 }

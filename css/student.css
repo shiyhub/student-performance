@@ -39,6 +39,23 @@ body {
   transition: all .12s;
 }
 .chip.active { border-color: var(--primary); background: var(--primary-soft); color: #1f7a66; }
+
+/* 勾选型标签 + 二级选项（如 优秀作业 → 数学课堂作业） */
+.opt-tag { flex: 0 0 100%; }
+.sub-options {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 8px 0 4px; padding: 10px 12px;
+  background: #f3f8f6; border: 1.5px dashed #b9d9cf; border-radius: 12px;
+}
+.sub-hint { flex: 0 0 100%; font-size: 12.5px; color: var(--ink-2); margin-bottom: 1px; }
+.sub-chip {
+  border: 1.5px solid #b9d9cf; background: #fff; color: var(--primary-d);
+  border-radius: 999px; padding: 5px 13px; font-size: 13px; font-weight: 600;
+}
+.sub-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.detail-items .sub-val { color: var(--primary-d); font-weight: 700; }
+.detail-foot { padding: 10px 2px 12px; border-top: 1px dashed var(--line); }
+.detail-foot .btn { width: 100%; }
 .text-tag {
   border: 1.5px solid var(--line); border-radius: 12px;
   padding: 10px 12px; margin-top: 8px; background: #fbfdfc;

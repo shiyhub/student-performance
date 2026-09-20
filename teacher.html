@@ -152,6 +152,11 @@
                 <option value="text">填写型</option>
               </select>
             </div>
+            <div class="field full">
+              <label for="addTagOptions">二级选项（仅"勾选型"有效，选填）</label>
+              <input class="input" id="addTagOptions" type="text" maxlength="200"
+                     placeholder="用逗号分隔，如：数学课堂作业,语文课堂作业,英语课堂作业">
+            </div>
           </div>
           <button class="btn btn-primary" type="submit">添加标签</button>
         </form>
@@ -160,7 +165,7 @@
       <div class="sec-label">已有标签（修改后即时生效）</div>
       <div id="tagBox"></div>
       <p class="text-muted" style="margin-top:6px;">
-        停用或删除标签不会影响已经提交的历史记录（历史记录中保存了标签文字快照）。
+        勾选型标签可设置"二级选项"（如「优秀作业」下再分数学/语文课堂作业），学生勾选后要再选一项。停用或删除标签不影响历史记录（历史中保存了文字快照）。
       </p>
     </section>
   </main>

@@ -42,6 +42,7 @@
   word-break: break-word;
 }
 .item-list .tick { color: var(--primary); font-weight: 800; margin-right: 6px; }
+.item-list .item-sub { color: var(--primary-d, #1f7a66); font-weight: 700; }
 .item-list b { color: var(--ink); font-weight: 600; }
 
 .comment-box {

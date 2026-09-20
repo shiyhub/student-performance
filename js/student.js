@@ -50,6 +50,8 @@ const els = {
   detailName: $('#detailName'),
   detailSub: $('#detailSub'),
   detailBody: $('#detailBody'),
+  detailFoot: $('#detailFoot'),
+  btnDetailWrite: $('#btnDetailWrite'),
   btnDetailClose: $('#btnDetailClose'),
   // 表单
   todayLabel: $('#todayLabel'),
@@ -78,11 +80,13 @@ const state = {
   currentClass: '',
   roster: [],
   records: [],
+  detailName: '',
   // 表单
   stars: 0,
   mood: null,
   tags: [],
-  checkChosen: {},
+  checkChosen: {},   // 勾选型标签：{ [tagId]: true }
+  checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
   textValues: {}
 };
 
@@ -248,6 +252,8 @@ function openStudentDetail(name) {
     ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
     : '还没有提交过表现记录';
   els.detailBody.innerHTML = renderRecordTimeline(rows);
+  state.detailName = name;
+  els.detailFoot.hidden = false;
   els.detailModal.classList.add('show');
 }
 
@@ -257,6 +263,8 @@ function openClassDetail(avg, todayCount) {
   els.detailName.textContent = state.currentClass + ' · 全班';
   els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条${avg ? ' · 平均 ⭐' + avg : ''}`;
   els.detailBody.innerHTML = renderClassRanking() + renderRecordTimeline(state.records);
+  state.detailName = '';
+  els.detailFoot.hidden = true;
   els.detailModal.classList.add('show');
 }
 
@@ -314,6 +322,8 @@ function renderRecordTimeline(rows) {
         items.forEach(it => {
           if (it.type === 'text') {
             itemsHtml += `<li><b>${esc(it.label || '')}：</b>${esc(it.value || '')}</li>`;
+          } else if (it.value) {
+            itemsHtml += `<li><span class="tick">✓</span>${esc(it.label || '')} <span class="sub-val">· ${esc(it.value)}</span></li>`;
           } else {
             itemsHtml += `<li><span class="tick">✓</span>${esc(it.label || '')}</li>`;
           }
@@ -383,7 +393,7 @@ function renderMoods() {
 async function loadTags() {
   const { data, error } = await supabase
     .from('behavior_tags')
-    .select('id, label, tag_type, sort_order')
+    .select('id, label, tag_type, options, sort_order')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
@@ -392,26 +402,47 @@ async function loadTags() {
     els.tagsFailed.hidden = false;
     return;
   }
+  // 兼容旧数据：options 可能为 null
+  data.forEach(t => { if (!Array.isArray(t.options)) t.options = []; });
   state.tags = data;
   els.chipsBox.innerHTML = '';
   els.textTagsBox.innerHTML = '';
 
   data.forEach(t => {
     if (t.tag_type === 'check') {
+      const wrap = document.createElement('div');
+      wrap.className = 'opt-tag';
+
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'chip';
       chip.textContent = t.label;
-      chip.addEventListener('click', () => {
-        if (state.checkChosen[t.id]) {
-          delete state.checkChosen[t.id];
-          chip.classList.remove('active');
-        } else {
-          state.checkChosen[t.id] = true;
-          chip.classList.add('active');
-        }
-      });
-      els.chipsBox.appendChild(chip);
+      chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
+      wrap.appendChild(chip);
+
+      if (t.options.length) {
+        const sub = document.createElement('div');
+        sub.className = 'sub-options';
+        sub.hidden = true;
+        const hint = document.createElement('div');
+        hint.className = 'sub-hint';
+        hint.textContent = '再选一个具体的 👇';
+        sub.appendChild(hint);
+        t.options.forEach(opt => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'sub-chip';
+          b.textContent = opt;
+          b.addEventListener('click', () => {
+            state.checkOption[t.id] = opt;
+            sub.querySelectorAll('.sub-chip').forEach(x =>
+              x.classList.toggle('active', x === b));
+          });
+          sub.appendChild(b);
+        });
+        wrap.appendChild(sub);
+      }
+      els.chipsBox.appendChild(wrap);
     } else {
       const wrap = document.createElement('div');
       wrap.className = 'text-tag';
@@ -435,6 +466,24 @@ async function loadTags() {
   els.tagsBox.hidden = false;
 }
 
+// 勾选 / 取消勾选一个"勾选型"标签；带二级选项的要联动展开/收起
+function toggleCheckTag(tag, chip, wrap) {
+  const sub = wrap.querySelector('.sub-options');
+  if (state.checkChosen[tag.id]) {
+    delete state.checkChosen[tag.id];
+    delete state.checkOption[tag.id];
+    chip.classList.remove('active');
+    if (sub) {
+      sub.hidden = true;
+      sub.querySelectorAll('.sub-chip.active').forEach(x => x.classList.remove('active'));
+    }
+  } else {
+    state.checkChosen[tag.id] = true;
+    chip.classList.add('active');
+    if (sub) sub.hidden = false;
+  }
+}
+
 function bindEvents() {
   // 墙 ↔ 表单
   els.btnGoWrite.addEventListener('click', showForm);
@@ -451,6 +500,12 @@ function bindEvents() {
   // 详情弹窗
   els.btnDetailClose.addEventListener('click', closeDetail);
   els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeDetail(); });
+  els.btnDetailWrite.addEventListener('click', () => {
+    if (!state.detailName) return;
+    const name = state.detailName;
+    closeDetail();
+    showForm(name);
+  });
   // 提交
   els.btnSubmit.addEventListener('click', onSubmit);
   els.btnAgain.addEventListener('click', () => els.successOverlay.classList.remove('show'));
@@ -460,9 +515,16 @@ function bindEvents() {
   });
 }
 
-function showForm() {
+function showForm(presetName) {
   if (!state.currentClass) { toast('请先选择班级'); return; }
   els.inpClass.value = state.currentClass;
+  if (presetName) {
+    els.inpName.value = presetName;
+    try {
+      localStorage.setItem('sp_identity',
+        JSON.stringify({ class: state.currentClass, studentName: presetName }));
+    } catch (e) {}
+  }
   els.wallView.hidden = true;
   els.formView.hidden = false;
   window.scrollTo({ top: 0 });
@@ -489,7 +551,11 @@ async function onSubmit() {
   for (const t of state.tags) {
     if (t.tag_type === 'check') {
       if (state.checkChosen[t.id]) {
-        items.push({ id: t.id, label: t.label, type: 'check', value: null });
+        const subVal = (state.checkOption[t.id] || '').trim();
+        if (Array.isArray(t.options) && t.options.length && !subVal) {
+          return toast(`请为「${t.label}」再选一个具体项目`);
+        }
+        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null });
       }
     } else {
       const v = (state.textValues[t.id] || '').trim();
@@ -541,11 +607,14 @@ function resetSelections() {
   state.stars = 0;
   state.mood = null;
   state.checkChosen = {};
+  state.checkOption = {};
   state.textValues = {};
   renderStars();
   renderMoods();
   els.starCaption.textContent = '点一点上面的小星星';
   els.chipsBox.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+  els.chipsBox.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));
+  els.chipsBox.querySelectorAll('.sub-options').forEach(s => { s.hidden = true; });
   els.textTagsBox.querySelectorAll('input').forEach(i => { i.value = ''; });
 }
 

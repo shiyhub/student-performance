@@ -158,6 +158,8 @@ function renderRecordCard(r) {
       const label = esc(it.label || '');
       if (it.type === 'text') {
         itemsHtml += `<li><b>${label}：</b>${esc(it.value || '')}</li>`;
+      } else if (it.value) {
+        itemsHtml += `<li><span class="tick">✓</span>${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
       } else {
         itemsHtml += `<li><span class="tick">✓</span>${label}</li>`;
       }

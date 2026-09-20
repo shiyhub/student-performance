@@ -139,7 +139,8 @@ body { background: #f3f6f5; }
   background: #fbfdfc; width: 100%; min-height: 40px;
 }
 .tag-edit-row .tag-label { grid-column: 1 / -1; order: 1; }
-.tag-edit-row .tag-type { order: 2; }
+.tag-edit-row .tag-options { grid-column: 1 / -1; order: 2; }
+.tag-edit-row .tag-type { order: 3; }
 .tag-edit-row .tag-sort { order: 3; }
 .tag-edit-row .tag-off-toggle {
   grid-column: 1 / -1; order: 4; display: flex; align-items: center;
@@ -148,11 +149,14 @@ body { background: #f3f6f5; }
 }
 .tag-edit-row .tag-row-actions { display: flex; gap: 6px; grid-column: 1 / -1; order: 5; }
 .tag-edit-row .tag-row-actions .btn { flex: 1; }
+.tag-edit-row .tag-options:disabled { opacity: .45; background: #f2f4f3; }
+.item-list .item-sub { color: var(--primary-d, #1f7a66); font-weight: 700; }
 .sec-label { font-size: 14px; font-weight: 700; margin: 16px 2px 8px; color: var(--ink); }
 
 @media (min-width: 720px) {
-  .tag-edit-row { grid-template-columns: 1fr 130px 90px 90px auto; }
+  .tag-edit-row { grid-template-columns: 1.1fr 1.7fr 104px 76px 62px auto; }
   .tag-edit-row .tag-label,
+  .tag-edit-row .tag-options,
   .tag-edit-row .tag-type,
   .tag-edit-row .tag-sort,
   .tag-edit-row .tag-off-toggle,
