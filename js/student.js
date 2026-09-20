@@ -49,18 +49,33 @@ const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
   return arr;
 }, []);
 const CAMPUS_UNLOCK_LEVEL = 3;
+const LEGEND_UNLOCK_LEVEL = 6;
+const LEGEND_GROUPS = [
+  { name: '赛博少年',   prefix: 'cyber',  count: 8 },
+  { name: '机甲少年',   prefix: 'mecha',  count: 8 },
+  { name: '假面骑士',   prefix: 'rider',  count: 8 },
+  { name: '光之英雄',   prefix: 'ultra',  count: 8 },
+  { name: '魔法少女',   prefix: 'magic',  count: 8 },
+  { name: '科幻角色',   prefix: 'star',   count: 8 }
+];
+const LEGEND_KEYS = LEGEND_GROUPS.reduce((arr, g) => {
+  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
+  return arr;
+}, []);
 const EMOJI_CHANGE_LIMIT = 2;
-// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200（与数据库 level_from_xp 同口径）
-const XP_LEVELS = [0, 20, 60, 120, 200];
+// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
+const XP_LEVELS = [0, 20, 60, 120, 200, 400];
 const XP_PER_POSITIVE = 2;
-function isImgKey(k) { return /^(girl|boy|neutral)[1-8]$/.test(String(k || '')); }
+const IMG_KEY_RE = /^(girl|boy|neutral|cyber|mecha|rider|ultra|magic|star)[1-8]$/;
+function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
+function isLegendKey(k) { return /^(cyber|mecha|rider|ultra|magic|star)[1-8]$/.test(String(k || '')); }
 function levelFromXp(xp) {
   let lv = 1;
   for (let i = 0; i < XP_LEVELS.length; i++) if ((xp || 0) >= XP_LEVELS[i]) lv = i + 1;
   return lv;
 }
 function xpProgress(xp, level) {
-  if (level >= 5) return { pct: 100, left: 0, maxed: true };
+  if (level >= XP_LEVELS.length) return { pct: 100, left: 0, maxed: true };
   const lo = XP_LEVELS[level - 1], hi = XP_LEVELS[level];
   return { pct: Math.min(100, Math.max(0, ((xp - lo) / (hi - lo)) * 100)), left: hi - (xp || 0), maxed: false };
 }
@@ -757,7 +772,6 @@ function openAvatarPicker() {
   const cur = currentAvatar();
   const row = currentRosterRow();
   const lv = row ? (Number(row.level) || 1) : 1;
-  const unlocked = lv >= CAMPUS_UNLOCK_LEVEL;
   els.avatarPicker.innerHTML = '';
 
   // —— 表情头像（每天限换 2 次）——
@@ -773,20 +787,45 @@ function openAvatarPicker() {
   els.avatarPicker.appendChild(emojiSec);
 
   // —— 校园头像（3 级解锁）——
+  const campusUnlocked = lv >= CAMPUS_UNLOCK_LEVEL;
   const campusSec = document.createElement('div');
   campusSec.className = 'avatar-sec campus';
-  campusSec.innerHTML = unlocked
+  campusSec.innerHTML = campusUnlocked
     ? `<div class="avatar-sec-title">🏫 校园头像<span class="avatar-sec-tip ok">已解锁，可随意更换</span></div>`
     : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（多记录积极表现赚经验吧）</span></div>`;
   const campusGrid = document.createElement('div');
   campusGrid.className = 'avatar-grid avatar-grid-img';
   CAMPUS_GROUPS.forEach(g => {
     for (let i = 1; i <= g.count; i++) {
-      campusGrid.appendChild(buildCampusChoice(g.prefix + i, cur.key, unlocked));
+      campusGrid.appendChild(buildImgChoice(g.prefix + i, cur.key, campusUnlocked, CAMPUS_UNLOCK_LEVEL));
     }
   });
   campusSec.appendChild(campusGrid);
   els.avatarPicker.appendChild(campusSec);
+
+  // —— 典藏头像（6 级解锁）——
+  const legendUnlocked = lv >= LEGEND_UNLOCK_LEVEL;
+  const legendSec = document.createElement('div');
+  legendSec.className = 'avatar-sec campus legend';
+  legendSec.innerHTML = legendUnlocked
+    ? `<div class="avatar-sec-title">🌟 典藏头像<span class="avatar-sec-tip ok">Lv.${LEGEND_UNLOCK_LEVEL} 已解锁，可随意更换</span></div>`
+    : `<div class="avatar-sec-title">🔒 典藏头像<span class="avatar-sec-tip">升到 Lv.${LEGEND_UNLOCK_LEVEL} 解锁（再攒经验吧）</span></div>`;
+  const legendGrid = document.createElement('div');
+  legendGrid.className = 'avatar-grid avatar-grid-img';
+  LEGEND_GROUPS.forEach(g => {
+    const sub = document.createElement('div');
+    sub.className = 'avatar-sub-group';
+    sub.innerHTML = `<div class="avatar-sub-title">${g.name}</div>`;
+    const row = document.createElement('div');
+    row.className = 'avatar-grid avatar-grid-img';
+    for (let i = 1; i <= g.count; i++) {
+      row.appendChild(buildImgChoice(g.prefix + i, cur.key, legendUnlocked, LEGEND_UNLOCK_LEVEL));
+    }
+    sub.appendChild(row);
+    legendGrid.appendChild(sub);
+  });
+  legendSec.appendChild(legendGrid);
+  els.avatarPicker.appendChild(legendSec);
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
@@ -801,7 +840,7 @@ function buildEmojiChoice(emoji, selectedKey) {
   return b;
 }
 
-function buildCampusChoice(key, selectedKey, unlocked) {
+function buildImgChoice(key, selectedKey, unlocked, lockLevel) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'avatar-choice avatar-choice-img'
@@ -809,11 +848,11 @@ function buildCampusChoice(key, selectedKey, unlocked) {
     + (unlocked ? '' : ' locked');
   b.innerHTML = unlocked
     ? `<img src="${AVATAR_BASE}${key}.webp" alt="" loading="lazy">`
-    : `<img src="${AVATAR_BASE}${key}.webp" alt="" loading="lazy"><span class="avatar-lock">🔒<em>Lv${CAMPUS_UNLOCK_LEVEL}</em></span>`;
+    : `<img src="${AVATAR_BASE}${key}.webp" alt="" loading="lazy"><span class="avatar-lock">🔒<em>Lv${lockLevel}</em></span>`;
   b.addEventListener('click', () => {
     if (!unlocked) {
       sfx.oops();
-      toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦，多记录积极表现赚经验吧～`);
+      toast(`这款头像要升到 Lv.${lockLevel} 才能用哦，继续加油～`);
       return;
     }
     onChooseAvatar(key, b);
@@ -829,6 +868,8 @@ async function onChooseAvatar(key, btn) {
     sfx.oops();
     if (reason === 'locked') {
       toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
+    } else if (reason === 'locked_legend') {
+      toast(`典藏头像要升到 Lv.${LEGEND_UNLOCK_LEVEL} 才能解锁哦`);
     } else if (reason === 'limit') {
       toast(`表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
     } else if (reason === 'no_student') {

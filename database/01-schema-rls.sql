@@ -28,7 +28,7 @@ create table if not exists public.student_info (
   avatar_changes_today smallint not null default 0,     -- 当日已换表情头像次数（上限2）
   created_at           timestamptz not null default now(),
   constraint uq_student unique (class, student_name),   -- 同班不允许重名重复录入
-  constraint chk_student_level check (level between 1 and 5),
+  constraint chk_student_level check (level between 1 and 6),
   constraint chk_student_xp    check (xp >= 0)
 );
 
@@ -203,6 +203,7 @@ language sql
 immutable
 as $$
   select case
+           when coalesce(p_xp, 0) >= 400 then 6
            when coalesce(p_xp, 0) >= 200 then 5
            when coalesce(p_xp, 0) >= 120 then 4
            when coalesce(p_xp, 0) >= 60  then 3
@@ -343,11 +344,12 @@ declare
   v_changed_at timestamptz;
   v_changes    smallint;
   v_key        text;
-  v_is_image   boolean;
+  v_is_campus  boolean;
+  v_is_legend  boolean;
   v_left       int;
 begin
   v_key := nullif(btrim(coalesce(p_avatar, '')), '');
-  if v_key is null or length(v_key) > 16 then
+  if v_key is null or length(v_key) > 24 then
     return jsonb_build_object('ok', false, 'reason', 'bad_key', 'changed', false);
   end if;
 
@@ -361,7 +363,8 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'no_student', 'changed', false);
   end if;
 
-  v_is_image := v_key ~ '^(girl|boy|neutral)[1-8]$';
+  v_is_campus := v_key ~ '^(girl|boy|neutral)[1-8]$';
+  v_is_legend := v_key ~ '^(cyber|mecha|rider|ultra|magic|star)[1-8]$';
 
   if v_key is not distinct from v_cur then
     v_left := case when v_changed_at::date = current_date then greatest(0, 2 - coalesce(v_changes,0)) else 2 end;
@@ -369,12 +372,21 @@ begin
                               'level', v_level, 'xp', v_xp, 'changes_left', v_left);
   end if;
 
-  if v_is_image then
+  if v_is_legend then
+    if coalesce(v_level, 1) < 6 then
+      return jsonb_build_object('ok', false, 'reason', 'locked_legend', 'changed', false,
+                                'level', v_level, 'xp', v_xp, 'changes_left', 0);
+    end if;
+    update public.student_info set avatar = v_key where id = v_sid;
+    return jsonb_build_object('ok', true, 'changed', true, 'reason', 'ok',
+                              'level', v_level, 'xp', v_xp, 'changes_left', -1);
+  end if;
+
+  if v_is_campus then
     if coalesce(v_level, 1) < 3 then
       return jsonb_build_object('ok', false, 'reason', 'locked', 'changed', false,
                                 'level', v_level, 'xp', v_xp, 'changes_left', 0);
     end if;
-
     update public.student_info set avatar = v_key where id = v_sid;
     return jsonb_build_object('ok', true, 'changed', true, 'reason', 'ok',
                               'level', v_level, 'xp', v_xp, 'changes_left', -1);
