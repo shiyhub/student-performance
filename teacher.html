@@ -96,8 +96,9 @@
               <input class="input" id="addStudent" type="text" placeholder="学生姓名" maxlength="20">
             </div>
             <div class="field full">
-              <label for="addParent">家长姓名</label>
-              <input class="input" id="addParent" type="text" placeholder="用于家长查询时校验" maxlength="20">
+              <label>家长姓名（可添加多位，每位家长都能查询该生）</label>
+              <div id="parentInputs"></div>
+              <button class="btn btn-ghost btn-sm" id="btnAddParentField" type="button">＋ 再加一位家长</button>
             </div>
           </div>
           <button class="btn btn-primary" type="submit">添加学生</button>
@@ -105,19 +106,20 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📋 批量录入（一次粘贴全班名单）</div>
+        <div class="card-title">📋 批量录入（一次粘贴全班名单，支持多位家长）</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          <b>同班最省事：</b>先在下面填一次"统一班级"，然后每行写 <b>学生姓名,家长姓名</b>（用逗号、空格分隔都行；也可以直接从 Excel 复制两列粘贴，会自动按表格列识别）。<br>
-          <b>多个班混排：</b>统一班级留空，每行写 <b>班级,学生姓名,家长姓名</b> 三列即可。空行会自动忽略，重复的学生自动跳过。
+          <b>同班最省事：</b>先填一次"统一班级"，每行写 <b>学生姓名,家长1,家长2,…</b>（逗号、空格分隔均可；从 Excel 一次复制多列粘贴也行——第一列学生，后面每列一位家长）。<br>
+          <b>多个班混排：</b>统一班级留空，每行写 <b>班级,学生姓名,家长1,家长2,…</b>。<br>
+          空行自动忽略；同一孩子分几行写不同家长会自动合并；名单里已有的学生和家长自动跳过。
         </p>
         <div class="field">
-          <label for="batchClass">统一班级（每行只有"学生+家长"两列时生效）</label>
+          <label for="batchClass">统一班级（每行从"学生姓名"列开始时生效）</label>
           <input class="input" id="batchClass" type="text" placeholder="例如：三年级2班" maxlength="30" list="classOptions">
         </div>
         <div class="field">
-          <label for="batchText">名单内容（每行一个学生）</label>
+          <label for="batchText">名单内容（每行一个学生，家长数量不限）</label>
           <textarea class="input batch-textarea" id="batchText" rows="9"
-            placeholder="李小明,李大明&#10;王小红 王建国&#10;张三&#9;张父   ← 也可以是 Excel 复制来的两列"></textarea>
+            placeholder="李小明,李大明,刘小芳   ← 爸爸、妈妈都能查&#10;王小红 王建国 王秀兰&#10;张三&#9;张父   ← 也可以是 Excel 复制来的多列"></textarea>
         </div>
         <div class="batch-actions">
           <button class="btn btn-ghost" id="btnBatchCheck" type="button">① 检查内容</button>

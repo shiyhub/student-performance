@@ -45,7 +45,8 @@ const els = {
   addStudentForm: $('#addStudentForm'),
   addClass: $('#addClass'),
   addStudent: $('#addStudent'),
-  addParent: $('#addParent'),
+  parentInputs: $('#parentInputs'),
+  btnAddParentField: $('#btnAddParentField'),
   classOptions: $('#classOptions'),
   studentBox: $('#studentBox'),
   // 批量录入
@@ -91,6 +92,16 @@ function init() {
   });
   els.addStudentForm.addEventListener('submit', onAddStudent);
   els.addTagForm.addEventListener('submit', onAddTag);
+
+  // 单个录入：动态家长输入（至少 1 位，最多 10 位）
+  renderParentFields(['']);
+  els.btnAddParentField.addEventListener('click', () => {
+    const n = $$('.parent-input', els.parentInputs).length;
+    if (n >= 10) { toast('一位学生最多添加 10 位家长'); return; }
+    addParentField('');
+    const inputs = $$('.parent-input', els.parentInputs);
+    inputs[inputs.length - 1].focus();
+  });
   els.btnBatchCheck.addEventListener('click', onBatchCheck);
   els.btnBatchImport.addEventListener('click', onBatchImport);
   els.btnBatchClear.addEventListener('click', onBatchClear);
@@ -315,7 +326,7 @@ async function loadStudents() {
   els.studentBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载名单…</div>';
   const { data, error } = await supabase
     .from('student_info')
-    .select('*')
+    .select('*, student_parent(id, parent_name)')
     .order('class')
     .order('student_name');
   if (error) {
@@ -338,10 +349,22 @@ async function loadStudents() {
     html += `<div class="roster-group">
                <h4>${esc(cls)} <span class="n">${groups.get(cls).length} 人</span></h4>`;
     groups.get(cls).forEach(s => {
+      const parents = (s.student_parent || [])
+        .slice()
+        .sort((a, b) => a.parent_name.localeCompare(b.parent_name, 'zh-Hans-CN'));
+      const chips = parents.map(p =>
+        `<span class="pchip">${esc(p.parent_name)}
+           <button type="button" class="pchip-x" data-del-parent="${p.id}"
+                   data-student="${esc(s.student_name)}" title="移除该家长">×</button>
+         </span>`
+      ).join('');
       html += `<div class="roster-row">
                  <div class="roster-who">
                    <div class="sname">${esc(s.student_name)}</div>
-                   <div class="pname">家长：${esc(s.parent_name)}</div>
+                   <div class="pchips" data-chips-for="${s.id}">
+                     ${chips}
+                     <button type="button" class="pchip-add" data-add-parent="${s.id}">＋家长</button>
+                   </div>
                  </div>
                  <button class="icon-btn" title="生成家长查询二维码" data-qr-id="${s.id}">🔗</button>
                  <button class="icon-btn danger" title="删除学生" data-del-id="${s.id}">🗑️</button>
@@ -351,17 +374,19 @@ async function loadStudents() {
   });
   els.studentBox.innerHTML = html;
 
+  // 二维码
   $$('[data-qr-id]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', () => {
       const s = data.find(x => x.id === btn.dataset.qrId);
       if (s) openStudentQr(s);
     });
   });
+  // 删除学生（家长关联由数据库级联删除）
   $$('[data-del-id]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', async () => {
       const s = data.find(x => x.id === btn.dataset.delId);
       if (!s) return;
-      if (!confirm(`确定删除「${s.class} · ${s.student_name}」吗？\n（历史表现记录仍会保留，但该学生将无法再提交新记录、家长也无法再查询。）`)) return;
+      if (!confirm(`确定删除「${s.class} · ${s.student_name}」及其全部家长吗？\n（历史表现记录仍会保留，但该学生将无法再提交新记录、家长也无法再查询。）`)) return;
       const { error } = await supabase.from('student_info').delete().eq('id', s.id);
       if (error) { toast('删除失败：' + error.message); return; }
       toast('已删除');
@@ -369,34 +394,137 @@ async function loadStudents() {
       loadClassesAndRecords();
     });
   });
+  // 移除某位家长
+  $$('[data-del-parent]', els.studentBox).forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const box = btn.closest('.pchips');
+      const count = box.querySelectorAll('.pchip').length;
+      if (count <= 1) {
+        toast('至少要保留一位家长；可先点「＋家长」添加新家长，再移除这一位');
+        return;
+      }
+      const pid = btn.dataset.delParent;
+      if (!confirm(`确定移除家长「${btn.parentElement.textContent.replace('×','').trim()}」吗？\n移除后这位家长将无法再查询该生。`)) return;
+      const { error } = await supabase.from('student_parent').delete().eq('id', pid);
+      if (error) { toast('移除失败：' + error.message); return; }
+      toast('已移除该家长');
+      loadStudents();
+    });
+  });
+  // 给学生添加家长（行内输入）
+  $$('[data-add-parent]', els.studentBox).forEach(btn => {
+    btn.addEventListener('click', () => showAddParentRow(btn));
+  });
+}
+
+// 在「＋家长」按钮位置展开一个输入框
+function showAddParentRow(addBtn) {
+  const studentId = addBtn.dataset.addParent;
+  addBtn.outerHTML =
+    `<span class="pchip-edit" data-edit-for="${studentId}">
+       <input type="text" class="parent-inline-input" maxlength="20" placeholder="家长姓名">
+       <button type="button" class="btn btn-primary btn-sm parent-ok">确定</button>
+       <button type="button" class="btn btn-ghost btn-sm parent-cancel">取消</button>
+     </span>`;
+  const row = els.studentBox.querySelector(`[data-edit-for="${studentId}"]`);
+  const input = $('.parent-inline-input', row);
+  input.focus();
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); $('.parent-ok', row).click(); }
+    if (ev.key === 'Escape') $('.parent-cancel', row).click();
+  });
+  $('.parent-cancel', row).addEventListener('click', () => loadStudents());
+  $('.parent-ok', row).addEventListener('click', async () => {
+    const name = input.value.trim();
+    if (!name) { toast('请输入家长姓名'); return; }
+    const { error } = await supabase
+      .from('student_parent')
+      .insert({ student_id: studentId, parent_name: name });
+    if (error) {
+      if (/uq_student_parent|unique/i.test(error.message)) {
+        toast('这位家长已经在名单里了');
+      } else {
+        toast('添加失败：' + error.message);
+      }
+      return;
+    }
+    toast('已添加家长：' + name);
+    loadStudents();
+  });
+}
+
+/* ---------------- 单个录入：学生 + 多位家长 ---------------- */
+
+function renderParentFields(values) {
+  els.parentInputs.innerHTML = '';
+  values.forEach(v => addParentField(v));
+}
+
+function addParentField(value) {
+  const row = document.createElement('div');
+  row.className = 'parent-field-row';
+  row.innerHTML =
+    `<input type="text" class="input parent-input" maxlength="20"
+            placeholder="家长姓名（如：爸爸 李大明）" value="">
+     <button type="button" class="parent-field-del" title="删除这一位">×</button>`;
+  const input = $('.parent-input', row);
+  input.value = value || '';
+  $('.parent-field-del', row).addEventListener('click', () => {
+    if ($$('.parent-input', els.parentInputs).length <= 1) {
+      toast('至少填写一位家长');
+      return;
+    }
+    row.remove();
+  });
+  els.parentInputs.appendChild(row);
 }
 
 async function onAddStudent(e) {
   e.preventDefault();
   const cls = els.addClass.value.trim();
   const name = els.addStudent.value.trim();
-  const parent = els.addParent.value.trim();
-  if (!cls || !name || !parent) { toast('班级、学生姓名、家长姓名都要填写'); return; }
+  const parents = $$('.parent-input', els.parentInputs)
+    .map(i => i.value.trim())
+    .filter(Boolean);
+  if (!cls || !name) { toast('请填写班级和学生姓名'); return; }
+  if (!parents.length) { toast('请至少填写一位家长姓名'); return; }
+  // 去掉本次重复填写的同名家长
+  const uniqParents = Array.from(new Set(parents));
 
   const btn = els.addStudentForm.querySelector('button[type=submit]');
   btn.disabled = true;
   btn.textContent = '添加中…';
-  const { error } = await supabase
+
+  // 先建学生并拿回 id，再写家长关联
+  const { data: stuData, error: stuErr } = await supabase
     .from('student_info')
-    .insert({ class: cls, student_name: name, parent_name: parent });
-  btn.disabled = false;
-  btn.textContent = '添加学生';
-  if (error) {
-    if (/unique|uq_student/i.test(error.message)) {
-      toast('名单里已经有这个学生了（班级+学生+家长组合重复）');
+    .insert({ class: cls, student_name: name })
+    .select('id')
+    .single();
+
+  if (stuErr) {
+    btn.disabled = false;
+    btn.textContent = '添加学生';
+    if (/uq_student|duplicate|unique/i.test(stuErr.message)) {
+      toast('这个班已经有同名学生了，可在名单里直接给他「＋家长」');
     } else {
-      toast('添加失败：' + error.message);
+      toast('添加失败：' + stuErr.message);
     }
     return;
   }
-  toast('已添加：' + name);
+
+  const parentRows = uniqParents.map(p => ({ student_id: stuData.id, parent_name: p }));
+  const { error: pErr } = await supabase.from('student_parent').insert(parentRows);
+
+  btn.disabled = false;
+  btn.textContent = '添加学生';
+  if (pErr) {
+    toast('学生已添加，但部分家长保存失败：' + pErr.message);
+  } else {
+    toast(`已添加：${name}（${uniqParents.length} 位家长）`);
+  }
   els.addStudent.value = '';
-  els.addParent.value = '';
+  renderParentFields(['']);
   els.addStudent.focus();
   if (loaded.students) loadStudents();
   loadClassesAndRecords();
@@ -410,15 +538,24 @@ function openStudentQr(s) {
   window.open(url.toString(), '_blank');
 }
 
-/* ---------------- 批量录入学生 ---------------- */
+/* ---------------- 批量录入学生（每位学生家长数量不限） ---------------- */
 
-// 把粘贴文本解析成行：支持 Excel 制表符、中英文逗号、空白分隔；
-// 每行 2 列 = 学生+家长（用统一班级），3 列 = 班级+学生+家长。
+// 解析粘贴文本：
+//   统一班级非空：每行 = 学生姓名 + 1..N 位家长
+//   统一班级为空：每行 = 班级 + 学生姓名 + 1..N 位家长
+// 同一个学生分多行写不同家长会自动合并。
 function parseBatchText(text, defaultClass) {
-  const rows = [];
+  const students = new Map();  // key: 班级|学生 → {class, student_name, parents:Set}
   const bad = [];
-  const seen = new Set();
   const cls = (defaultClass || '').trim();
+
+  function addStudent(key, rowClass, name, parents) {
+    if (!students.has(key)) {
+      students.set(key, { class: rowClass, student_name: name, parents: [] });
+    }
+    const rec = students.get(key);
+    parents.forEach(p => { if (!rec.parents.includes(p)) rec.parents.push(p); });
+  }
 
   text.split(/\r?\n/).forEach((line, idx) => {
     const lineNo = idx + 1;
@@ -427,57 +564,57 @@ function parseBatchText(text, defaultClass) {
 
     // 依次按 制表符 / 中英文逗号 / 连续空白 切分
     const parts = raw.split(/\t|[，,]|\s+/).map(s => s.trim()).filter(Boolean);
-    let rowClass, name, parent;
+    let rowClass, name, parents;
 
-    if (parts.length === 2) {
-      if (!cls) {
-        bad.push({ lineNo, raw, reason: '只有"学生 家长"两列，但上面没有填写统一班级' });
+    if (cls) {
+      // 统一班级：至少要有"学生 + 1 位家长"两列
+      if (parts.length < 2) {
+        bad.push({ lineNo, raw, reason: '需要至少两列：学生姓名 + 一位家长姓名' });
         return;
       }
-      rowClass = cls; name = parts[0]; parent = parts[1];
-    } else if (parts.length === 3) {
-      rowClass = parts[0]; name = parts[1]; parent = parts[2];
+      rowClass = cls; name = parts[0]; parents = parts.slice(1);
     } else {
-      bad.push({ lineNo, raw, reason: `识别出 ${parts.length} 列，应为 2 列（学生 家长）或 3 列（班级 学生 家长）` });
-      return;
+      // 混班：至少要有"班级 + 学生 + 1 位家长"三列
+      if (parts.length < 3) {
+        bad.push({ lineNo, raw, reason: '未填统一班级时，每行至少三列：班级,学生姓名,一位家长姓名' });
+        return;
+      }
+      rowClass = parts[0]; name = parts[1]; parents = parts.slice(2);
     }
 
-    const key = `${rowClass}|${name}|${parent}`;
-    if (seen.has(key)) {
-      bad.push({ lineNo, raw, reason: '与本次粘贴中的另一行完全重复' });
-      return;
-    }
-    seen.add(key);
-    rows.push({ class: rowClass, student_name: name, parent_name: parent });
+    addStudent(`${rowClass}|${name}`, rowClass, name, parents);
   });
 
-  return { rows, bad };
+  return { students: Array.from(students.values()), bad };
 }
 
 function onBatchCheck() {
-  const { rows, bad } = parseBatchText(els.batchText.value || '', els.batchClass.value);
-  batchParsed = rows;
-  els.btnBatchImport.disabled = rows.length === 0;
+  const { students, bad } = parseBatchText(els.batchText.value || '', els.batchClass.value);
+  batchParsed = students;
+  els.btnBatchImport.disabled = students.length === 0;
 
   // 按班级分组统计
   const groups = new Map();
-  rows.forEach(r => {
+  students.forEach(r => {
     if (!groups.has(r.class)) groups.set(r.class, []);
     groups.get(r.class).push(r);
   });
 
   let html = '';
-  if (rows.length) {
+  if (students.length) {
+    const totalParents = students.reduce((n, s) => n + s.parents.length, 0);
     const groupHtml = Array.from(groups.keys()).sort().map(c => {
       const list = groups.get(c);
-      const preview = list.slice(0, 5).map(r => esc(r.student_name)).join('、');
+      const pCount = list.reduce((n, s) => n + s.parents.length, 0);
+      const preview = list.slice(0, 5)
+        .map(s => `${esc(s.student_name)}（${s.parents.length}位家长）`).join('、');
       const more = list.length > 5 ? ` 等 ${list.length} 人` : '';
-      return `<li><b>${esc(c)}</b>：${list.length} 人 —— ${preview}${more}</li>`;
+      return `<li><b>${esc(c)}</b>：${list.length} 名学生、${pCount} 位家长 —— ${preview}${more}</li>`;
     }).join('');
     html += `<div class="banner banner-success batch-preview">
-               ✅ 检查通过，本次将导入 <b>${rows.length}</b> 名学生：
+               ✅ 检查通过，本次将导入 <b>${students.length}</b> 名学生、共 <b>${totalParents}</b> 位家长：
                <ul>${groupHtml}</ul>
-               确认无误后点「② 确认导入」；名单中已存在的学生会自动跳过。
+               确认无误后点「② 确认导入」；已存在的学生和家长会自动跳过，新家长会追加到已有学生名下。
              </div>`;
   } else {
     html += '<div class="banner banner-error">没有可导入的有效行，请按格式粘贴名单。</div>';
@@ -497,47 +634,73 @@ async function onBatchImport() {
   btn.disabled = true;
   btn.textContent = '导入中…';
 
-  // 先取现有名单，用于提示"新增多少 / 跳过多少重复"
+  // 1) 确保所有学生都存在（已存在的靠唯一约束忽略）
+  const studentRows = batchParsed.map(s => ({ class: s.class, student_name: s.student_name }));
+  for (let i = 0; i < studentRows.length; i += 200) {
+    const { error } = await supabase
+      .from('student_info')
+      .upsert(studentRows.slice(i, i + 200), {
+        onConflict: 'class,student_name',
+        ignoreDuplicates: true
+      });
+    if (error) {
+      toast('导入失败（学生）：' + error.message);
+      btn.disabled = false;
+      btn.textContent = '② 确认导入';
+      return;
+    }
+  }
+
+  // 2) 重新读取学生与现有家长，建立映射
   const { data: existing, error: qerr } = await supabase
     .from('student_info')
-    .select('class,student_name,parent_name');
+    .select('id, class, student_name, student_parent(parent_name)');
   if (qerr) {
-    toast('导入失败：' + qerr.message);
+    toast('导入失败（读取名单）：' + qerr.message);
     btn.disabled = false;
     btn.textContent = '② 确认导入';
     return;
   }
-  const exSet = new Set((existing || []).map(
-    s => `${s.class}|${s.student_name}|${s.parent_name}`
-  ));
-  const fresh = batchParsed.filter(r =>
-    !exSet.has(`${r.class}|${r.student_name}|${r.parent_name}`)
-  );
-  const dupCount = batchParsed.length - fresh.length;
+  const idMap = new Map();           // 班级|学生 → id
+  const existParents = new Set();    // id|家长姓名
+  (existing || []).forEach(s => {
+    idMap.set(`${s.class}|${s.student_name}`, s.id);
+    (s.student_parent || []).forEach(p => existParents.add(`${s.id}|${p.parent_name}`));
+  });
+
+  // 3) 组装需要新增的家长关联
+  const freshParents = [];
+  let totalParentCount = 0;
+  batchParsed.forEach(s => {
+    const sid = idMap.get(`${s.class}|${s.student_name}`);
+    if (!sid) return;
+    s.parents.forEach(p => {
+      totalParentCount++;
+      if (!existParents.has(`${sid}|${p}`)) {
+        freshParents.push({ student_id: sid, parent_name: p });
+      }
+    });
+  });
 
   let lastError = null;
-  if (fresh.length) {
-    // 分块写入（每块 200 条）；onConflict 命中唯一约束，ignoreDuplicates 双保险
-    for (let i = 0; i < fresh.length; i += 200) {
-      const chunk = fresh.slice(i, i + 200);
-      const { error } = await supabase
-        .from('student_info')
-        .upsert(chunk, {
-          onConflict: 'class,student_name,parent_name',
-          ignoreDuplicates: true
-        });
-      if (error) { lastError = error; break; }
-    }
+  for (let i = 0; i < freshParents.length; i += 200) {
+    const { error } = await supabase
+      .from('student_parent')
+      .upsert(freshParents.slice(i, i + 200), {
+        onConflict: 'student_id,parent_name',
+        ignoreDuplicates: true
+      });
+    if (error) { lastError = error; break; }
   }
 
   btn.disabled = false;
   btn.textContent = '② 确认导入';
   if (lastError) {
-    toast('部分导入失败：' + lastError.message);
+    toast('部分家长导入失败：' + lastError.message);
     return;
   }
 
-  toast(`导入完成：新增 ${fresh.length} 人，跳过重复 ${dupCount} 人`);
+  toast(`导入完成：${batchParsed.length} 名学生；新增家长 ${freshParents.length} 位，跳过已有 ${totalParentCount - freshParents.length} 位`);
   els.batchText.value = '';
   els.batchResult.innerHTML = '';
   batchParsed = [];
