@@ -488,3 +488,11 @@ body {
   .avatar-grid { gap: 20px; }
   .avatar-lock { font-size: 38px; } .avatar-lock em { font-size: 23px; }
 }
+
+/* 老师预览模式提示条 */
+.preview-banner {
+  background: linear-gradient(90deg,#fff3d6,#ffe9b8);
+  color: #8a5a00; border: 1.5px solid #f0c66a;
+  padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  margin-bottom: 10px; text-align: center;
+}

@@ -71,7 +71,14 @@ const els = {
   addTagType: $('#addTagType'),
   addTagCategory: $('#addTagCategory'),
   addTagOptions: $('#addTagOptions'),
+  addTagXp: $('#addTagXp'),
   tagBox: $('#tagBox'),
+  // 测试工具
+  btnRecalcXp: $('#btnRecalcXp'),
+  recalcResult: $('#recalcResult'),
+  previewClass: $('#previewClass'),
+  previewStudent: $('#previewStudent'),
+  btnPreviewStudent: $('#btnPreviewStudent'),
   // 新增 / 修改记录
   btnAddRecord: $('#btnAddRecord'),
   recordModal: $('#recordModal'),
@@ -144,6 +151,10 @@ function init() {
   els.btnBatchCheck.addEventListener('click', onBatchCheck);
   els.btnBatchImport.addEventListener('click', onBatchImport);
   els.btnBatchClear.addEventListener('click', onBatchClear);
+  // 测试工具
+  if (els.btnRecalcXp) els.btnRecalcXp.addEventListener('click', onRecalcXp);
+  if (els.previewClass) els.previewClass.addEventListener('change', fillPreviewStudents);
+  if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
   els.classQrModal.addEventListener('click', e => { if (e.target === els.classQrModal) closeClassQr(); });
@@ -213,9 +224,12 @@ function switchTab(name) {
   $('#tabStudents').hidden = name !== 'students';
   $('#tabTags').hidden = name !== 'tags';
   $('#tabExam').hidden = name !== 'exam';
+  const toolsPane = $('#tabTools');
+  if (toolsPane) toolsPane.hidden = name !== 'tools';
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
+  if (name === 'tools') fillPreviewClasses();
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -794,9 +808,16 @@ async function loadStudents() {
                    data-student="${esc(s.student_name)}" title="移除该家长">×</button>
          </span>`
       ).join('');
+      const lv = Number(s.level) || 1;
+      const xp = Number(s.xp) || 0;
       html += `<div class="roster-row">
                  <div class="roster-who">
-                   <div class="sname">${esc(s.student_name)}</div>
+                   <div class="sname">${esc(s.student_name)}
+                     <span class="xp-badge" title="经验 ${xp}">Lv${lv} · ${xp}XP</span>
+                     <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
+                             data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
+                             data-xp-cur="${xp}" title="手动调整该学生经验">✏️ 调经验</button>
+                   </div>
                    <div class="pchips" data-chips-for="${s.id}">
                      ${chips}
                      <button type="button" class="pchip-add" data-add-parent="${s.id}">＋家长</button>
@@ -824,6 +845,25 @@ async function loadStudents() {
       toast('已删除');
       loadStudents();
       loadClassesAndRecords();
+    });
+  });
+  // 手动调整学生经验
+  $$('[data-xp-id]', els.studentBox).forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cur = Number(btn.dataset.xpCur) || 0;
+      const input = prompt(`给「${btn.dataset.xpName}」设置经验值：\n（当前 ${cur} 点；等级会自动重算，Lv3=60 经验）`, String(cur));
+      if (input == null) return;
+      const newXp = parseInt(input, 10);
+      if (isNaN(newXp) || newXp < 0) { toast('请输入 0 以上的数字'); return; }
+      const { data, error } = await supabase.rpc('set_student_xp', {
+        p_class: btn.dataset.xpClass,
+        p_student: btn.dataset.xpName,
+        p_xp: newXp
+      });
+      if (error) { toast('调整失败：' + error.message); return; }
+      if (data && data.ok === false) { toast('没找到这个学生'); return; }
+      toast(`已设为 ${data.xp} 经验（Lv${data.level}）`);
+      loadStudents();
     });
   });
   // 移除某位家长
@@ -1255,6 +1295,7 @@ async function renderTags() {
         <input type="checkbox" class="tag-active" ${t.is_active ? 'checked' : ''}> 启用
       </label>
       <input type="number" class="tag-sort" value="${Number(t.sort_order) || 0}" min="0" max="9999" title="排序，数字越小越靠前">
+      <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="学生选这个表现加多少经验（消极建议0）">
       <div class="tag-row-actions">
         <button class="btn btn-primary btn-sm tag-save">保存</button>
         <button class="btn btn-danger-ghost btn-sm tag-delete">删除</button>
@@ -1281,6 +1322,7 @@ async function renderTags() {
       let category = $('.tag-cat', row).value === 'negative' ? 'negative' : 'positive';
       if (tagType === 'text') category = 'positive';
       const score = category === 'negative' ? -1 : 1;
+      const xpVal = Math.max(0, Math.min(100, parseInt($('.tag-xp', row).value, 10) || 0));
       const btn = $('.tag-save', row);
       btn.disabled = true;
       btn.textContent = '…';
@@ -1290,6 +1332,7 @@ async function renderTags() {
         options,
         category,
         score,
+        xp_value: xpVal,
         is_active: $('.tag-active', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
       }).eq('id', id);
@@ -1340,6 +1383,7 @@ async function onAddTag(e) {
   let category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
   if (tagType === 'text') category = 'positive';
   const score = category === 'negative' ? -1 : 1;
+  const xpVal = Math.max(0, Math.min(100, parseInt(els.addTagXp.value, 10) || 0));
   const { data, error } = await supabase
     .from('behavior_tags')
     .insert({
@@ -1348,6 +1392,7 @@ async function onAddTag(e) {
       options,
       category,
       score,
+      xp_value: xpVal,
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
     .select('id');
@@ -1358,8 +1403,56 @@ async function onAddTag(e) {
   els.addTagLabel.value = '';
   els.addTagOptions.value = '';
   els.addTagCategory.value = 'positive';
+  els.addTagXp.value = '2';
   els.addTagLabel.focus();
   if (loaded.tags) renderTags();
+}
+
+/* ---------------- 测试工具 ---------------- */
+
+async function onRecalcXp() {
+  if (!confirm('将按历史记录重新累加全班的经验和等级。\n不会删除任何记录，只是重算经验。确定继续吗？')) return;
+  const btn = els.btnRecalcXp;
+  btn.disabled = true;
+  btn.textContent = '重算中…';
+  const { data, error } = await supabase.rpc('recalc_all_xp');
+  btn.disabled = false;
+  btn.textContent = '一键重算全班经验';
+  if (error) {
+    els.recalcResult.textContent = '失败：' + error.message;
+    toast('重算失败：' + error.message);
+    return;
+  }
+  els.recalcResult.textContent = `✅ 完成，重放了 ${data && data.records_replayed} 条记录`;
+  toast('经验已重算');
+  loadStudents();
+}
+
+async function fillPreviewClasses() {
+  if (!els.previewClass) return;
+  const { data } = await supabase.from('student_info').select('class').order('class');
+  const classes = Array.from(new Set((data || []).map(s => s.class))).sort();
+  els.previewClass.innerHTML = '<option value="">请选择班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  fillPreviewStudents();
+}
+
+async function fillPreviewStudents() {
+  if (!els.previewClass || !els.previewStudent) return;
+  const cls = els.previewClass.value;
+  if (!cls) { els.previewStudent.innerHTML = '<option value="">先选班级</option>'; return; }
+  const { data } = await supabase
+    .from('student_info').select('student_name').eq('class', cls).order('student_name');
+  els.previewStudent.innerHTML = '<option value="">请选择学生</option>' +
+    (data || []).map(s => `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
+}
+
+function openStudentPreview() {
+  const cls = els.previewClass.value;
+  const name = els.previewStudent.value;
+  if (!cls || !name) { toast('请先选班级和学生'); return; }
+  const url = `./index.html?class=${encodeURIComponent(cls)}&student=${encodeURIComponent(name)}&readonly=1`;
+  window.open(url, '_blank');
 }
 
 /* ---------------- 工具 ---------------- */

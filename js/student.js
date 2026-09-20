@@ -199,10 +199,36 @@ async function loadClasses() {
                     : state.classes.includes(saved) ? saved
                     : state.classes[0];
 
+  // 老师预览模式：?readonly=1&student=姓名 —— 自动以该学生身份打开，禁止提交
+  state.readonly = params.get('readonly') === '1';
+  state.previewName = (params.get('student') || '').trim();
+
   els.wallClass.innerHTML = state.classes
     .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
     .join('');
-  loadWall();
+  loadWall().then(() => {
+    if (state.readonly && state.previewName) {
+      showForm(state.previewName);
+      applyReadonlyMode();
+    }
+  });
+}
+
+function applyReadonlyMode() {
+  // 隐藏提交按钮，顶部加预览提示
+  const banner = document.createElement('div');
+  banner.className = 'preview-banner';
+  banner.innerHTML = '👁 老师预览模式（只读）——你看到的就是这位学生看到的页面，不能提交记录';
+  const card = document.querySelector('.identity-card') || document.querySelector('main');
+  if (card && !document.querySelector('.preview-banner')) card.prepend(banner);
+  if (els.btnSubmit) {
+    els.btnSubmit.style.display = 'none';
+    const tip = document.createElement('div');
+    tip.className = 'text-muted';
+    tip.style.cssText = 'margin-top:10px;text-align:center;';
+    tip.textContent = '（预览模式下不能提交，仅供老师查看效果）';
+    els.formView.appendChild(tip);
+  }
 }
 
 async function loadWall() {
@@ -751,7 +777,7 @@ function openAvatarPicker() {
   campusSec.className = 'avatar-sec campus';
   campusSec.innerHTML = unlocked
     ? `<div class="avatar-sec-title">🏫 校园头像<span class="avatar-sec-tip ok">已解锁，可随意更换</span></div>`
-    : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（每记录 1 个积极表现 +2 经验）</span></div>`;
+    : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（多记录积极表现赚经验吧）</span></div>`;
   const campusGrid = document.createElement('div');
   campusGrid.className = 'avatar-grid avatar-grid-img';
   CAMPUS_GROUPS.forEach(g => {
@@ -876,6 +902,7 @@ function closeDetail() { els.detailModal.classList.remove('show'); }
 
 async function onSubmit() {
   if (!ready) return toast('系统尚未配置完成，请联系老师');
+  if (state.readonly) { sfx.oops(); return toast('老师预览模式下不能提交记录哦～'); }
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (!cls) { sfx.oops(); return toast('请先填写班级'); }
@@ -883,6 +910,11 @@ async function onSubmit() {
   updateMood();
 
   const items = [];
+  const tagXpOf = t => {
+    const v = Number(t.xp_value);
+    if (Number.isFinite(v)) return v;
+    return t.category === 'negative' ? 0 : 2;
+  };
   for (const t of state.tags) {
     if (t.tag_type === 'check') {
       if (state.checkChosen[t.id]) {
@@ -891,11 +923,11 @@ async function onSubmit() {
           sfx.oops();
           return toast(`请为「${t.label}」再选一个具体项目`);
         }
-        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive' });
+        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive', xp: tagXpOf(t) });
       }
     } else {
       const v = (state.textValues[t.id] || '').trim();
-      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive' });
+      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive', xp: tagXpOf(t) });
     }
   }
 
@@ -936,14 +968,14 @@ async function onSubmit() {
       return;
     }
 
-    // 乐观更新经验/等级（数据库触发器会做同样的累加）
-    const posCount = items.filter(i => i.category === 'positive').length;
+    // 乐观更新经验/等级（数据库触发器会按各标签配置的 xp_value 做同样的累加）
+    const gainedXp = items.reduce((s, i) => s + (Number(i.xp) || 0), 0);
     let leveledUp = false;
-    if (posCount) {
+    if (gainedXp > 0) {
       const row = state.roster.find(s => s.class === cls && s.student_name === name);
       if (row) {
         const beforeLv = Number(row.level) || 1;
-        row.xp = (Number(row.xp) || 0) + posCount * XP_PER_POSITIVE;
+        row.xp = (Number(row.xp) || 0) + gainedXp;
         row.level = levelFromXp(row.xp);
         leveledUp = row.level > beforeLv;
       }
@@ -951,7 +983,7 @@ async function onSubmit() {
 
     try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
     sfx.success();
-    celebrate(posCount, leveledUp);
+    celebrate(gainedXp, leveledUp);
     resetSelections();
     renderMoodPreview();
   } catch (e) {
@@ -991,7 +1023,7 @@ function prefillIdentity() {
 
 /* ---------- 鼓励动画 ---------- */
 
-function celebrate(posCount, leveledUp) {
+function celebrate(gainedXp, leveledUp) {
   const emojis = ['⭐', '🌟', '✨', '🎉', '💛', '🌈', '👏', '🚌', '📚'];
   els.confettiBox.innerHTML = '';
   for (let i = 0; i < 42; i++) {
@@ -1008,8 +1040,8 @@ function celebrate(posCount, leveledUp) {
   if (leveledUp) {
     const row = currentRosterRow();
     msg = `🎉 升级啦！你现在是 Lv.${row ? row.level : ''}，新头像已经解锁，快去挑一个吧！`;
-  } else if (posCount > 0) {
-    msg = `太棒啦！本次获得 ${posCount * XP_PER_POSITIVE} 点经验 🌟`;
+  } else if (gainedXp > 0) {
+    msg = `太棒啦！本次获得 ${gainedXp} 点经验 🌟`;
   } else {
     const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
     msg = pool[Math.floor(Math.random() * pool.length)];

@@ -54,6 +54,7 @@
       <button class="tab-btn" data-tab="students">👥 学生名单</button>
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
+      <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
     </nav>
 
     <!-- ===== 表现记录 ===== -->
@@ -161,6 +162,10 @@
                 <option value="text">填写型</option>
               </select>
             </div>
+            <div class="field">
+              <label for="addTagXp">加多少经验</label>
+              <input class="input" id="addTagXp" type="number" min="0" max="100" value="2" title="消极表现建议填 0">
+            </div>
             <div class="field full">
               <label for="addTagOptions">二级选项（仅"勾选型"有效，选填）</label>
               <input class="input" id="addTagOptions" type="text" maxlength="200"
@@ -239,6 +244,50 @@
       <div class="sec-label">已上传试卷</div>
       <div id="examBox" class="exam-box"></div>
     </section>
+
+    <!-- ===== 测试工具（不影响真实使用） ===== -->
+    <section id="tabTools" hidden>
+      <div class="card">
+        <div class="card-title">🔄 经验值重算</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          修改了「表现标签」里的经验值后，点这里按历史记录重新累加全班的经验和等级。
+          <b>只会重算，不会删除任何记录。</b>
+        </p>
+        <button class="btn btn-primary" id="btnRecalcXp" type="button">一键重算全班经验</button>
+        <span id="recalcResult" class="text-muted" style="margin-left:10px;"></span>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👁 以学生身份预览（只读，不会提交）</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          选一个学生，打开他看到的班级墙和填写页。预览模式下<b>不能提交记录</b>，方便你核对孩子看到的效果。
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="previewClass">班级</label>
+            <select class="input" id="previewClass"></select>
+          </div>
+          <div class="field">
+            <label for="previewStudent">学生</label>
+            <select class="input" id="previewStudent"></select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" id="btnPreviewStudent" type="button">打开学生视角</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ℹ️ 经验规则说明</div>
+        <p class="text-muted" style="margin-bottom:6px;">
+          · 学生每勾选一个「积极表现」，经验 +该标签设定值（默认 +2）；消极表现默认 +0。<br>
+          · 老师删掉一条记录时，这条记录带来的经验会自动扣回。<br>
+          · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200。校园头像 Lv3 解锁。<br>
+          · 想直接调整某个学生的经验，到「学生名单」里点他那一行的 ✏️ 调经验。
+        </p>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -307,5 +356,6 @@
 <script src="js/vendor/tesseract/tesseract.min.js"></script>
 <script src="js/teacher.js"></script>
 <script src="js/exam.js"></script>
+<script>document.addEventListener("contextmenu",function(e){e.preventDefault();});</script>
 </body>
 </html>

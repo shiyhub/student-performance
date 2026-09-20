@@ -75,6 +75,7 @@ create table if not exists public.behavior_tags (
   options    jsonb not null default '[]'::jsonb, -- 勾选型二级选项（如科目），字符串数组；空数组=无二级
   category   text not null default 'positive',  -- positive=积极(+1)；negative=消极(-1)
   score      int  not null default 1,            -- 对心情的分值（积极 +1 / 消极 -1）
+  xp_value   int  not null default 2,            -- 学生选这个表现加多少经验（老师可调，消极建议0）
   is_active  boolean not null default true,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
@@ -210,7 +211,7 @@ as $$
          end;
 $$;
 
--- 提交表现后：每个积极项 +2 XP，并重算等级（消极项不加经验）
+-- 提交表现：按各标签配置的 xp_value 累加经验；删除记录时回扣
 create or replace function public.apply_record_xp()
 returns trigger
 language plpgsql
@@ -218,36 +219,108 @@ security definer
 set search_path = public
 as $$
 declare
-  v_pos int := 0;
-  v_xp  int;
+  v_rec    record;
+  v_item   record;
+  v_tag_xp int;
+  v_delta  int := 0;
+  v_xp     int;
 begin
-  select count(*) into v_pos
-  from jsonb_array_elements(coalesce(new.behavior -> 'items', '[]'::jsonb)) as e
-  where e ->> 'category' = 'positive';
+  v_rec := case when tg_op = 'DELETE' then old else new end;
 
-  if coalesce(v_pos, 0) > 0 then
-    update public.student_info
-       set xp = coalesce(xp, 0) + v_pos * 2
-     where class = new.class
-       and student_name = new.student_name
-    returning xp into v_xp;
-
-    if found then
-      update public.student_info
-         set level = public.level_from_xp(v_xp)
-       where class = new.class
-         and student_name = new.student_name;
+  for v_item in
+    select e ->> 'id' as tag_id, e ->> 'category' as category
+    from jsonb_array_elements(coalesce(v_rec.behavior -> 'items', '[]'::jsonb)) as e
+  loop
+    select t.xp_value into v_tag_xp
+      from public.behavior_tags t
+     where t.id::text = v_item.tag_id;
+    if v_tag_xp is null then
+      v_tag_xp := case when v_item.category = 'negative' then 0 else 2 end;
     end if;
+    v_delta := v_delta + coalesce(v_tag_xp, 0);
+  end loop;
+
+  if coalesce(v_delta, 0) = 0 then
+    return v_rec;
   end if;
 
-  return new;
+  if tg_op = 'DELETE' then
+    v_delta := -v_delta;
+  end if;
+
+  update public.student_info
+     set xp = greatest(0, coalesce(xp, 0) + v_delta)
+   where class = v_rec.class
+     and student_name = v_rec.student_name
+  returning xp into v_xp;
+
+  if found then
+    update public.student_info
+       set level = public.level_from_xp(v_xp)
+     where class = v_rec.class
+       and student_name = v_rec.student_name;
+  end if;
+
+  return v_rec;
 end;
 $$;
 
-drop trigger if exists trg_apply_record_xp on public.daily_record;
-create trigger trg_apply_record_xp
-  after insert on public.daily_record
+drop trigger if exists trg_apply_record_xp     on public.daily_record;
+drop trigger if exists trg_apply_record_xp_ins on public.daily_record;
+drop trigger if exists trg_apply_record_xp_del on public.daily_record;
+create trigger trg_apply_record_xp_ins after insert on public.daily_record
   for each row execute function public.apply_record_xp();
+create trigger trg_apply_record_xp_del after delete on public.daily_record
+  for each row execute function public.apply_record_xp();
+
+-- 3.3b 测试工具：一键重算全班经验 / 老师手动调学生经验
+create or replace function public.recalc_all_xp()
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare v_rec record; v_item record; v_tag_xp int; v_delta int; v_touched int := 0;
+begin
+  update public.student_info set xp = 0, level = 1;
+  for v_rec in select class, student_name, behavior, record_date, create_at
+                 from public.daily_record order by record_date, create_at loop
+    v_delta := 0;
+    for v_item in select e ->> 'id' as tag_id, e ->> 'category' as category
+                    from jsonb_array_elements(coalesce(v_rec.behavior -> 'items', '[]'::jsonb)) e loop
+      select t.xp_value into v_tag_xp from public.behavior_tags t where t.id::text = v_item.tag_id;
+      if v_tag_xp is null then
+        v_tag_xp := case when v_item.category = 'negative' then 0 else 2 end;
+      end if;
+      v_delta := v_delta + coalesce(v_tag_xp, 0);
+    end loop;
+    if v_delta <> 0 then
+      update public.student_info
+         set xp = coalesce(xp, 0) + v_delta,
+             level = public.level_from_xp(coalesce(xp, 0) + v_delta)
+       where class = v_rec.class and student_name = v_rec.student_name;
+      v_touched := v_touched + 1;
+    end if;
+  end loop;
+  return jsonb_build_object('ok', true, 'records_replayed', v_touched);
+end;
+$$;
+revoke execute on function public.recalc_all_xp() from public;
+grant  execute on function public.recalc_all_xp() to authenticated;
+
+create or replace function public.set_student_xp(p_class text, p_student text, p_xp int)
+returns jsonb language plpgsql security definer set search_path = public
+as $$
+declare v_xp int; v_level int;
+begin
+  v_xp := greatest(0, least(99999, coalesce(p_xp, 0)));
+  update public.student_info set xp = v_xp, level = public.level_from_xp(v_xp)
+   where class = btrim(coalesce(p_class,'')) and student_name = btrim(coalesce(p_student,''))
+  returning xp, level into v_xp, v_level;
+  if not found then return jsonb_build_object('ok', false, 'reason', 'no_student'); end if;
+  return jsonb_build_object('ok', true, 'xp', v_xp, 'level', v_level);
+end;
+$$;
+revoke execute on function public.set_student_xp(text, text, int) from public;
+grant  execute on function public.set_student_xp(text, text, int) to authenticated;
 
 -- 3.4 学生保存自选头像：
 --     校园图片头像(girl/boy/neutral1~8) 需 3 级解锁且不限次数；

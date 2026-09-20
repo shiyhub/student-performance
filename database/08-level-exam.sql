@@ -10,8 +10,9 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- 1) 学生表：经验、等级、换头像计数
+-- 1) 学生表：头像、经验、等级、换头像计数
 -- ---------------------------------------------------------------------------
+alter table public.student_info add column if not exists avatar              text;
 alter table public.student_info add column if not exists xp                   int not null default 0;
 alter table public.student_info add column if not exists level                int not null default 1;
 alter table public.student_info add column if not exists avatar_changed_at    timestamptz;

@@ -1,13 +1,15 @@
 # 学生在校表现记录平台 · 部署指南
 
-> ## 🆕 v9 版本更新（等级头像 + 试卷拍照）必读
-> 已上线的老用户，只需做两件事：
-> 1. **跑数据库脚本**：Supabase → SQL Editor → 粘贴运行 `database/08-level-exam.sql` 全部内容（可重复执行）。跑完到左侧 **Storage** 菜单确认出现名为 `exam-papers` 的存储桶（没出现就点 "New bucket"，名字填 `exam-papers`，设为 Public bucket）。
-> 2. **覆盖上传代码**：本次新增了两个目录 `assets/avatars/`（24 个头像）和 `js/vendor/tesseract/`（约 20MB 离线识分库）。在 GitHub 仓库点 Add file → Upload files，把解压文件夹里的**全部内容（含这两个新目录）**拖进去，Commit。约 1–2 分钟后用 `?v=9` 强刷页面。
+> ## 🆕 v10 版本更新（经验可调 + 删记录回扣 + 测试工具）必读
+> 老用户只需两步：
+> 1. **跑数据库脚本**：Supabase → SQL Editor → 粘贴运行 `database/09-xp-tuning.sql` 全部内容（可重复执行）。
+> 2. **覆盖上传代码**：GitHub 仓库点 Add file → Upload files，把解压文件夹里的**全部内容**拖进去，Commit。约 1–2 分钟后用 `?v=10` 强刷页面。
 >
-> 本次新功能：24 个校园风头像（3 级解锁）、经验/升级（每记录 1 个积极表现 +2 经验）、表情头像每天限换 2 次、打星改为选填（但至少要选一个表现）、教师端"试卷拍照"自动识别分数（仅家长可见，学生端没有入口）。
->
-> 全新部署的用户直接跑 `database/01-schema-rls.sql`（已含全部最新结构），无需再按顺序跑 02–08。
+> 本次新功能：①老师在「表现标签」里可给每个标签单独设经验值；②老师在「学生名单」里可直接调某学生经验；③删掉一条表现记录时，这条带来的经验自动扣回；④新增「🧪 测试工具」标签：一键重算全班经验、以学生身份只读预览；⑤全站屏蔽右键防误触。
+
+> ## v9 版本（等级头像 + 试卷拍照）
+> 1. 跑 `database/08-level-exam.sql`；2. 覆盖上传代码（含 assets/avatars 和 js/vendor/tesseract）。
+> 全新部署用户直接跑 `database/01-schema-rls.sql`（已含全部最新结构，含 v9/v10）。
 
 纯静态网站（HTML/CSS/JS）+ Supabase 免费版数据库，部署在 Vercel。
 三个页面：学生星光墙/自评（`index.html`）、家长查询（`parent.html`）、教师后台（`teacher.html`）。

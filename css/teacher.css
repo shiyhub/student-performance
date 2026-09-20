@@ -148,6 +148,13 @@ body { background: #f3f6f5; }
 .tag-edit-row .tag-cat { order: 3; }
 .tag-edit-row .tag-type { order: 3; }
 .tag-edit-row .tag-sort { order: 3; }
+.tag-edit-row .tag-xp { order: 3; }
+.tag-edit-row .tag-xp:focus { border-color: var(--primary); }
+.xp-badge {
+  display: inline-block; margin: 0 6px; padding: 1px 8px; border-radius: 999px;
+  background: #fff3d6; color: #9a6b00; font-size: 12px; font-weight: 700;
+}
+.xp-edit { margin-left: 6px; min-height: 26px !important; padding: 2px 8px !important; font-size: 12px; }
 .tag-edit-row .tag-off-toggle {
   grid-column: 1 / -1; order: 4; display: flex; align-items: center;
   justify-content: center; gap: 6px; font-size: 13px; color: var(--ink-2);
