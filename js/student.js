@@ -36,6 +36,34 @@ const AVATARS = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨',
   '🐧','🐦','🐤','🦆','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🦎','🐙','🦑',
   '🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🦖','🦕'];
 const AVATAR_BG = ['#fdecc8','#d8f0e2','#dcecfb','#f6e0f1','#fdf3c9','#e6e2fb','#d9f2f5','#ffe3dd','#e8f6dc','#fae3ef'];
+
+/* ---------- 校园头像（24 款，3 级解锁）与经验等级 ---------- */
+const AVATAR_BASE = 'assets/avatars/';
+const CAMPUS_GROUPS = [
+  { name: '女生款', prefix: 'girl',    count: 8 },
+  { name: '男生款', prefix: 'boy',     count: 8 },
+  { name: '中性款', prefix: 'neutral', count: 8 }
+];
+const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
+  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
+  return arr;
+}, []);
+const CAMPUS_UNLOCK_LEVEL = 3;
+const EMOJI_CHANGE_LIMIT = 2;
+// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200（与数据库 level_from_xp 同口径）
+const XP_LEVELS = [0, 20, 60, 120, 200];
+const XP_PER_POSITIVE = 2;
+function isImgKey(k) { return /^(girl|boy|neutral)[1-8]$/.test(String(k || '')); }
+function levelFromXp(xp) {
+  let lv = 1;
+  for (let i = 0; i < XP_LEVELS.length; i++) if ((xp || 0) >= XP_LEVELS[i]) lv = i + 1;
+  return lv;
+}
+function xpProgress(xp, level) {
+  if (level >= 5) return { pct: 100, left: 0, maxed: true };
+  const lo = XP_LEVELS[level - 1], hi = XP_LEVELS[level];
+  return { pct: Math.min(100, Math.max(0, ((xp - lo) / (hi - lo)) * 100)), left: hi - (xp || 0), maxed: false };
+}
 const sfx = window.SFX || {
   tap(){}, back(){}, star(){}, tagOn(){}, tagOff(){}, sub(){}, moodUp(){}, moodDown(){}, pick(){}, success(){}, oops(){}
 };
@@ -65,9 +93,13 @@ const els = {
   // 头像选择
   btnPickAvatar: $('#btnPickAvatar'),
   identityAvatarEmoji: $('#identityAvatarEmoji'),
+  identityLevel: $('#identityLevel'),
+  identityXpFill: $('#identityXpFill'),
+  identityXpText: $('#identityXpText'),
   avatarModal: $('#avatarModal'),
   avatarModalEmoji: $('#avatarModalEmoji'),
   avatarPicker: $('#avatarPicker'),
+  avatarHint: $('#avatarHint'),
   btnAvatarClose: $('#btnAvatarClose'),
   btnSound: $('#btnSound'),
   // 表单
@@ -211,9 +243,10 @@ function renderWall() {
   const recs = state.records;
   const today = todayStr();
 
-  // 全班汇总
-  const classAvg = recs.length
-    ? (recs.reduce((s, r) => s + (r.self_evaluation || 0), 0) / recs.length).toFixed(1)
+  // 全班汇总（未打星的记录不计入平均星级）
+  const classRated = recs.filter(r => Number(r.self_evaluation) > 0);
+  const classAvg = classRated.length
+    ? (classRated.reduce((s, r) => s + Number(r.self_evaluation), 0) / classRated.length).toFixed(1)
     : null;
   const classToday = recs.filter(r => r.record_date === today).length;
 
@@ -229,8 +262,9 @@ function renderWall() {
   // 每个同学
   state.roster.forEach((s, i) => {
     const mine = recs.filter(r => r.student_name === s.student_name);
-    const avg = mine.length
-      ? (mine.reduce((sum, r) => sum + (r.self_evaluation || 0), 0) / mine.length).toFixed(1)
+    const mineRated = mine.filter(r => Number(r.self_evaluation) > 0);
+    const avg = mineRated.length
+      ? (mineRated.reduce((sum, r) => sum + Number(r.self_evaluation), 0) / mineRated.length).toFixed(1)
       : null;
     const todayRecs = mine.filter(r => r.record_date === today);
     const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
@@ -241,9 +275,12 @@ function renderWall() {
 
     const av = avatarForName(s.student_name, s.avatar);
     const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
+    const lvBadge = (Number(s.level) || 1) > 1
+      ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
-        <span class="mate-avatar${ringCls}" style="background:${av.bg}">${av.emoji}</span>
+        <span class="mate-avatar${ringCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
+        ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         ${avg ? `<span class="mate-badge">⭐${avg}</span>` : `<span class="mate-badge count-badge">未记录</span>`}
         <span class="mate-name">${esc(s.student_name)}</span>
@@ -270,11 +307,11 @@ function openStudentDetail(name) {
                       (a.create_at < b.create_at ? 1 : -1)));
   const rosterRow = state.roster.find(s => s.student_name === name);
   const av = avatarForName(name, rosterRow && rosterRow.avatar);
-  els.detailAvatar.textContent = av.emoji;
-  els.detailAvatar.style.background = av.bg;
+  paintAvatar(els.detailAvatar, av);
   els.detailName.textContent = name;
-  const avg = rows.length
-    ? (rows.reduce((s, r) => s + (r.self_evaluation || 0), 0) / rows.length).toFixed(1)
+  const rated = rows.filter(r => Number(r.self_evaluation) > 0);
+  const avg = rated.length
+    ? (rated.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated.length).toFixed(1)
     : null;
   els.detailSub.textContent = rows.length
     ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
@@ -299,9 +336,10 @@ function openClassDetail(avg, todayCount) {
 function renderClassRanking() {
   const byName = new Map();
   state.records.forEach(r => {
+    if (!(Number(r.self_evaluation) > 0)) return;
     if (!byName.has(r.student_name)) byName.set(r.student_name, { name: r.student_name, sum: 0, n: 0 });
     const x = byName.get(r.student_name);
-    x.sum += r.self_evaluation || 0;
+    x.sum += Number(r.self_evaluation);
     x.n += 1;
   });
   const list = Array.from(byName.values())
@@ -340,7 +378,10 @@ function renderRecordTimeline(rows) {
   groups.forEach(g => {
     html += `<div class="detail-day-head"><span>${formatDate(g.date)}</span><span>${g.rows.length} 条</span></div>`;
     g.rows.forEach(r => {
-      const stars = '★'.repeat(r.self_evaluation) + '☆'.repeat(5 - r.self_evaluation);
+      const starCount = Number(r.self_evaluation) || 0;
+      const stars = starCount
+        ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+        : '<span class="text-muted" style="letter-spacing:0;">本次未打星</span>';
       const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
       let itemsHtml = '';
@@ -397,24 +438,41 @@ function renderStars() {
     b.setAttribute('aria-label', i + '星');
     b.innerHTML = '<span class="star-shape">★</span>';
     b.addEventListener('click', () => {
-      state.stars = i;
-      sfx.star(i);
+      // 再点一次当前星级 = 清空（打星选填，不打星也能提交）
+      state.stars = (state.stars === i) ? 0 : i;
+      sfx.star(state.stars);
       renderStars();
       b.classList.remove('pop');
       void b.offsetWidth;
       b.classList.add('pop');
-      els.starCaption.textContent = STAR_TEXT[i];
+      els.starCaption.textContent = state.stars
+        ? STAR_TEXT[state.stars]
+        : '可以不打星，直接选今天的小表现就行';
     });
     els.starsRow.appendChild(b);
   }
 }
 
-/* ---------- 头像（按姓名稳定取卡通动物 + 底色） ---------- */
+/* ---------- 头像（emoji 或校园图片；按姓名稳定取卡通动物 + 底色兜底） ---------- */
 function avatarForName(name, saved) {
   const h = hashCode(String(name || ''));
   const mod = n => ((h % n) + n) % n;
-  const emoji = (saved && String(saved).trim()) ? String(saved).trim() : AVATARS[mod(AVATARS.length)];
-  return { emoji, bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+  const key = saved && String(saved).trim() ? String(saved).trim() : '';
+  if (isImgKey(key)) {
+    return { kind: 'img', key, src: AVATAR_BASE + key + '.webp', bg: '#ffffff' };
+  }
+  const emoji = key || AVATARS[mod(AVATARS.length)];
+  return { kind: 'emoji', key: emoji, emoji, bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+}
+function avatarInner(av) {
+  return av.kind === 'img'
+    ? `<img class="avatar-img" src="${av.src}" alt="" loading="lazy">`
+    : av.emoji;
+}
+function paintAvatar(el, av) {
+  if (!el) return;
+  el.innerHTML = avatarInner(av);
+  el.style.background = av.bg;
 }
 
 // 当前表单里"这个学生"的头像：优先本次选择，其次名单里已保存的，最后按姓名分配
@@ -424,6 +482,13 @@ function currentAvatar() {
   const row = state.roster.find(s =>
     s.student_name === name && (!state.currentClass || s.class === state.currentClass));
   return avatarForName(name || '我', row && row.avatar);
+}
+
+// 当前学生的等级/经验（名单行）
+function currentRosterRow() {
+  const name = (els.inpName && els.inpName.value || '').trim();
+  return state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass)) || null;
 }
 
 /* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */
@@ -449,14 +514,12 @@ function renderMoodPreview() {
   const level = state.moodLevel || 3;
   const m = MOOD_BY_LEVEL(level);
   const av = currentAvatar();
-  els.mpAvatar.innerHTML = `${av.emoji}<span class="mp-badge">${m.emoji}</span>`;
+  els.mpAvatar.innerHTML = `${avatarInner(av)}<span class="mp-badge">${m.emoji}</span>`;
   els.mpAvatar.style.background = av.bg;
-  if (els.identityAvatarEmoji) els.identityAvatarEmoji.textContent = av.emoji;
-  if (els.avatarModalEmoji) {
-    els.avatarModalEmoji.textContent = av.emoji;
-    els.avatarModalEmoji.style.background = av.bg;
-  }
+  paintAvatar(els.identityAvatarEmoji, av);
+  paintAvatar(els.avatarModalEmoji, av);
   els.mpLevel.textContent = `${m.emoji} ${m.label}`;
+  renderIdentityLevel();
   const card = document.getElementById('moodPreviewCard');
   if (card) {
     card.classList.remove('lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5');
@@ -465,6 +528,26 @@ function renderMoodPreview() {
   if (els.moodMeter) {
     els.moodMeter.querySelectorAll('span').forEach(s =>
       s.classList.toggle('on', Number(s.dataset.l) <= level));
+  }
+}
+
+// 身份卡上的等级徽章 + 经验进度条（外层 frame 槽位为后续头像框预留）
+function renderIdentityLevel() {
+  const row = currentRosterRow();
+  const lv = row ? (Number(row.level) || 1) : 1;
+  const xp = row ? (Number(row.xp) || 0) : 0;
+  const p = xpProgress(xp, lv);
+  if (els.identityLevel) els.identityLevel.textContent = 'Lv.' + lv;
+  if (els.identityXpFill) els.identityXpFill.style.width = p.pct + '%';
+  if (els.identityXpText) {
+    els.identityXpText.textContent = p.maxed
+      ? `经验 ${xp} · 已满级 🏆`
+      : `经验 ${xp} · 再得 ${p.left} 点升到 Lv.${lv + 1}`;
+  }
+  const wrap = document.querySelector('.identity-avatar');
+  if (wrap) {
+    wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
+    if (lv >= 3) wrap.classList.add('frame-l' + lv);
   }
 }
 
@@ -645,49 +728,124 @@ function updateSoundButton() {
 /* ---------------- 头像选择 ---------------- */
 
 function openAvatarPicker() {
-  const cur = currentAvatar().emoji;
+  const cur = currentAvatar();
+  const row = currentRosterRow();
+  const lv = row ? (Number(row.level) || 1) : 1;
+  const unlocked = lv >= CAMPUS_UNLOCK_LEVEL;
   els.avatarPicker.innerHTML = '';
+
+  // —— 表情头像（每天限换 2 次）——
+  const emojiSec = document.createElement('div');
+  emojiSec.className = 'avatar-sec';
+  emojiSec.innerHTML = `<div class="avatar-sec-title">😊 表情头像<span class="avatar-sec-tip">每天可换 ${EMOJI_CHANGE_LIMIT} 次</span></div>`;
+  const emojiGrid = document.createElement('div');
+  emojiGrid.className = 'avatar-grid';
   AVATARS.forEach(emoji => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'avatar-choice' + (emoji === cur ? ' selected' : '');
-    b.textContent = emoji;
-    b.addEventListener('click', () => chooseAvatar(emoji, b));
-    els.avatarPicker.appendChild(b);
+    emojiGrid.appendChild(buildEmojiChoice(emoji, cur.key));
   });
+  emojiSec.appendChild(emojiGrid);
+  els.avatarPicker.appendChild(emojiSec);
+
+  // —— 校园头像（3 级解锁）——
+  const campusSec = document.createElement('div');
+  campusSec.className = 'avatar-sec campus';
+  campusSec.innerHTML = unlocked
+    ? `<div class="avatar-sec-title">🏫 校园头像<span class="avatar-sec-tip ok">已解锁，可随意更换</span></div>`
+    : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（每记录 1 个积极表现 +2 经验）</span></div>`;
+  const campusGrid = document.createElement('div');
+  campusGrid.className = 'avatar-grid avatar-grid-img';
+  CAMPUS_GROUPS.forEach(g => {
+    for (let i = 1; i <= g.count; i++) {
+      campusGrid.appendChild(buildCampusChoice(g.prefix + i, cur.key, unlocked));
+    }
+  });
+  campusSec.appendChild(campusGrid);
+  els.avatarPicker.appendChild(campusSec);
+
   renderMoodPreview();
   els.avatarModal.classList.add('show');
 }
 
-async function chooseAvatar(emoji, btn) {
+function buildEmojiChoice(emoji, selectedKey) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'avatar-choice' + (emoji === selectedKey ? ' selected' : '');
+  b.textContent = emoji;
+  b.addEventListener('click', () => onChooseAvatar(emoji, b));
+  return b;
+}
+
+function buildCampusChoice(key, selectedKey, unlocked) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'avatar-choice avatar-choice-img'
+    + (key === selectedKey ? ' selected' : '')
+    + (unlocked ? '' : ' locked');
+  b.innerHTML = unlocked
+    ? `<img src="${AVATAR_BASE}${key}.webp" alt="" loading="lazy">`
+    : `<img src="${AVATAR_BASE}${key}.webp" alt="" loading="lazy"><span class="avatar-lock">🔒<em>Lv${CAMPUS_UNLOCK_LEVEL}</em></span>`;
+  b.addEventListener('click', () => {
+    if (!unlocked) {
+      sfx.oops();
+      toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦，多记录积极表现赚经验吧～`);
+      return;
+    }
+    onChooseAvatar(key, b);
+  });
+  return b;
+}
+
+async function onChooseAvatar(key, btn) {
   sfx.pick();
-  state.myAvatar = emoji;
+  const res = await persistAvatar(key);
+  if (!res || res.ok === false) {
+    const reason = res && res.reason;
+    sfx.oops();
+    if (reason === 'locked') {
+      toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
+    } else if (reason === 'limit') {
+      toast(`表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
+    } else if (reason === 'no_student') {
+      toast('请先在下面填好班级和姓名，再换头像');
+    } else {
+      toast('头像没有保存成功，请稍后再试');
+    }
+    return; // 服务端拒绝：不更新本地选择
+  }
+
+  state.myAvatar = key;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  const row = state.roster.find(s => s.class === cls && s.student_name === name);
+  if (row) row.avatar = key;
+
   els.avatarPicker.querySelectorAll('.avatar-choice').forEach(x =>
     x.classList.toggle('selected', x === btn));
   renderMoodPreview();
-  await persistAvatar(emoji);
+
+  if (typeof res.changes_left === 'number' && res.changes_left >= 0 && !isImgKey(key)) {
+    toast(res.changes_left > 0 ? `换好啦！今天还能换 ${res.changes_left} 次` : '换好啦！今天的更换次数用完了');
+  }
   // 稍作停留让孩子看到"选中"反馈，再关闭
-  setTimeout(() => els.avatarModal.classList.remove('show'), 220);
+  setTimeout(() => els.avatarModal.classList.remove('show'), 260);
 }
 
-// 经 RPC 保存头像；成功后同步本地名单，头像墙立即生效
-async function persistAvatar(emoji) {
-  if (!ready) return false;
+// 经 RPC 保存头像；返回服务端 jsonb 判定结果（含 ok / reason / level / xp / changes_left）
+async function persistAvatar(key) {
+  if (!ready) return { ok: false, reason: 'not_ready' };
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!cls || !name) return false;
+  if (!cls || !name) return { ok: false, reason: 'no_identity' };
   try {
     const { data, error } = await supabase.rpc('set_student_avatar', {
       p_class: cls,
       p_student: name,
-      p_avatar: emoji
+      p_avatar: key
     });
-    if (error) return false;
-    const row = state.roster.find(s => s.class === cls && s.student_name === name);
-    if (row) row.avatar = emoji;
-    return data === true;
+    if (error) return { ok: false, reason: 'error' };
+    return data || { ok: false, reason: 'error' };
   } catch (e) {
-    return false;
+    return { ok: false, reason: 'error' };
   }
 }
 
@@ -722,7 +880,6 @@ async function onSubmit() {
   const name = els.inpName.value.trim();
   if (!cls) { sfx.oops(); return toast('请先填写班级'); }
   if (!name) { sfx.oops(); return toast('请先填写姓名'); }
-  if (state.stars < 1) { sfx.oops(); return toast('给自己打个星吧～'); }
   updateMood();
 
   const items = [];
@@ -742,6 +899,12 @@ async function onSubmit() {
     }
   }
 
+  // 不允许提交空白表现（星级可以不打，但至少要选一个小表现）
+  if (!items.length) {
+    sfx.oops();
+    return toast('还没有选择任何表现哦，先选一个今天的小表现吧～');
+  }
+
   els.btnSubmit.disabled = true;
   els.btnSubmit.textContent = '正在提交…';
   try {
@@ -756,14 +919,11 @@ async function onSubmit() {
       return;
     }
 
-    // 顺手把本次选的头像保存好（失败也不影响记录提交）
-    if (state.myAvatar) await persistAvatar(state.myAvatar);
-
     const { error: insertError } = await supabase.from('daily_record').insert({
       class: cls,
       student_name: name,
       record_date: todayStr(),
-      self_evaluation: state.stars,
+      self_evaluation: state.stars || null,   // 打星选填
       behavior: { mood: MOOD_BY_LEVEL(state.moodLevel).key, items }
     });
     if (insertError) {
@@ -776,10 +936,24 @@ async function onSubmit() {
       return;
     }
 
+    // 乐观更新经验/等级（数据库触发器会做同样的累加）
+    const posCount = items.filter(i => i.category === 'positive').length;
+    let leveledUp = false;
+    if (posCount) {
+      const row = state.roster.find(s => s.class === cls && s.student_name === name);
+      if (row) {
+        const beforeLv = Number(row.level) || 1;
+        row.xp = (Number(row.xp) || 0) + posCount * XP_PER_POSITIVE;
+        row.level = levelFromXp(row.xp);
+        leveledUp = row.level > beforeLv;
+      }
+    }
+
     try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
     sfx.success();
-    celebrate();
+    celebrate(posCount, leveledUp);
     resetSelections();
+    renderMoodPreview();
   } catch (e) {
     sfx.oops();
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
@@ -795,7 +969,7 @@ function resetSelections() {
   state.checkOption = {};
   state.textValues = {};
   renderStars();
-  els.starCaption.textContent = '点一点上面的小星星';
+  els.starCaption.textContent = '可以不打星，直接选今天的小表现就行';
   [els.posGrid, els.negGrid].forEach(grid => {
     grid.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
     grid.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));
@@ -817,7 +991,7 @@ function prefillIdentity() {
 
 /* ---------- 鼓励动画 ---------- */
 
-function celebrate() {
+function celebrate(posCount, leveledUp) {
   const emojis = ['⭐', '🌟', '✨', '🎉', '💛', '🌈', '👏', '🚌', '📚'];
   els.confettiBox.innerHTML = '';
   for (let i = 0; i < 42; i++) {
@@ -830,8 +1004,17 @@ function celebrate() {
     piece.style.animationDelay = (Math.random() * 0.7) + 's';
     els.confettiBox.appendChild(piece);
   }
-  const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
-  els.successMsg.textContent = pool[Math.floor(Math.random() * pool.length)];
+  let msg;
+  if (leveledUp) {
+    const row = currentRosterRow();
+    msg = `🎉 升级啦！你现在是 Lv.${row ? row.level : ''}，新头像已经解锁，快去挑一个吧！`;
+  } else if (posCount > 0) {
+    msg = `太棒啦！本次获得 ${posCount * XP_PER_POSITIVE} 点经验 🌟`;
+  } else {
+    const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
+    msg = pool[Math.floor(Math.random() * pool.length)];
+  }
+  els.successMsg.textContent = msg;
   els.successOverlay.classList.add('show');
   setTimeout(() => { els.confettiBox.innerHTML = ''; }, 5200);
 }

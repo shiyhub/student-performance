@@ -212,8 +212,10 @@ function switchTab(name) {
   $('#tabRecords').hidden = name !== 'records';
   $('#tabStudents').hidden = name !== 'students';
   $('#tabTags').hidden = name !== 'tags';
+  $('#tabExam').hidden = name !== 'exam';
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
+  if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -374,7 +376,7 @@ async function openRecordModal(mode, record) {
     cls: record ? record.class : (els.filterClass.value || ''),
     student: record ? record.student_name : '',
     date: record ? record.record_date : todayStrLocal(),
-    stars: record ? (record.self_evaluation || 5) : 5,
+    stars: record ? (Number(record.self_evaluation) || 0) : 5,
     tags: [],
     chosen: {},   // {tagId: true}
     option: {},   // {tagId: 二级选项}
@@ -473,7 +475,11 @@ function renderRecStars() {
     b.type = 'button';
     b.className = 'rec-star' + (i <= recState.stars ? '' : ' off');
     b.textContent = '★';
-    b.addEventListener('click', () => { recState.stars = i; renderRecStars(); });
+    b.addEventListener('click', () => {
+      // 再点一次当前星级 = 清空（不打星）
+      recState.stars = (recState.stars === i) ? 0 : i;
+      renderRecStars();
+    });
     els.recStars.appendChild(b);
   }
 }
@@ -606,7 +612,7 @@ async function saveRecordModal() {
 
   const payload = {
     record_date: els.recDate.value,
-    self_evaluation: recState.stars,
+    self_evaluation: recState.stars || null,
     behavior,
     teacher_comment: els.recComment.value.trim() || null
   };
@@ -642,7 +648,10 @@ function showRecError(msg) {
 }
 
 function renderRecordCard(r) {
-  const stars = '★'.repeat(r.self_evaluation) + '☆'.repeat(5 - r.self_evaluation);
+  const starCount = Number(r.self_evaluation) || 0;
+  const stars = starCount
+    ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+    : '<span style="color:#98a69f;font-weight:600;">未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
   let itemsHtml = '';

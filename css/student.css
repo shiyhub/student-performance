@@ -377,3 +377,114 @@ body {
   .avatar-choice { font-size: 66px; border-radius: 28px; border-width: 5px; }
   .sound-toggle { width: 88px; height: 88px; font-size: 44px; top: 30px; right: 30px; }
 }
+
+/* ====================================================================
+ * v9：经验等级 / 校园图片头像 / 头像框槽位
+ * ==================================================================== */
+
+/* 头像内图片通用 */
+.avatar-img {
+  width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; display: block; pointer-events: none;
+}
+.mate-avatar.is-img { background: #fff; }
+.mate-avatar.is-img .avatar-img { border-radius: 50%; }
+
+/* 头像墙上的小等级徽章 */
+.mate-lv {
+  position: absolute; left: calc(50% + 18px); top: -4px; z-index: 3;
+  background: linear-gradient(135deg,#f7b955,#ef8e3a); color: #fff;
+  font-size: 10.5px; font-weight: 800; line-height: 1;
+  padding: 3px 6px 3px 5px; border-radius: 9px;
+  box-shadow: 0 2px 6px rgba(222,122,30,.4); pointer-events: none;
+}
+
+/* 身份卡：等级徽章 + 经验条 */
+.identity-avatar { position: relative; }
+.identity-avatar-emoji { position: relative; overflow: hidden; }
+.identity-lv-badge {
+  position: absolute; top: -2px; right: 50%; transform: translateX(60px);
+  background: linear-gradient(135deg,#f7b955,#ef8e3a); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 1;
+  padding: 4px 7px; border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(222,122,30,.4); pointer-events: none;
+}
+.identity-xp { width: min(280px, 86%); margin: 0 auto 14px; }
+.identity-xp-bar {
+  height: 12px; border-radius: 99px; background: #edf2ef; overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.08);
+}
+.identity-xp-bar i {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg,#ffd27a,#f59e42);
+  transition: width .5s ease;
+}
+.identity-xp-text { margin-top: 5px; font-size: 12px; color: #7a8a82; text-align: center; }
+.title-optional { font-size: 13px; color: #8fa098; font-weight: 600; }
+
+/* 预留：高等级头像框（3/4/5 级光环），后续可替换为头像框图片 */
+.identity-avatar.frame-l3 .identity-avatar-emoji { box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(247,185,85,.55), 0 6px 16px rgba(224,122,63,.22); }
+.identity-avatar.frame-l4 .identity-avatar-emoji { box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(110,190,255,.65), 0 6px 16px rgba(224,122,63,.22); }
+.identity-avatar.frame-l5 .identity-avatar-emoji {
+  box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(245,185,69,.8), 0 0 16px rgba(245,185,69,.55);
+}
+
+/* 头像弹窗：分组结构（覆盖旧的 grid 容器样式） */
+.avatar-picker {
+  display: block; max-height: min(60vh, 560px);
+  overflow-y: auto; overflow-x: hidden; padding: 4px 2px 10px;
+}
+.avatar-sec + .avatar-sec { margin-top: 14px; }
+.avatar-sec-title {
+  font-size: 14px; font-weight: 800; color: #315045;
+  margin: 4px 2px 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.avatar-sec-tip { font-size: 11.5px; font-weight: 600; color: #98a69f; }
+.avatar-sec-tip.ok { color: #2f9e72; }
+.avatar-grid {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;
+}
+.avatar-choice-img { position: relative; padding: 0; overflow: hidden; background: #fff; }
+.avatar-choice-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; }
+.avatar-choice.locked { opacity: .85; }
+.avatar-choice.locked img { filter: grayscale(.35) brightness(.96); }
+.avatar-lock {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  background: rgba(40,55,48,.32); border-radius: 13px;
+  font-size: 18px; color: #fff; pointer-events: none;
+}
+.avatar-lock em { font-style: normal; font-size: 11px; font-weight: 800; }
+
+/* 详情弹窗 / 心情卡中的图片头像 */
+.detail-avatar img.avatar-img,
+.mp-avatar img.avatar-img { border-radius: 50%; }
+.mp-avatar { overflow: hidden; }
+
+@media (min-width: 1400px) {
+  .mate-lv { font-size: 14px; padding: 4px 8px; border-radius: 11px; left: calc(50% + 26px); }
+  .identity-lv-badge { font-size: 15px; padding: 5px 10px; border-radius: 12px; transform: translateX(76px); }
+  .identity-xp { width: min(380px, 80%); }
+  .identity-xp-bar { height: 16px; }
+  .identity-xp-text { font-size: 15px; }
+  .title-optional { font-size: 17px; }
+  .avatar-modal { max-width: 720px; }
+  .avatar-picker { max-height: 70vh; }
+  .avatar-sec-title { font-size: 19px; }
+  .avatar-sec-tip { font-size: 15px; }
+  .avatar-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 12px; }
+  .avatar-lock { font-size: 24px; } .avatar-lock em { font-size: 14px; }
+}
+@media (min-width: 2400px) {
+  .mate-lv { font-size: 22px; padding: 6px 12px; left: calc(50% + 42px); }
+  .identity-lv-badge { font-size: 24px; padding: 8px 15px; transform: translateX(118px); }
+  .identity-xp { width: min(560px, 76%); }
+  .identity-xp-bar { height: 24px; }
+  .identity-xp-text { font-size: 23px; }
+  .title-optional { font-size: 28px; }
+  .avatar-modal { max-width: 1100px; }
+  .avatar-sec-title { font-size: 30px; margin: 10px 4px 14px; }
+  .avatar-sec-tip { font-size: 23px; }
+  .avatar-grid { gap: 20px; }
+  .avatar-lock { font-size: 38px; } .avatar-lock em { font-size: 23px; }
+}

@@ -57,7 +57,14 @@ const els = {
   // 在家表现
   homeDate: $('#homeDate'),
   homeContent: $('#homeContent'),
-  btnHomeSubmit: $('#btnHomeSubmit')
+  btnHomeSubmit: $('#btnHomeSubmit'),
+  // 试卷
+  papersCard: $('#papersCard'),
+  papersList: $('#papersList'),
+  paperViewModal: $('#paperViewModal'),
+  paperViewImg: $('#paperViewImg'),
+  paperViewOpen: $('#paperViewOpen'),
+  btnPaperViewClose: $('#btnPaperViewClose')
 };
 
 // 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
@@ -67,6 +74,7 @@ let lockedClass = '';
 const state = {
   ctx: { cls: '', student: '', parent: '' },
   allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
+  papers: [],           // 该生试卷（独立 RPC，学生端不开放）
   quick: 'all',         // all | week | lastweek | 4w | custom
   picked: null,         // 自选日期 Set（null=未启用自选）
   viewMode: 'detail'    // detail | summary
@@ -96,6 +104,7 @@ function init() {
   els.btnQuery.addEventListener('click', onQuery);
   els.btnBack.addEventListener('click', () => {
     els.resultCard.hidden = true;
+    els.papersCard.hidden = true;
     els.mismatchBanner.hidden = true;
     els.queryCard.hidden = false;
     window.scrollTo({ top: 0 });
@@ -142,13 +151,14 @@ async function onQuery() {
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
   try {
-    const { data, error } = await supabase.rpc('get_student_records', {
-      p_class: cls,
-      p_student: student,
-      p_parent: parent
-    });
-    if (error) throw error;
-    if (!data || data.length === 0) {
+    const [recRes, paperRes] = await Promise.all([
+      supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_parent: parent }),
+      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_parent: parent })
+    ]);
+    if (recRes.error) throw recRes.error;
+    const records = recRes.data || [];
+    const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
+    if (!records.length && !papers.length) {
       els.mismatchBanner.textContent = lockedClass
         ? '信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。'
         : '三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。';
@@ -156,7 +166,8 @@ async function onQuery() {
       return;
     }
     state.ctx = { cls, student, parent };
-    renderResults(student, data);
+    renderResults(student, records);
+    renderPapers(papers);
   } catch (e) {
     toast('查询失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
@@ -371,8 +382,11 @@ function renderDetailList(rows) {
 function renderSummary(rows) {
   if (!rows.length) return '';
 
-  // 平均星级
-  const avg = rows.reduce((s, r) => s + (r.self_evaluation || 0), 0) / rows.length;
+  // 平均星级（未打星的记录不参与平均）
+  const ratedRows = rows.filter(r => Number(r.self_evaluation) > 0);
+  const avg = ratedRows.length
+    ? ratedRows.reduce((s, r) => s + Number(r.self_evaluation), 0) / ratedRows.length
+    : null;
   const dates = Array.from(new Set(rows.map(r => r.record_date))).sort();
   const rangeTxt = dates.length === 1
     ? formatDate(dates[0])
@@ -434,7 +448,7 @@ function renderSummary(rows) {
   return `<div class="sum-card">
             <div class="sum-overview">
               <div><span class="sum-big">${rows.length}</span><span class="sum-sub">条记录</span></div>
-              <div><span class="sum-big">★${avg.toFixed(1)}</span><span class="sum-sub">平均星级</span></div>
+              <div><span class="sum-big">${avg === null ? '—' : '★' + avg.toFixed(1)}</span><span class="sum-sub">平均星级</span></div>
               <div class="sum-range">${rangeTxt}</div>
             </div>
             <div class="sum-moods">${moodLine || '<span class="text-muted">暂无心情数据</span>'}</div>
@@ -451,7 +465,10 @@ function shortDate(ymd) {
 }
 
 function renderRecordCard(r) {
-  const stars = '★'.repeat(r.self_evaluation) + '☆'.repeat(5 - r.self_evaluation);
+  const starCount = Number(r.self_evaluation) || 0;
+  const stars = starCount
+    ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+    : '<span class="text-muted">本次未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
   let itemsHtml = '';
@@ -612,4 +629,62 @@ function toast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ---------------- 试卷与成绩（仅家长可见，学生端不开放） ---------------- */
+
+function renderPapers(papers) {
+  state.papers = papers || [];
+  if (!state.papers.length) {
+    els.papersCard.hidden = true;
+    els.papersList.innerHTML = '';
+    return;
+  }
+  els.papersCard.hidden = false;
+  els.papersList.innerHTML = state.papers.map(p => {
+    const scoreTxt = formatScore(p.score, p.score_text);
+    const subject = (p.subject || '').trim();
+    const note = (p.note || '').trim();
+    return `<button type="button" class="paper-card" data-url="${esc(p.image_url)}">
+      <span class="paper-thumb"><img src="${esc(p.image_url)}" alt="试卷照片" loading="lazy"></span>
+      <span class="paper-meta">
+        <span class="paper-line1"><b>${esc(subject || '试卷')}</b><span class="paper-date">${esc(shortPaperDate(p.record_date))}</span></span>
+        <span class="paper-score">${scoreTxt}</span>
+        ${note ? `<span class="paper-note">${esc(note)}</span>` : ''}
+      </span>
+    </button>`;
+  }).join('');
+
+  els.papersList.querySelectorAll('.paper-card').forEach(card => {
+    card.addEventListener('click', () => openPaper(card.dataset.url));
+  });
+}
+
+function formatScore(score, scoreText) {
+  if (score !== null && score !== undefined && score !== '') {
+    const n = Number(score);
+    if (!isNaN(n)) return '成绩：<b>' + String(parseFloat(n.toFixed(1))) + ' 分</b>';
+  }
+  if (scoreText && String(scoreText).trim()) return '成绩：' + esc(String(scoreText).trim());
+  return '成绩待老师补充';
+}
+
+function shortPaperDate(ymd) {
+  const [y, m, d] = String(ymd || '').split('-').map(Number);
+  if (!y) return '';
+  return `${m}月${d}日`;
+}
+
+function openPaper(url) {
+  els.paperViewImg.src = url;
+  els.paperViewOpen.href = url;
+  els.paperViewModal.classList.add('show');
+}
+function closePaper() {
+  els.paperViewModal.classList.remove('show');
+  els.paperViewImg.src = '';
+}
+if (els.btnPaperViewClose) els.btnPaperViewClose.addEventListener('click', closePaper);
+if (els.paperViewModal) {
+  els.paperViewModal.addEventListener('click', e => { if (e.target === els.paperViewModal) closePaper(); });
 }

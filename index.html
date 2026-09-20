@@ -63,8 +63,13 @@
     <div class="card-title">🙋 先告诉我你是谁</div>
     <button type="button" class="identity-avatar" id="btnPickAvatar">
       <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
+      <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
       <span class="identity-avatar-hint">点我换头像 ✨</span>
     </button>
+    <div class="identity-xp">
+      <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
+      <div class="identity-xp-text" id="identityXpText">经验 0 · 再得 20 点升到 Lv.2</div>
+    </div>
     <div class="field">
       <label for="inpClass">我的班级</label>
       <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班"
@@ -77,11 +82,11 @@
     </div>
   </section>
 
-  <!-- 星级 -->
+  <!-- 星级（选填） -->
   <section class="card">
-    <div class="card-title">⭐ 今天给自己打几颗星？</div>
+    <div class="card-title">⭐ 今天给自己打几颗星？<span class="title-optional">（选填）</span></div>
     <div class="stars-row" id="starsRow" role="radiogroup" aria-label="综合自评星级"></div>
-    <div class="star-caption" id="starCaption">点一点上面的小星星</div>
+    <div class="star-caption" id="starCaption">可以不打星，直接选今天的小表现就行</div>
   </section>
 
   <!-- 今日心情（由勾选项自动算出，5 档） -->

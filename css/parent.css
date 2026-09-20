@@ -149,3 +149,33 @@
 .home-row label { font-size: 13.5px; font-weight: 700; color: #556b61; }
 .home-row .input { width: 170px; }
 .home-text { width: 100%; box-sizing: border-box; resize: vertical; margin-bottom: 10px; }
+
+/* ========== 试卷与成绩（v9） ========== */
+.papers-card {
+  margin-top: 14px;
+  border: 2px solid #e7e0d3; border-radius: 18px;
+  background: #fffdf8; padding: 14px;
+}
+.papers-head { font-size: 16px; font-weight: 800; color: #8a5a20; margin-bottom: 10px; }
+.papers-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.paper-card {
+  display: flex; flex-direction: column; text-align: left;
+  border: 1px solid #ece6d8; border-radius: 14px; overflow: hidden;
+  background: #fff; padding: 0; transition: transform .12s, box-shadow .12s;
+}
+.paper-card:active { transform: scale(.98); }
+.paper-thumb { display: block; width: 100%; aspect-ratio: 3/4; background: #f4f1ea; overflow: hidden; }
+.paper-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.paper-meta { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 3px; }
+.paper-line1 { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13.5px; }
+.paper-date { color: #97a09a; font-size: 12px; }
+.paper-score { color: #d2691e; font-size: 14px; }
+.paper-score b { font-size: 18px; }
+.paper-note { color: #7d8a83; font-size: 12.5px; line-height: 1.4; }
+
+.paper-view-modal { max-width: 92vw; max-height: 90vh; padding: 12px; }
+.paper-view-modal img { max-width: 100%; max-height: 74vh; border-radius: 10px; display: block; margin: 0 auto; }
+
+@media (min-width: 760px) {
+  .papers-list { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}

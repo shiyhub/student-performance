@@ -53,6 +53,7 @@
       <button class="tab-btn active" data-tab="records">📒 表现记录</button>
       <button class="tab-btn" data-tab="students">👥 学生名单</button>
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
+      <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
     </nav>
 
     <!-- ===== 表现记录 ===== -->
@@ -176,6 +177,68 @@
         勾选型标签可设置"二级选项"（如「优秀作业」下再分数学/语文课堂作业），学生勾选后要再选一项。停用或删除标签不影响历史记录（历史中保存了文字快照）。
       </p>
     </section>
+
+    <!-- ===== 试卷拍照（仅家长端可见，学生端不显示） ===== -->
+    <section id="tabExam" hidden>
+      <div class="card">
+        <div class="card-title">📷 上传学生试卷（拍照自动识别分数）</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          手机点"拍照上传"可直接调起相机；上传后会自动识别卷面上的数字分数，识别结果可以手动修改。<b>试卷只会展示给该生家长，学生端看不到。</b>
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="examClass">班级</label>
+            <select class="input" id="examClass"></select>
+          </div>
+          <div class="field">
+            <label for="examStudent">学生</label>
+            <select class="input" id="examStudent"></select>
+          </div>
+          <div class="field">
+            <label for="examDate">考试日期</label>
+            <input class="input" id="examDate" type="date">
+          </div>
+          <div class="field">
+            <label for="examSubject">科目</label>
+            <input class="input" id="examSubject" type="text" maxlength="20"
+                   placeholder="如：数学" list="examSubjectList">
+            <datalist id="examSubjectList">
+              <option value="语文"><option value="数学"><option value="英语">
+              <option value="科学"><option value="道德与法治">
+            </datalist>
+          </div>
+          <div class="field full">
+            <label for="examFile">试卷照片</label>
+            <input class="input" id="examFile" type="file"
+                   accept="image/*" capture="environment">
+          </div>
+          <div class="field full" id="examPreviewWrap" hidden>
+            <img id="examPreview" class="exam-preview" alt="试卷预览">
+          </div>
+          <div class="field">
+            <label for="examScore">识别到的分数（可手动修改）</label>
+            <input class="input" id="examScore" type="text" inputmode="decimal"
+                   maxlength="6" placeholder="识别后自动填入，也可手填">
+          </div>
+          <div class="field">
+            <label for="examScoreText">分数原文（选填）</label>
+            <input class="input" id="examScoreText" type="text" maxlength="20" placeholder="如：95分">
+          </div>
+          <div class="field full">
+            <label for="examNote">备注（选填）</label>
+            <input class="input" id="examNote" type="text" maxlength="100" placeholder="如：第三单元测验">
+          </div>
+        </div>
+        <div id="examOcrStatus" class="text-muted exam-ocr-status"></div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="btnExamSave" type="button">保存并发送给家长</button>
+          <button class="btn btn-ghost" id="btnExamReset" type="button">清空重拍</button>
+        </div>
+      </div>
+
+      <div class="sec-label">已上传试卷</div>
+      <div id="examBox" class="exam-box"></div>
+    </section>
   </main>
 </div>
 
@@ -241,6 +304,8 @@
 <script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/vendor/qrcode.min.js"></script>
+<script src="js/vendor/tesseract/tesseract.min.js"></script>
 <script src="js/teacher.js"></script>
+<script src="js/exam.js"></script>
 </body>
 </html>

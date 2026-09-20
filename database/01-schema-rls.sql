@@ -3,8 +3,9 @@
 -- 适用环境：Supabase 免费版（PostgreSQL 15+）
 -- 使用方法：Supabase 控制台 → SQL Editor → New query → 粘贴本文件全部内容 → Run
 -- 可重复执行；全新空库直接跑本脚本。
--- 结构：4 张表（student_info / student_parent / daily_record / behavior_tags）
---       + 1 个视图（student_directory）
+-- 结构：6 张表（student_info / student_parent / daily_record / behavior_tags /
+--              home_note / exam_paper）
+--       + 1 个视图（student_directory）+ 经验等级 + 试卷存储桶 exam-papers
 -- 规则：一个学生可绑定任意数量家长，任一登记家长姓名均可查询该生记录。
 -- ============================================================================
 
@@ -17,12 +18,18 @@ create extension if not exists pgcrypto;
 
 -- 1.1 学生名单表（一个班内学生姓名唯一；家长独立成表）------------------------
 create table if not exists public.student_info (
-  id           uuid primary key default gen_random_uuid(),
-  class        text not null,                   -- 班级，如：三年级2班
-  student_name text not null,                   -- 学生姓名
-  avatar       text,                            -- 学生自选头像(emoji)，空=按姓名自动分配
-  created_at   timestamptz not null default now(),
-  constraint uq_student unique (class, student_name)   -- 同班不允许重名重复录入
+  id                   uuid primary key default gen_random_uuid(),
+  class                text not null,                   -- 班级，如：三年级2班
+  student_name         text not null,                   -- 学生姓名
+  avatar               text,                            -- 头像：emoji 或校园头像key(girl1..)
+  xp                   int not null default 0,          -- 经验值（每积极项 +2）
+  level                int not null default 1,          -- 等级 1~5（3级解锁校园头像）
+  avatar_changed_at    timestamptz,                     -- 最近一次换表情头像时间
+  avatar_changes_today smallint not null default 0,     -- 当日已换表情头像次数（上限2）
+  created_at           timestamptz not null default now(),
+  constraint uq_student unique (class, student_name),   -- 同班不允许重名重复录入
+  constraint chk_student_level check (level between 1 and 5),
+  constraint chk_student_xp    check (xp >= 0)
 );
 
 comment on table public.student_info is '学生名单：仅老师可读写，匿名端不可直接访问';
@@ -47,11 +54,11 @@ create table if not exists public.daily_record (
   student_name    text not null,
   class           text not null,
   record_date     date not null default current_date,
-  self_evaluation smallint not null,            -- 综合星级 1~5
+  self_evaluation smallint,                      -- 综合星级 1~5（选填；NULL=本次未打星）
   behavior        jsonb not null default '{}'::jsonb,
   teacher_comment text,
   create_at       timestamptz not null default now(),
-  constraint chk_self_eval check (self_evaluation between 1 and 5),
+  constraint chk_self_eval check (self_evaluation is null or self_evaluation between 1 and 5),
   constraint chk_behavior_object check (jsonb_typeof(behavior) = 'object')
 );
 
@@ -94,12 +101,32 @@ create index if not exists idx_home_note_student
 
 comment on table public.home_note is '家长填写的学生在家表现：匿名端只能经校验RPC写入、不能读取；仅老师可查看与管理';
 
--- 1.6 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
+-- 1.6 教师上传的学生试卷照片与分数（仅家长经 RPC 可见，学生端不开放）------------
+create table if not exists public.exam_paper (
+  id           uuid primary key default gen_random_uuid(),
+  student_id   uuid not null references public.student_info(id) on delete cascade,
+  class        text not null,
+  student_name text not null,
+  record_date  date not null default current_date,
+  subject      text,                              -- 科目，如 数学
+  score        numeric(6,1),                      -- OCR/老师确认后的分数（可空）
+  score_text   text,                              -- 识别到的原始分数文字
+  image_url    text not null,                     -- Storage 图片地址（随机文件名）
+  note         text,
+  create_at    timestamptz not null default now()
+);
+
+create index if not exists idx_exam_paper_lookup
+  on public.exam_paper (class, student_name, record_date desc);
+
+comment on table public.exam_paper is '教师上传的学生试卷照片与分数：仅老师可直连；家长经三要素RPC查看；学生端不开放';
+
+-- 1.7 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
 create or replace view public.student_directory as
-  select id, class, student_name, avatar
+  select id, class, student_name, avatar, xp, level
   from public.student_info;
 
-comment on view public.student_directory is '学生端班级墙只读视图：仅含班级与学生姓名';
+comment on view public.student_directory is '学生端班级墙只读视图：班级、学生姓名、头像、经验、等级';
 
 
 -- ============================================================================
@@ -111,6 +138,7 @@ alter table public.student_parent enable row level security;
 alter table public.daily_record   enable row level security;
 alter table public.behavior_tags  enable row level security;
 alter table public.home_note      enable row level security;
+alter table public.exam_paper     enable row level security;
 
 
 -- ============================================================================
@@ -167,26 +195,137 @@ as $$
   order by r.record_date desc, r.create_at desc;
 $$;
 
--- 3.3 学生保存自选头像：仅能改"班级+姓名"匹配到的名单记录
-create or replace function public.set_student_avatar(
-  p_class  text,
-  p_student text,
-  p_avatar  text
-)
-returns boolean
+-- 3.3 经验等级：阈值 L1=0 / L2=20 / L3=60 / L4=120 / L5=200
+create or replace function public.level_from_xp(p_xp int)
+returns int
+language sql
+immutable
+as $$
+  select case
+           when coalesce(p_xp, 0) >= 200 then 5
+           when coalesce(p_xp, 0) >= 120 then 4
+           when coalesce(p_xp, 0) >= 60  then 3
+           when coalesce(p_xp, 0) >= 20  then 2
+           else 1
+         end;
+$$;
+
+-- 提交表现后：每个积极项 +2 XP，并重算等级（消极项不加经验）
+create or replace function public.apply_record_xp()
+returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v text;
+  v_pos int := 0;
+  v_xp  int;
 begin
-  v := nullif(left(btrim(coalesce(p_avatar, '')), 8), '');
+  select count(*) into v_pos
+  from jsonb_array_elements(coalesce(new.behavior -> 'items', '[]'::jsonb)) as e
+  where e ->> 'category' = 'positive';
+
+  if coalesce(v_pos, 0) > 0 then
+    update public.student_info
+       set xp = coalesce(xp, 0) + v_pos * 2
+     where class = new.class
+       and student_name = new.student_name
+    returning xp into v_xp;
+
+    if found then
+      update public.student_info
+         set level = public.level_from_xp(v_xp)
+       where class = new.class
+         and student_name = new.student_name;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_apply_record_xp on public.daily_record;
+create trigger trg_apply_record_xp
+  after insert on public.daily_record
+  for each row execute function public.apply_record_xp();
+
+-- 3.4 学生保存自选头像：
+--     校园图片头像(girl/boy/neutral1~8) 需 3 级解锁且不限次数；
+--     表情头像每天最多更换 2 次（选回当前头像不计数）。
+create or replace function public.set_student_avatar(
+  p_class   text,
+  p_student text,
+  p_avatar  text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sid        uuid;
+  v_cur        text;
+  v_xp         int;
+  v_level      int;
+  v_changed_at timestamptz;
+  v_changes    smallint;
+  v_key        text;
+  v_is_image   boolean;
+  v_left       int;
+begin
+  v_key := nullif(btrim(coalesce(p_avatar, '')), '');
+  if v_key is null or length(v_key) > 16 then
+    return jsonb_build_object('ok', false, 'reason', 'bad_key', 'changed', false);
+  end if;
+
+  select id, avatar, xp, level, avatar_changed_at, avatar_changes_today
+    into v_sid, v_cur, v_xp, v_level, v_changed_at, v_changes
+  from public.student_info
+  where class = btrim(coalesce(p_class, ''))
+    and student_name = btrim(coalesce(p_student, ''));
+
+  if v_sid is null then
+    return jsonb_build_object('ok', false, 'reason', 'no_student', 'changed', false);
+  end if;
+
+  v_is_image := v_key ~ '^(girl|boy|neutral)[1-8]$';
+
+  if v_key is not distinct from v_cur then
+    v_left := case when v_changed_at::date = current_date then greatest(0, 2 - coalesce(v_changes,0)) else 2 end;
+    return jsonb_build_object('ok', true, 'changed', false, 'reason', 'same',
+                              'level', v_level, 'xp', v_xp, 'changes_left', v_left);
+  end if;
+
+  if v_is_image then
+    if coalesce(v_level, 1) < 3 then
+      return jsonb_build_object('ok', false, 'reason', 'locked', 'changed', false,
+                                'level', v_level, 'xp', v_xp, 'changes_left', 0);
+    end if;
+
+    update public.student_info set avatar = v_key where id = v_sid;
+    return jsonb_build_object('ok', true, 'changed', true, 'reason', 'ok',
+                              'level', v_level, 'xp', v_xp, 'changes_left', -1);
+  end if;
+
+  if v_changed_at::date is distinct from current_date then
+    v_changes := 0;
+  end if;
+
+  if coalesce(v_changes, 0) >= 2 then
+    return jsonb_build_object('ok', false, 'reason', 'limit', 'changed', false,
+                              'level', v_level, 'xp', v_xp, 'changes_left', 0);
+  end if;
+
+  v_changes := coalesce(v_changes, 0) + 1;
   update public.student_info
-     set avatar = v
-   where class = btrim(coalesce(p_class, ''))
-     and student_name = btrim(coalesce(p_student, ''));
-  return found;
+     set avatar = v_key,
+         avatar_changed_at = now(),
+         avatar_changes_today = v_changes
+   where id = v_sid;
+
+  return jsonb_build_object('ok', true, 'changed', true, 'reason', 'ok',
+                            'level', v_level, 'xp', v_xp,
+                            'changes_left', greatest(0, 2 - v_changes));
 end;
 $$;
 
@@ -237,6 +376,41 @@ begin
 end;
 $$;
 
+-- 3.6 家长三要素匹配后查看该生试卷（学生端不调用）
+create or replace function public.get_student_papers(
+  p_class   text,
+  p_student text,
+  p_parent  text
+)
+returns table (
+  id           uuid,
+  record_date  date,
+  subject      text,
+  score        numeric,
+  score_text   text,
+  image_url    text,
+  note         text,
+  create_at    timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select e.id, e.record_date, e.subject, e.score, e.score_text, e.image_url, e.note, e.create_at
+  from public.exam_paper e
+  where e.class = btrim(coalesce(p_class, ''))
+    and e.student_name = btrim(coalesce(p_student, ''))
+    and exists (
+      select 1
+      from public.student_info s
+      join public.student_parent p on p.student_id = s.id
+      where s.class = e.class
+        and s.student_name = e.student_name
+        and p.parent_name = btrim(coalesce(p_parent, ''))
+    )
+  order by e.record_date desc, e.create_at desc;
+$$;
+
 
 -- ============================================================================
 -- 第 4 部分：RLS 策略（白名单制）
@@ -283,13 +457,18 @@ drop policy if exists home_note_teacher_all on public.home_note;
 create policy home_note_teacher_all on public.home_note
   for all to authenticated using (true) with check (true);
 
+-- exam_paper —— 仅登录老师；匿名端无策略（家长只能经 get_student_papers RPC 查看）
+drop policy if exists exam_paper_teacher_all on public.exam_paper;
+create policy exam_paper_teacher_all on public.exam_paper
+  for all to authenticated using (true) with check (true);
+
 
 -- ============================================================================
 -- 第 5 部分：SQL 层显式授权
 -- ============================================================================
 
-revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note from anon;
-revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note from authenticated;
+revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note, public.exam_paper from anon;
+revoke all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note, public.exam_paper from authenticated;
 revoke all on public.student_directory from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 
@@ -302,7 +481,7 @@ grant select on public.student_directory to anon;
 grant select on public.behavior_tags to anon;
 
 -- 老师（authenticated）
-grant all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note to authenticated;
+grant all on public.student_info, public.student_parent, public.daily_record, public.behavior_tags, public.home_note, public.exam_paper to authenticated;
 grant select on public.student_directory to authenticated;
 
 -- 函数执行权限
@@ -317,6 +496,22 @@ grant  execute on function public.set_student_avatar(text, text, text) to anon, 
 
 revoke execute on function public.add_home_note(text, text, text, text, date) from public;
 grant  execute on function public.add_home_note(text, text, text, text, date) to anon, authenticated;
+
+revoke execute on function public.get_student_papers(text, text, text) from public;
+grant  execute on function public.get_student_papers(text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 试卷存储桶：public 桶 + 随机 UUID 文件名；老师可读写，匿名不能列举/上传
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('exam-papers', 'exam-papers', true)
+on conflict (id) do update set public = excluded.public;
+
+drop policy if exists exam_papers_bucket_teacher on storage.objects;
+create policy exam_papers_bucket_teacher on storage.objects
+  for all to authenticated
+  using (bucket_id = 'exam-papers')
+  with check (bucket_id = 'exam-papers');
 
 notify pgrst, 'reload schema';
 
