@@ -499,10 +499,12 @@ body {
 
 /* Lv6 典藏头像分组 */
 .avatar-sec.legend { background: linear-gradient(180deg,#fff7e6,#fff); border:1.5px solid #f0c66a; }
-.avatar-sub-group { margin: 6px 0 10px; }
-.avatar-sub-title { font-size: 13px; font-weight: 700; color: #b07a1a; margin: 4px 2px 6px; }
-.avatar-sec.legend .avatar-grid-img { gap: 10px; }
+.legend-groups { display:block; }
+.avatar-sub-group { margin: 6px 0 12px; }
+.avatar-sub-title { font-size: 14px; font-weight: 800; color: #b07a1a; margin: 8px 2px 6px; }
+.legend-row { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
 .avatar-sec.legend .avatar-choice-img img { border-radius: 50%; }
+@media (min-width: 700px) { .legend-row { grid-template-columns: repeat(8, minmax(0,1fr)); gap: 10px; } }
 
 /* 今日任务（学生端） */
 .task-card { background: linear-gradient(180deg,#fff9f0,#fff); border:1.5px solid #f3d9a8; }

@@ -818,13 +818,13 @@ function openAvatarPicker() {
     ? `<div class="avatar-sec-title">🌟 典藏头像<span class="avatar-sec-tip ok">Lv.${LEGEND_UNLOCK_LEVEL} 已解锁，可随意更换</span></div>`
     : `<div class="avatar-sec-title">🔒 典藏头像<span class="avatar-sec-tip">升到 Lv.${LEGEND_UNLOCK_LEVEL} 解锁（再攒经验吧）</span></div>`;
   const legendGrid = document.createElement('div');
-  legendGrid.className = 'avatar-grid avatar-grid-img';
+  legendGrid.className = 'legend-groups';
   LEGEND_GROUPS.forEach(g => {
     const sub = document.createElement('div');
     sub.className = 'avatar-sub-group';
     sub.innerHTML = `<div class="avatar-sub-title">${g.name}</div>`;
     const row = document.createElement('div');
-    row.className = 'avatar-grid avatar-grid-img';
+    row.className = 'avatar-grid avatar-grid-img legend-row';
     for (let i = 1; i <= g.count; i++) {
       row.appendChild(buildImgChoice(g.prefix + i, cur.key, legendUnlocked, LEGEND_UNLOCK_LEVEL));
     }
