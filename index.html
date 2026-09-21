@@ -81,13 +81,6 @@
     </div>
   </section>
 
-  <!-- 星级（选填） -->
-  <section class="card">
-    <div class="card-title">⭐ 今天给自己打几颗星？<span class="title-optional">（选填）</span></div>
-    <div class="stars-row" id="starsRow" role="radiogroup" aria-label="综合自评星级"></div>
-    <div class="star-caption" id="starCaption">可以不打星，直接选今天的小表现就行</div>
-  </section>
-
   <!-- 今日心情（由勾选项自动算出，5 档） -->
   <section class="card mood-preview-card" id="moodPreviewCard">
     <div class="mood-preview" id="moodPreview">
@@ -100,6 +93,12 @@
     <div class="mood-meter" id="moodMeter" aria-hidden="true">
       <span data-l="1">😢</span><span data-l="2">😟</span><span data-l="3">😐</span><span data-l="4">🙂</span><span data-l="5">😄</span>
     </div>
+  </section>
+
+  <!-- 往日任务回顾（近一周） -->
+  <section class="card" id="pastTaskCard" hidden>
+    <div class="card-title">🗓️ 往日任务（近7天）</div>
+    <div id="pastTaskBody"></div>
   </section>
 
   <!-- 今日学习任务 -->

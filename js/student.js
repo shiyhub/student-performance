@@ -140,7 +140,9 @@ const els = {
   btnWallFromSuccess: $('#btnWallFromSuccess'),
   confettiBox: $('#confettiBox'),
   taskCard: $('#taskCard'),
-  taskBody: $('#taskBody')
+  taskBody: $('#taskBody'),
+  pastTaskCard: $('#pastTaskCard'),
+  pastTaskBody: $('#pastTaskBody')
 };
 
 const state = {
@@ -472,30 +474,8 @@ function renderRecordTimeline(rows) {
  * ===================================================================== */
 
 function renderStars() {
+  if (!els.starsRow) return; // 打星模块已移除
   els.starsRow.innerHTML = '';
-  for (let i = 1; i <= 5; i++) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'star-btn' + (i <= state.stars ? '' : ' off');
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-label', i + '星');
-    b.innerHTML = '<span class="star-shape">★</span>';
-    b.addEventListener('click', () => {
-      // 再点一次当前星级 = 清空（打星选填，不打星也能提交）
-      state.stars = (state.stars === i) ? 0 : i;
-      sfx.star(state.stars);
-      // 打星联动心情：选几颗星就对应几档心情
-      if (state.stars > 0) { state.moodLevel = state.stars; renderMoodPreview(); }
-      renderStars();
-      b.classList.remove('pop');
-      void b.offsetWidth;
-      b.classList.add('pop');
-      els.starCaption.textContent = state.stars
-        ? STAR_TEXT[state.stars]
-        : '可以不打星，直接选今天的小表现就行';
-    });
-    els.starsRow.appendChild(b);
-  }
 }
 
 /* ---------- 头像（emoji 或校园图片；按姓名稳定取卡通动物 + 底色兜底） ---------- */
@@ -553,8 +533,6 @@ function calcMoodLevel() {
 
 function updateMood() {
   state.moodLevel = calcMoodLevel();
-  // 心情联动自动打星：心情几档就自动亮几颗星（学生可再手动改）
-  state.stars = state.moodLevel;
   renderStars();
   renderMoodPreview();
 }
@@ -948,6 +926,36 @@ function showForm(presetName) {
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
   loadStudentTask();
+  loadPastTasks();
+}
+
+async function loadPastTasks() {
+  if (!els.pastTaskCard) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { els.pastTaskCard.hidden = true; return; }
+  els.pastTaskCard.hidden = false;
+  const since = new Date(); since.setDate(since.getDate() - 6);
+  const p = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p(since.getMonth()+1)}-${p(since.getDate())}`;
+  try {
+    const { data: tasks } = await supabase.from('daily_task')
+      .select('id,title,detail,task_date,task_type,due_time')
+      .eq('class', cls).gte('task_date', sinceStr).order('task_date', { ascending: false });
+    const { data: subs } = await supabase.from('task_submission')
+      .select('task_id,grade').eq('class', cls).eq('student_name', name);
+    const gradeMap = {}; (subs||[]).forEach(s => gradeMap[s.task_id] = s.grade);
+    const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
+    if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
+    els.pastTaskBody.innerHTML = (tasks||[]).map(t => {
+      const g = gLabel[gradeMap[t.id]] || '—';
+      const due = t.due_time ? ` 截止${t.due_time}` : '';
+      return `<div class="past-row">
+        <div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${due}</div>
+        <div class="past-grade">${g}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { els.pastTaskBody.innerHTML = ''; }
 }
 function showWall() {
   els.formView.hidden = true;
@@ -982,7 +990,14 @@ async function onSubmit() {
           return toast(`请为「${t.label}」再选一个具体项目`);
         }
         const subVal = subArr.join('、');
-        items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive', xp: tagXpOf(t) });
+        if (Array.isArray(t.options) && t.options.length) {
+          // 有二级选项：一级标题本身不加经验，按选中的二级数量逐个加
+          subArr.forEach(opt => {
+            items.push({ id: t.id, label: t.label, type: 'check', value: opt, category: t.category || 'positive', xp: tagXpOf(t) });
+          });
+        } else {
+          items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive', xp: tagXpOf(t) });
+        }
       }
     } else {
       const v = (state.textValues[t.id] || '').trim();
@@ -1014,7 +1029,7 @@ async function onSubmit() {
       class: cls,
       student_name: name,
       record_date: todayStr(),
-      self_evaluation: state.stars || null,   // 打星选填
+      self_evaluation: null,   // 打星模块已移除
       behavior: { mood: MOOD_BY_LEVEL(state.moodLevel).key, items }
     });
     if (insertError) {
@@ -1060,7 +1075,7 @@ function resetSelections() {
   state.checkOption = {};
   state.textValues = {};
   renderStars();
-  els.starCaption.textContent = '可以不打星，直接选今天的小表现就行';
+  if (els.starCaption) els.starCaption.textContent = '';
   [els.posGrid, els.negGrid].forEach(grid => {
     grid.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
     grid.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));

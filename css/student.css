@@ -588,3 +588,12 @@ body {
   #tagsBox .tag-group.neg { order: 1; flex: 1; }
   #tagsBox .tag-group { order: 2; flex: 1; }
 }
+
+/* v20：往日任务 + 两模块独立卡片 */
+.past-row { display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:8px 4px; border-bottom:1px dashed #eee; font-size:14px; }
+.past-row:last-child { border-bottom:none; }
+.past-grade { white-space:nowrap; font-weight:700; color:#2c7a4e; }
+@media (min-width: 900px) {
+  #tagsBox .tag-group { background:#fafafa; border-radius:14px; padding:14px; }
+}

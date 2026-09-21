@@ -1525,23 +1525,25 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   const type = document.getElementById('taskType').value || 'classwork';
   const title = document.getElementById('taskTitle').value.trim();
   const detail = document.getElementById('taskDetail').value.trim();
+  const due = document.getElementById('taskDue').value || null;
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
   if (editingTaskId) {
     const { error } = await supabase.from('daily_task')
-      .update({ class: cls, task_date: date, task_type: type, title, detail })
+      .update({ class: cls, task_date: date, task_type: type, title, detail, due_time: due })
       .eq('id', editingTaskId);
     if (error) { toast('保存失败：' + error.message); return; }
     toast('任务已更新');
     cancelTaskEdit();
   } else {
     const { error } = await supabase.from('daily_task')
-      .insert({ class: cls, task_date: date, task_type: type, title, detail });
+      .insert({ class: cls, task_date: date, task_type: type, title, detail, due_time: due });
     if (error) { toast('发布失败：' + error.message); return; }
     toast('任务已发布，学生端今天就能看到啦');
   }
   document.getElementById('taskTitle').value = '';
   document.getElementById('taskDetail').value = '';
+  document.getElementById('taskDue').value = '';
   loadTaskReport();
 });
 
@@ -1568,6 +1570,7 @@ function beginTaskEdit(t) {
   document.getElementById('taskType').value = t.task_type || 'classwork';
   document.getElementById('taskTitle').value = t.title;
   document.getElementById('taskDetail').value = t.detail || '';
+  document.getElementById('taskDue').value = t.due_time || '';
   const btn = document.querySelector('#taskForm button[type="submit"]');
   if (btn) btn.textContent = '💾 保存修改';
   const cancelBtn = document.getElementById('btnCancelTaskEdit');
