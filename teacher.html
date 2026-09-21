@@ -54,6 +54,7 @@
       <button class="tab-btn" data-tab="students">👥 学生名单</button>
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
+      <button class="tab-btn" data-tab="task">📋 每日任务</button>
       <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
     </nav>
 
@@ -283,9 +284,57 @@
         <p class="text-muted" style="margin-bottom:6px;">
           · 学生每勾选一个「积极表现」，经验 +该标签设定值（默认 +2）；消极表现默认 +0。<br>
           · 老师删掉一条记录时，这条记录带来的经验会自动扣回。<br>
-          · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200。校园头像 Lv3 解锁。<br>
+          · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200 / Lv6=400。校园头像 Lv3、典藏头像 Lv6 解锁。<br>
           · 想直接调整某个学生的经验，到「学生名单」里点他那一行的 ✏️ 调经验。
         </p>
+      </div>
+    </section>
+
+    <!-- ===== 每日任务 ===== -->
+    <section id="tabTask" hidden>
+      <div class="card">
+        <div class="card-title">📢 发布今日学习任务</div>
+        <form id="taskForm">
+          <div class="filter-grid">
+            <div class="field">
+              <label for="taskClass">班级</label>
+              <select class="input" id="taskClass"></select>
+            </div>
+            <div class="field">
+              <label for="taskDate">日期</label>
+              <input class="input" id="taskDate" type="date">
+            </div>
+            <div class="field full">
+              <label for="taskTitle">任务标题</label>
+              <input class="input" id="taskTitle" type="text" placeholder="例如：完成数学练习册第12页" maxlength="60">
+            </div>
+            <div class="field full">
+              <label for="taskDetail">任务说明（可留空）</label>
+              <textarea class="input" id="taskDetail" rows="2" placeholder="写清楚要求、交什么" maxlength="300"></textarea>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">发布任务</button>
+          <span class="text-muted" style="margin-left:10px;">同一天同班再发布会覆盖旧任务</span>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 全班完成情况</div>
+        <div class="filter-grid">
+          <div class="field">
+            <label for="reportClass">班级</label>
+            <select class="input" id="reportClass"></select>
+          </div>
+          <div class="field">
+            <label for="reportDate">日期</label>
+            <input class="input" id="reportDate" type="date">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-ghost" id="btnLoadReport" type="button">刷新</button>
+          </div>
+        </div>
+        <div id="taskReportBox"></div>
       </div>
     </section>
   </main>
