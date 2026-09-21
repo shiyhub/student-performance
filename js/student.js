@@ -1044,7 +1044,8 @@ async function loadPastTasks() {
   try {
     const { data: tasks } = await supabase.from('daily_task')
       .select('id,title,detail,task_date,task_type,due_time')
-      .eq('class', cls).gte('task_date', sinceStr).order('task_date', { ascending: false });
+      .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
+      .order('task_date', { ascending: false });
     const { data: subs } = await supabase.from('task_submission')
       .select('task_id,grade').eq('class', cls).eq('student_name', name);
     const gradeMap = {}; (subs||[]).forEach(s => gradeMap[s.task_id] = s.grade);
