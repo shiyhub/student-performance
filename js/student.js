@@ -323,7 +323,9 @@ function renderWall() {
         <span class="mate-avatar${ringCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
         ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
-        ${avg ? `<span class="mate-badge">⭐${avg}</span>` : `<span class="mate-badge count-badge">未记录</span>`}
+        ${todayRec
+          ? (avg ? `<span class="mate-badge">⭐${avg}</span>` : `<span class="mate-badge done-badge">已打卡</span>`)
+          : `<span class="mate-badge count-badge">未打卡</span>`}
         <span class="mate-name">${esc(s.student_name)}</span>
       </button>`;
   });
@@ -482,6 +484,8 @@ function renderStars() {
       // 再点一次当前星级 = 清空（打星选填，不打星也能提交）
       state.stars = (state.stars === i) ? 0 : i;
       sfx.star(state.stars);
+      // 打星联动心情：选几颗星就对应几档心情
+      if (state.stars > 0) { state.moodLevel = state.stars; renderMoodPreview(); }
       renderStars();
       b.classList.remove('pop');
       void b.offsetWidth;
@@ -549,6 +553,9 @@ function calcMoodLevel() {
 
 function updateMood() {
   state.moodLevel = calcMoodLevel();
+  // 心情联动自动打星：心情几档就自动亮几颗星（学生可再手动改）
+  state.stars = state.moodLevel;
+  renderStars();
   renderMoodPreview();
 }
 

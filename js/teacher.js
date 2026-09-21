@@ -61,7 +61,7 @@ const els = {
   // 批量录入
   batchClass: $('#batchClass'),
   batchText: $('#batchText'),
-  batchResult: $('#batchResult'),
+  awardResult: $('#awardResult'),
   btnBatchCheck: $('#btnBatchCheck'),
   btnBatchImport: $('#btnBatchImport'),
   btnBatchClear: $('#btnBatchClear'),
@@ -166,7 +166,7 @@ function init() {
       batchParsed = [];
       els.btnBatchImport.disabled = true;
       els.btnBatchImport.textContent = '② 确认导入';
-      els.batchResult.innerHTML = '';
+      els.awardResult.innerHTML = '';
     });
   });
 
@@ -1161,7 +1161,7 @@ function onBatchCheck() {
                <ul>${bad.map(b => `<li>第 ${b.lineNo} 行「${esc(b.raw)}」——${esc(b.reason)}</li>`).join('')}</ul>
              </div>`;
   }
-  els.batchResult.innerHTML = html;
+  els.awardResult.innerHTML = html;
 }
 
 async function onBatchImport() {
@@ -1238,7 +1238,7 @@ async function onBatchImport() {
 
   toast(`导入完成：${batchParsed.length} 名学生；新增家长 ${freshParents.length} 位，跳过已有 ${totalParentCount - freshParents.length} 位`);
   els.batchText.value = '';
-  els.batchResult.innerHTML = '';
+  els.awardResult.innerHTML = '';
   batchParsed = [];
   els.btnBatchImport.disabled = true;
   if (loaded.students) loadStudents();
@@ -1247,7 +1247,7 @@ async function onBatchImport() {
 
 function onBatchClear() {
   els.batchText.value = '';
-  els.batchResult.innerHTML = '';
+  els.awardResult.innerHTML = '';
   batchParsed = [];
   els.btnBatchImport.disabled = true;
   els.btnBatchImport.textContent = '② 确认导入';
@@ -1681,26 +1681,26 @@ async function activateBatchTab() {
   if (!batchState.loaded) {
     batchState.loaded = true;
     await loadBatchClasses();
-    document.getElementById('batchClass').addEventListener('change', loadBatchTagsAndStudents);
-    document.getElementById('btnAddBatchDate').addEventListener('click', addBatchDate);
-    document.getElementById('btnBatchToday').addEventListener('click', () => {
-      document.getElementById('batchDates').value = todayStr(); addBatchDate();
+    document.getElementById('awardClass').addEventListener('change', loadBatchTagsAndStudents);
+    document.getElementById('btnAddAwardDate').addEventListener('click', addBatchDate);
+    document.getElementById('btnAwardToday').addEventListener('click', () => {
+      document.getElementById('awardDates').value = todayStr(); addBatchDate();
     });
-    document.getElementById('btnBatchClearDates').addEventListener('click', () => {
+    document.getElementById('btnAwardClearDates').addEventListener('click', () => {
       batchState.dates = []; renderBatchDates();
     });
-    document.getElementById('btnBatchAll').addEventListener('click', () => {
+    document.getElementById('btnAwardAll').addEventListener('click', () => {
       batchState.students = batchState.allStudents || []; renderBatchStudents();
     });
-    document.getElementById('btnBatchNone').addEventListener('click', () => {
+    document.getElementById('btnAwardNone').addEventListener('click', () => {
       batchState.students = []; renderBatchStudents();
     });
-    document.getElementById('btnBatchGo').addEventListener('click', runBatchAward);
+    document.getElementById('btnAwardGo').addEventListener('click', runBatchAward);
   }
 }
 
 async function loadBatchClasses() {
-  const sel = document.getElementById('batchClass');
+  const sel = document.getElementById('awardClass');
   const { data: students } = await supabase.from('student_info').select('class').order('class');
   const classes = Array.from(new Set((students || []).map(s => s.class))).sort();
   sel.innerHTML = '<option value="">请选择班级</option>' +
@@ -1708,9 +1708,9 @@ async function loadBatchClasses() {
 }
 
 async function loadBatchTagsAndStudents() {
-  const cls = document.getElementById('batchClass').value;
-  const tagSel = document.getElementById('batchTag');
-  const box = document.getElementById('batchStudentBox');
+  const cls = document.getElementById('awardClass').value;
+  const tagSel = document.getElementById('awardTag');
+  const box = document.getElementById('awardStudentBox');
   if (!cls) { tagSel.innerHTML = '<option value="">请先选班级</option>'; box.innerHTML=''; return; }
   // 学生
   const { data: students } = await supabase.from('student_info')
@@ -1726,7 +1726,7 @@ async function loadBatchTagsAndStudents() {
 }
 
 function renderBatchStudents() {
-  const box = document.getElementById('batchStudentBox');
+  const box = document.getElementById('awardStudentBox');
   const all = batchState.allStudents || [];
   box.innerHTML = all.map(n => {
     const on = batchState.students.includes(n);
@@ -1741,7 +1741,7 @@ function renderBatchStudents() {
 }
 
 function addBatchDate() {
-  const v = document.getElementById('batchDates').value;
+  const v = document.getElementById('awardDates').value;
   if (!v) return toast('请选一个日期');
   if (!batchState.dates.includes(v)) batchState.dates.push(v);
   batchState.dates.sort();
@@ -1749,7 +1749,7 @@ function addBatchDate() {
 }
 
 function renderBatchDates() {
-  const box = document.getElementById('batchDateChips');
+  const box = document.getElementById('awardDateChips');
   box.innerHTML = batchState.dates.map(d =>
     `<span class="batch-chip">${d} <button type="button" data-x="${d}">×</button></span>`).join('');
   box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -1759,13 +1759,13 @@ function renderBatchDates() {
 }
 
 async function runBatchAward() {
-  const cls = document.getElementById('batchClass').value;
-  const tagId = document.getElementById('batchTag').value;
-  const result = document.getElementById('batchResult');
+  const cls = document.getElementById('awardClass').value;
+  const tagId = document.getElementById('awardTag').value;
+  const result = document.getElementById('awardResult');
   if (!cls || !tagId) return toast('请先选班级和标签');
   if (!batchState.dates.length) return toast('请至少加一个日期');
   if (!batchState.students.length) return toast('请至少选一个学生');
-  const btn = document.getElementById('btnBatchGo');
+  const btn = document.getElementById('btnAwardGo');
   btn.disabled = true; btn.textContent = '正在写入…';
   result.textContent = '';
   try {
