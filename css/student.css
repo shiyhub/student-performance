@@ -503,3 +503,14 @@ body {
 .avatar-sub-title { font-size: 13px; font-weight: 700; color: #b07a1a; margin: 4px 2px 6px; }
 .avatar-sec.legend .avatar-grid-img { gap: 10px; }
 .avatar-sec.legend .avatar-choice-img img { border-radius: 50%; }
+
+/* 今日任务（学生端） */
+.task-card { background: linear-gradient(180deg,#fff9f0,#fff); border:1.5px solid #f3d9a8; }
+.stu-task-title { font-size:18px; font-weight:800; color:#5a4316; }
+.stu-task-detail { margin-top:6px; color:#6b5a3a; line-height:1.6; }
+.stu-task-tip { margin:12px 0 8px; color:#9a7b3a; font-size:14px; }
+.stu-task-grades { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.stu-task-grade { border:2px solid #e8d9b8; background:#fff; border-radius:14px; padding:10px 6px; font-size:14px; cursor:pointer; transition:.15s; }
+.stu-task-grade.on { background:#4caf7d; border-color:#3d9469; color:#fff; font-weight:800; transform:scale(1.03); }
+.stu-task-result { margin-top:10px; font-weight:700; color:#3d9469; min-height:20px; }
+@media (max-width:480px){ .stu-task-grades { grid-template-columns:repeat(2,1fr); } }

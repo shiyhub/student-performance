@@ -64,7 +64,10 @@ const els = {
   paperViewModal: $('#paperViewModal'),
   paperViewImg: $('#paperViewImg'),
   paperViewOpen: $('#paperViewOpen'),
-  btnPaperViewClose: $('#btnPaperViewClose')
+  btnPaperViewClose: $('#btnPaperViewClose'),
+  // 每日任务
+  tasksCard: $('#tasksCard'),
+  tasksList: $('#tasksList')
 };
 
 // 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
@@ -151,14 +154,17 @@ async function onQuery() {
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
   try {
-    const [recRes, paperRes] = await Promise.all([
+    const [recRes, paperRes, taskRes] = await Promise.all([
       supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_parent: parent }),
-      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_parent: parent })
+      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_parent: parent }),
+      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_parent: parent })
     ]);
     if (recRes.error) throw recRes.error;
     const records = recRes.data || [];
     const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
-    if (!records.length && !papers.length) {
+    const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
+    const tasks = taskData.tasks || [];
+    if (!records.length && !papers.length && !tasks.length) {
       els.mismatchBanner.textContent = lockedClass
         ? '信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。'
         : '三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。';
@@ -168,6 +174,7 @@ async function onQuery() {
     state.ctx = { cls, student, parent };
     renderResults(student, records);
     renderPapers(papers);
+    renderTasks(tasks);
   } catch (e) {
     toast('查询失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
@@ -687,4 +694,31 @@ function closePaper() {
 if (els.btnPaperViewClose) els.btnPaperViewClose.addEventListener('click', closePaper);
 if (els.paperViewModal) {
   els.paperViewModal.addEventListener('click', e => { if (e.target === els.paperViewModal) closePaper(); });
+}
+
+/* ---------------- 每日学习任务（家长可见） ---------------- */
+function renderTasks(tasks) {
+  if (!tasks || !tasks.length) { els.tasksCard.hidden = true; els.tasksList.innerHTML = ''; return; }
+  const gradeMap = {
+    none:    { label: '无表现', cls: 'g-none', icon: '⏳' },
+    done:    { label: '完成',   cls: 'g-done', icon: '✅' },
+    good:    { label: '优秀 A', cls: 'g-good', icon: '👍' },
+    perfect: { label: '完美 A+', cls: 'g-perfect', icon: '🏆' }
+  };
+  els.tasksCard.hidden = false;
+  els.tasksList.innerHTML = tasks.map(t => {
+    const g = gradeMap[t.grade] || gradeMap.none;
+    const d = (t.task_date || '').slice(0, 10);
+    return `<div class="task-row">
+      <div class="task-row-main">
+        <div class="task-row-date">${escapeHtmlP(d)}</div>
+        <div class="task-row-title">${escapeHtmlP(t.title)}</div>
+        ${t.detail ? `<div class="task-row-detail">${escapeHtmlP(t.detail)}</div>` : ''}
+      </div>
+      <div class="task-row-grade ${g.cls}">${g.icon} ${g.label}</div>
+    </div>`;
+  }).join('');
+}
+function escapeHtmlP(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

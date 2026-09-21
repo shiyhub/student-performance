@@ -140,7 +140,9 @@ const els = {
   successMsg: $('#successMsg'),
   btnAgain: $('#btnAgain'),
   btnWallFromSuccess: $('#btnWallFromSuccess'),
-  confettiBox: $('#confettiBox')
+  confettiBox: $('#confettiBox'),
+  taskCard: $('#taskCard'),
+  taskBody: $('#taskBody')
 };
 
 const state = {
@@ -736,7 +738,12 @@ function bindEvents() {
     showForm(name);
   });
   // 姓名变化时回到该姓名已保存的头像（手动改名场景）
-  els.inpName.addEventListener('input', () => { state.myAvatar = null; renderMoodPreview(); });
+  let taskTimer = null;
+  els.inpName.addEventListener('input', () => {
+    state.myAvatar = null; renderMoodPreview();
+    clearTimeout(taskTimer);
+    taskTimer = setTimeout(loadStudentTask, 400);
+  });
 
   // 头像选择
   els.btnPickAvatar.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
@@ -932,6 +939,7 @@ function showForm(presetName) {
   window.scrollTo({ top: 0 });
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
+  loadStudentTask();
 }
 function showWall() {
   els.formView.hidden = true;
@@ -1140,4 +1148,79 @@ function toast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ================= 今日学习任务 ================= */
+const TASK_GRADES = [
+  { key: 'none',    label: '还没做',   icon: '⏳' },
+  { key: 'done',    label: '完成了',   icon: '✅' },
+  { key: 'good',    label: '优秀 A',   icon: '👍' },
+  { key: 'perfect', label: '完美 A+',  icon: '🏆' }
+];
+
+async function loadStudentTask() {
+  if (!els.taskCard) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { els.taskCard.hidden = true; return; }
+  els.taskCard.hidden = false;
+  els.taskBody.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载今日任务…</div>';
+  let data;
+  try {
+    const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
+    data = r.data;
+  } catch (e) { data = null; }
+  if (!data || !data.task) {
+    els.taskBody.innerHTML = '<p class="text-muted">老师今天还没布置任务，先填下面的小表现吧～</p>';
+    return;
+  }
+  const t = data.task;
+  const my = data.my_grade || 'none';
+  let html = `<div class="stu-task">
+    <div class="stu-task-title">${escapeHtml(t.title)}</div>
+    ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
+    <div class="stu-task-tip">完成了就点下面选一下自己的表现：</div>
+    <div class="stu-task-grades">`;
+  TASK_GRADES.forEach(g => {
+    html += `<button type="button" class="stu-task-grade ${g.key === my ? 'on' : ''}" data-grade="${g.key}">${g.icon} ${g.label}</button>`;
+  });
+  html += '</div><div class="stu-task-result" id="taskResult"></div></div>';
+  els.taskBody.innerHTML = html;
+
+  els.taskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
+    btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn));
+  });
+}
+
+async function onPickTaskGrade(grade, btn) {
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  const resultEl = document.getElementById('taskResult');
+  if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+  // 需要任务 id
+  const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
+  if (!r.data || !r.data.task) return;
+  const res = await supabase.rpc('submit_task', {
+    p_class: cls, p_student: name, p_task_id: r.data.task.id, p_grade: grade
+  });
+  if (res.error) { sfx.oops(); toast('保存失败，请重试'); return; }
+  const d = res.data || {};
+  sfx.pick();
+  if (grade === 'none') {
+    resultEl.textContent = '好的，继续加油把任务完成吧！';
+  } else {
+    const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
+    resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
+                        : grade === 'good'    ? `真不错，继续保持！${xpGain}`
+                        :                       `完成啦，辛苦啦！${xpGain}`;
+    if (d.mood_awarded) resultEl.textContent += ' 心情+1 😊';
+  }
+  // 刷新本地经验/等级显示
+  const row = state.roster.find(s => s.class === cls && s.student_name === name);
+  if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+  renderIdentityLevel();
+  loadStudentTask();
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
