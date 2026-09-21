@@ -55,13 +55,24 @@ const LEGEND_GROUPS = [
   { name: '魔法少女',   prefix: 'magic',  count: 8 },
   { name: '科幻角色',   prefix: 'star',   count: 8 }
 ];
+// 7 级典藏头像
+const MASTER_UNLOCK_LEVEL = 7;
+const MASTER_GROUPS = [
+  { name: '国风少年',   prefix: 'guofeng', count: 9 },
+  { name: '多巴胺甜妹', prefix: 'dou',     count: 9 },
+  { name: '猫系少女',   prefix: 'cat',     count: 9 }
+];
 const LEGEND_KEYS = LEGEND_GROUPS.reduce((arr, g) => {
+  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
+  return arr;
+}, []);
+const MASTER_KEYS = MASTER_GROUPS.reduce((arr, g) => {
   for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
   return arr;
 }, []);
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
-const XP_LEVELS = [0, 20, 60, 120, 200, 400];
+const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600];
 const XP_PER_POSITIVE = 2;
 const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
@@ -392,7 +403,10 @@ function openStudentDetail(name) {
     : '还没有提交过表现记录';
   els.detailBody.innerHTML = renderRecordTimeline(rows);
   state.detailName = name;
-  els.detailFoot.hidden = false;
+  // 只有看自己（与已保存身份一致）才显示"写表现"，防止替别人提交
+  let savedMe = '';
+  try { savedMe = (JSON.parse(localStorage.getItem('sp_identity') || '{}')).studentName || ''; } catch(e){}
+  els.detailFoot.hidden = !savedMe || name !== savedMe;
   els.detailModal.classList.add('show');
 }
 
@@ -887,6 +901,30 @@ function openAvatarPicker() {
   });
   legendSec.appendChild(legendGrid);
   els.avatarPicker.appendChild(legendSec);
+
+  // —— 大师典藏（7 级解锁）——
+  const masterUnlocked = lv >= MASTER_UNLOCK_LEVEL;
+  const masterSec = document.createElement('div');
+  masterSec.className = 'avatar-sec campus legend master';
+  masterSec.innerHTML = masterUnlocked
+    ? `<div class="avatar-sec-title">👑 大师典藏<span class="avatar-sec-tip ok">Lv.${MASTER_UNLOCK_LEVEL} 已解锁</span></div>`
+    : `<div class="avatar-sec-title">🔒 大师典藏<span class="avatar-sec-tip">升到 Lv.${MASTER_UNLOCK_LEVEL} 解锁</span></div>`;
+  const masterGrid = document.createElement('div');
+  masterGrid.className = 'legend-groups';
+  MASTER_GROUPS.forEach(g => {
+    const sub = document.createElement('div');
+    sub.className = 'avatar-sub-group';
+    sub.innerHTML = `<div class="avatar-sub-title">${g.name}</div>`;
+    const row = document.createElement('div');
+    row.className = 'avatar-grid avatar-grid-img legend-row';
+    for (let i = 1; i <= g.count; i++) {
+      row.appendChild(buildImgChoice(g.prefix + i, cur.key, masterUnlocked, MASTER_UNLOCK_LEVEL));
+    }
+    sub.appendChild(row);
+    masterGrid.appendChild(sub);
+  });
+  masterSec.appendChild(masterGrid);
+  els.avatarPicker.appendChild(masterSec);
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
