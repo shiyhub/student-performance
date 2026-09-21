@@ -989,14 +989,30 @@ async function loadPastTasks() {
     const gradeMap = {}; (subs||[]).forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
+    const now = new Date(); now.setHours(0,0,0,0);
     els.pastTaskBody.innerHTML = (tasks||[]).map(t => {
-      const g = gLabel[gradeMap[t.id]] || '—';
-      const due = t.due_time ? ` 截止${t.due_time}` : '';
-      return `<div class="past-row">
-        <div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${due}</div>
-        <div class="past-grade">${g}</div>
-      </div>`;
+      const cur = gradeMap[t.id];
+      // 截止判断：有 due_time 用它；没有则默认任务发布后一周
+      let dueDate = t.due_time ? new Date(t.due_time) : null;
+      if (!dueDate && t.task_date) { dueDate = new Date(t.task_date); dueDate.setDate(dueDate.getDate() + 7); }
+      const active = dueDate ? dueDate >= now : false;
+      const dueStr = t.due_time ? ` 截止${String(t.due_time).slice(0,10)}`
+                  : (t.task_date ? ` 截止${(()=>{const d=new Date(t.task_date);d.setDate(d.getDate()+7);return d.toISOString().slice(0,10);})()}` : '');
+      const head = `<div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
+      if (!active) {
+        return `<div class="past-row">${head}<div class="past-grade">${gLabel[cur] || '已截止'}</div></div>`;
+      }
+      const btns = TASK_GRADES.map(g =>
+        `<button type="button" class="stu-task-grade sm ${g.key === cur ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`
+      ).join('');
+      return `<div class="past-row active">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
     }).join('');
+    els.pastTaskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn);
+        loadPastTasks();
+      });
+    });
   } catch(e) { els.pastTaskBody.innerHTML = ''; }
 }
 function showWall() {

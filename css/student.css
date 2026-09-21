@@ -665,3 +665,21 @@ body {
   #taskCard { grid-column: 2; }
   #tagsBox { display: flex; gap: 16px; }
 }
+
+/* v27：修正三栏对齐 */
+@media (min-width: 1200px) {
+  #formView {
+    display: grid;
+    grid-template-columns: 340px 1fr 1.25fr;
+    gap: 18px 22px;
+    align-items: start;
+  }
+  #identityCard, #moodPreviewCard { grid-column: 1; }
+  #pastTaskCard, #taskCard { grid-column: 2; width: 100%; }
+  #tagsBox, #formView > .card.tags-card { grid-column: 3; }
+  /* 提交按钮跨整行 */
+  #formView > .submit-wrap, #formView > #celebrate { grid-column: 1 / -1; }
+}
+@media (min-width: 1200px) {
+  #tagsCard { grid-column: 3; }
+}

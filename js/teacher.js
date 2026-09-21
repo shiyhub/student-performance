@@ -1529,7 +1529,12 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   const type = document.getElementById('taskType').value || 'classwork';
   const title = document.getElementById('taskTitle').value.trim();
   const detail = document.getElementById('taskDetail').value.trim();
-  const due = document.getElementById('taskDue').value || null;
+  let due = document.getElementById('taskDue').value || null;
+  // 未填截止日期：默认发布日起一周
+  if (!due) {
+    const d = new Date(date); d.setDate(d.getDate() + 7);
+    due = d.toISOString().slice(0, 10);
+  }
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
   if (editingTaskId) {
