@@ -1299,6 +1299,9 @@ async function renderTags() {
       <label class="tag-off-toggle">
         <input type="checkbox" class="tag-active" ${t.is_active ? 'checked' : ''}> 启用
       </label>
+      <label class="tag-off-toggle" title="勾选后，学生选过的具体二级项永久置灰、不能重复得分">
+        <input type="checkbox" class="tag-once" ${t.history_unique !== false ? 'checked' : ''}> 历史唯一
+      </label>
       <input type="number" class="tag-sort" value="${Number(t.sort_order) || 0}" min="0" max="9999" title="排序，数字越小越靠前">
       <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="学生选这个表现加多少经验（消极建议0）">
       <div class="tag-row-actions">
@@ -1339,6 +1342,7 @@ async function renderTags() {
         score,
         xp_value: xpVal,
         is_active: $('.tag-active', row).checked,
+        history_unique: $('.tag-once', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
       }).eq('id', id);
       btn.disabled = false;

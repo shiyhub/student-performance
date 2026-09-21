@@ -610,3 +610,20 @@ body {
   padding:14px 16px; margin:10px 0;
 }
 #tagsBox .tag-group.neg { background:#fff8f8; border-color:#f3d4d4; }
+
+/* v24：表现区拓宽、二级项历史置灰 */
+@media (min-width: 900px) {
+  #formView { max-width: 1080px; }
+  .tag-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:12px; }
+  .chip { min-height: 54px; font-size: 16px; }
+}
+.sub-chip.used, .sub-chip:disabled {
+  background:#e8e8e8 !important; color:#aaa !important;
+  cursor:not-allowed; text-decoration:line-through;
+}
+
+/* v25：往日任务放到心情卡下方（右栏），减少空白 */
+@media (min-width: 900px) and (orientation: landscape) {
+  #formView { grid-auto-flow: row dense; }
+  #pastTaskCard { grid-column: 2; }
+}

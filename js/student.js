@@ -89,6 +89,7 @@ const els = {
   wallDate: $('#wallDate'),
   wallConfigBanner: $('#wallConfigBanner'),
   wallClass: $('#wallClass'),
+  wallSemester: $('#wallSemester'),
   wallLoading: $('#wallLoading'),
   matesGrid: $('#matesGrid'),
   wallEmpty: $('#wallEmpty'),
@@ -256,14 +257,17 @@ async function loadWall() {
   els.wallLoading.innerHTML = '<span class="spinner"></span>正在加载同学们…';
 
   const cls = state.currentClass;
+  const sem = els.wallSemester ? els.wallSemester.value : '';
+  const recQ = supabase.from('daily_record')
+      .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
+      .eq('class', cls);
+  if (sem && sem !== '全部') recQ.eq('semester', sem);
   const [rosterRes, recordRes] = await Promise.all([
     supabase.from('student_directory')
       .select('*')
       .eq('class', cls)
       .order('student_name'),
-    supabase.from('daily_record')
-      .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
-      .eq('class', cls)
+    recQ
       .order('record_date', { ascending: false })
       .order('create_at', { ascending: false })
       .limit(1000)
@@ -582,7 +586,7 @@ function renderIdentityLevel() {
 async function loadTags() {
   const { data, error } = await supabase
     .from('behavior_tags')
-    .select('id, label, tag_type, options, category, score, sort_order')
+    .select('id, label, tag_type, options, category, score, sort_order, history_unique')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
@@ -622,7 +626,7 @@ async function loadTags() {
   updateMood();
 }
 
-// 加载当天已提交过的二级项，置灰不可重复得分
+// 加载已提交过的二级项，历史唯一的标签置灰不可重复得分
 async function loadDoneItems() {
   state.doneItems = {};
   const cls = (els.inpClass.value || '').trim();
@@ -632,8 +636,8 @@ async function loadDoneItems() {
     const { data } = await supabase.from('daily_record')
       .select('behavior')
       .eq('class', cls).eq('student_name', name)
-      .eq('record_date', todayStr())
-      .order('create_at', { ascending: false });
+      .order('create_at', { ascending: false })
+      .limit(500);
     (data || []).forEach(r => {
       const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
       items.forEach(it => {
@@ -671,9 +675,9 @@ function buildCheckTag(t) {
       b.type = 'button';
       b.className = 'sub-chip';
       b.textContent = opt;
-      // 当天已打过的具体二级项：置灰不可再选
+      // 历史唯一标签：打过的具体二级项永久置灰
       const doneSet = state.doneItems[t.id];
-      if (doneSet && doneSet.has(opt)) {
+      if (t.history_unique !== false && doneSet && doneSet.has(opt)) {
         b.classList.add('done');
         b.disabled = true;
         b.textContent = opt + ' ✓';
@@ -745,6 +749,10 @@ function bindEvents() {
       saved.class = state.currentClass;
       localStorage.setItem('sp_identity', JSON.stringify(saved));
     } catch (e) {}
+    loadWall();
+  });
+  els.wallSemester?.addEventListener('change', () => {
+    try { localStorage.setItem('sp_semester', els.wallSemester.value); } catch(e){}
     loadWall();
   });
   // 详情弹窗
