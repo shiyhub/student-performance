@@ -220,13 +220,15 @@ function leaveApp() {
 
 function switchTab(name) {
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  $('#tabRecords').hidden = name !== 'records';
-  $('#tabStudents').hidden = name !== 'students';
-  $('#tabTags').hidden = name !== 'tags';
-  $('#tabExam').hidden = name !== 'exam';
-  $('#tabTask').hidden = name !== 'task';
-  const toolsPane = $('#tabTools');
-  if (toolsPane) toolsPane.hidden = name !== 'tools';
+  // 逐页切换，元素缺失时不报错（防止缓存旧 HTML 与新 JS 不同步）
+  const panes = {
+    records: 'tabRecords', students: 'tabStudents', tags: 'tabTags',
+    exam: 'tabExam', task: 'tabTask', tools: 'tabTools'
+  };
+  Object.entries(panes).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = (key !== name);
+  });
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();

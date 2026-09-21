@@ -32,10 +32,7 @@ const PRAISE = {
   down:   ['明天试着多做一个积极的小表现吧！', '有一点小低落很正常，老师陪着你！'],
   sad:    ['愿意说出来就很勇敢，老师和家长都爱你！', '明天会是新的一天，陪你一起加油！']
 };
-const AVATARS = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔',
-  '🐧','🐦','🐤','🦆','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🦎','🐙','🦑',
-  '🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🦖','🦕'];
-const AVATAR_BG = ['#fdecc8','#d8f0e2','#dcecfb','#f6e0f1','#fdf3c9','#e6e2fb','#d9f2f5','#ffe3dd','#e8f6dc','#fae3ef'];
+const AVATARS = Array.from({ length: 24 }, (_, i) => 'animal' + (i + 1));
 
 /* ---------- 校园头像（24 款，3 级解锁）与经验等级 ---------- */
 const AVATAR_BASE = 'assets/avatars/';
@@ -66,8 +63,9 @@ const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
 const XP_LEVELS = [0, 20, 60, 120, 200, 400];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl|boy|neutral|cyber|mecha|rider|ultra|magic|star)[1-8]$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
+function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
 function isLegendKey(k) { return /^(cyber|mecha|rider|ultra|magic|star)[1-8]$/.test(String(k || '')); }
 function levelFromXp(xp) {
   let lv = 1;
@@ -504,8 +502,9 @@ function avatarForName(name, saved) {
   if (isImgKey(key)) {
     return { kind: 'img', key, src: AVATAR_BASE + key + '.webp', bg: '#ffffff' };
   }
-  const emoji = key || AVATARS[mod(AVATARS.length)];
-  return { kind: 'emoji', key: emoji, emoji, bg: AVATAR_BG[mod(AVATAR_BG.length)] };
+  // 未保存过头像：按姓名稳定分配一个小动物
+  const animal = AVATARS[mod(AVATARS.length)];
+  return { kind: 'img', key: animal, src: AVATAR_BASE + animal + '.webp', bg: '#ffffff' };
 }
 function avatarInner(av) {
   return av.kind === 'img'
@@ -781,14 +780,14 @@ function openAvatarPicker() {
   const lv = row ? (Number(row.level) || 1) : 1;
   els.avatarPicker.innerHTML = '';
 
-  // —— 表情头像（每天限换 2 次）——
+  // —— 小动物头像（免费，每天限换 2 次）——
   const emojiSec = document.createElement('div');
   emojiSec.className = 'avatar-sec';
-  emojiSec.innerHTML = `<div class="avatar-sec-title">😊 表情头像<span class="avatar-sec-tip">每天可换 ${EMOJI_CHANGE_LIMIT} 次</span></div>`;
+  emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 小动物头像<span class="avatar-sec-tip">每天可换 ${EMOJI_CHANGE_LIMIT} 次</span></div>`;
   const emojiGrid = document.createElement('div');
-  emojiGrid.className = 'avatar-grid';
-  AVATARS.forEach(emoji => {
-    emojiGrid.appendChild(buildEmojiChoice(emoji, cur.key));
+  emojiGrid.className = 'avatar-grid avatar-grid-img';
+  AVATARS.forEach(key => {
+    emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0));
   });
   emojiSec.appendChild(emojiGrid);
   els.avatarPicker.appendChild(emojiSec);
