@@ -683,3 +683,5 @@ body {
 @media (min-width: 1200px) {
   #tagsCard { grid-column: 3; }
 }
+/* v28：填写页不再显示今日心情选择，只在班级墙头像预览 */
+#moodPreviewCard { display: none !important; }
