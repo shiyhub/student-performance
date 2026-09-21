@@ -1696,6 +1696,44 @@ async function activateBatchTab() {
       batchState.students = []; renderBatchStudents();
     });
     document.getElementById('btnAwardGo').addEventListener('click', runBatchAward);
+    document.getElementById('btnTaskGradeGo').addEventListener('click', runBatchTaskGrade);
+  }
+}
+
+async function loadAwardTasks(cls) {
+  const sel = document.getElementById('awardTask');
+  if (!cls) { sel.innerHTML = '<option value="">选班级后加载</option>'; return; }
+  const today = todayStr();
+  const { data: tasks } = await supabase.from('daily_task')
+    .select('id,title,task_date,task_type')
+    .eq('class', cls)
+    .gte('task_date', today)
+    .order('task_date', { ascending: false });
+  sel.innerHTML = '<option value="">请选择任务</option>' +
+    (tasks || []).map(t => `<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('');
+}
+
+async function runBatchTaskGrade() {
+  const taskId = document.getElementById('awardTask').value;
+  const grade = document.getElementById('awardGrade').value;
+  const result = document.getElementById('taskGradeResult');
+  if (!taskId) return toast('请先选择任务');
+  if (!batchState.students.length) return toast('请先在上方选择学生');
+  const btn = document.getElementById('btnTaskGradeGo');
+  btn.disabled = true; btn.textContent = '正在评分…';
+  result.textContent = '';
+  try {
+    const { data, error } = await supabase.rpc('batch_grade_task', {
+      p_task_id: taskId, p_students: batchState.students, p_grade: grade
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    result.textContent = '✅ ' + (row && row.message ? row.message : '完成');
+    toast('任务批量评分完成！');
+  } catch (e) {
+    result.textContent = '❌ ' + (e.message || '失败');
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 批量给所选学生评等级';
   }
 }
 
@@ -1723,6 +1761,7 @@ async function loadBatchTagsAndStudents() {
     .select('id,label,category,xp_value').eq('is_active', true).order('sort_order');
   tagSel.innerHTML = '<option value="">请选择标签</option>' +
     (tags || []).map(t => `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${esc(t.label)}</option>`).join('');
+  loadAwardTasks(cls);
 }
 
 function renderBatchStudents() {

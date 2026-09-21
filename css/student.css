@@ -580,9 +580,9 @@ body {
   .submit-wrap .btn { min-height: 66px; font-size: 21px; }
 }
 
-/* v18：已打卡徽标 + 横屏下左右分类布局 */
+/* v18：已打卡徽标 + 宽屏下左右分类布局 */
 .mate-badge.done-badge { background:#d8f0e2; color:#2c7a4e; }
-@media (min-width: 900px) and (orientation: landscape) {
+@media (min-width: 900px) {
   /* 表现标签左右分栏：左边"需要加油"，右边"积极表现" */
   #tagsBox { display: flex; gap: 18px; align-items: flex-start; }
   #tagsBox .tag-group.neg { order: 1; flex: 1; }

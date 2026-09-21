@@ -386,6 +386,28 @@
         <button class="btn btn-primary" type="button" id="btnAwardGo">🚀 一键批量评价</button>
         <span id="awardResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
+
+      <div class="card">
+        <div class="card-title">📋 任务批量评分</div>
+        <p class="text-muted">先在上方选好班级和学生，再选今天的任务和统一等级，一次给多人打好。</p>
+        <div class="grid">
+          <div class="field">
+            <label for="awardTask">选择任务</label>
+            <select class="input" id="awardTask"><option value="">选班级后加载</option></select>
+          </div>
+          <div class="field">
+            <label for="awardGrade">统一等级</label>
+            <select class="input" id="awardGrade">
+              <option value="done">✅ 完成（经验+1）</option>
+              <option value="good">👍 优秀 A（经验+2）</option>
+              <option value="perfect" selected>🏆 完美 A+（经验+3）</option>
+              <option value="none">⏳ 未完成（经验0）</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="button" id="btnTaskGradeGo">🚀 批量给所选学生评等级</button>
+        <span id="taskGradeResult" class="text-muted" style="margin-left:10px;"></span>
+      </div>
     </section>
   </main>
 </div>
