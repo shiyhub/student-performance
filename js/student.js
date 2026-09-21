@@ -298,13 +298,21 @@ function renderWall() {
     : null;
   const classToday = recs.filter(r => r.record_date === today).length;
 
+  // 班级整体经验 = 全班学生经验总和；400/1000/2000/3000 升级
+  const classXp = state.roster.reduce((s, x) => s + (Number(x.xp) || 0), 0);
+  const CLASS_LEVELS = [0, 400, 1000, 2000, 3000];
+  let classLv = 1;
+  CLASS_LEVELS.forEach((th, i) => { if (classXp >= th) classLv = i + 1; });
+  const nextNeed = CLASS_LEVELS[classLv] || null;
+  const classLvText = nextNeed ? `Lv${classLv} · 再${nextNeed - classXp}升Lv${classLv+1}` : `Lv${classLv} · 满级`;
+
   let html = '';
 
-  // 全班汇总卡
+  // 全班汇总卡：显示班级经验与等级，点击仍可看记录数详情
   html += `<button class="mate mate-class-all" data-detail="__all__">
       <span class="mate-avatar">🌈</span>
-      <span class="mate-badge count-badge">${recs.length} 条记录</span>
-      <span class="mate-name">全班${classAvg ? ' ⭐' + classAvg : ''}</span>
+      <span class="mate-badge xp-badge">🧡 ${classXp} 经验</span>
+      <span class="mate-name">全班 ${classLvText}</span>
     </button>`;
 
   // 每个同学
@@ -330,9 +338,7 @@ function renderWall() {
         <span class="mate-avatar${ringCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
         ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
-        ${todayRec
-          ? (avg ? `<span class="mate-badge">⭐${avg}</span>` : `<span class="mate-badge done-badge">已打卡</span>`)
-          : `<span class="mate-badge count-badge">未打卡</span>`}
+        <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         <span class="mate-name">${esc(s.student_name)}</span>
       </button>`;
   });
