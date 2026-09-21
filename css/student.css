@@ -627,3 +627,41 @@ body {
   #formView { grid-auto-flow: row dense; }
   #pastTaskCard { grid-column: 2; }
 }
+
+/* v26：教室 4K 横屏铺满，多列布局，减少两侧空白 */
+@media (min-width: 1200px) {
+  #formView {
+    max-width: 100% !important;
+    width: 100%;
+    padding: 16px 40px 60px;
+    display: grid;
+    grid-template-columns: 320px 1fr 1.2fr;
+    gap: 20px 24px;
+    align-items: start;
+  }
+  #formView .s-header { grid-column: 1 / -1; }
+  /* 左栏：身份 + 心情 */
+  #formView .card { margin: 0; }
+  /* 往日任务放心情下方 */
+  #pastTaskCard { grid-column: 2; grid-row: auto; }
+  /* 任务卡占中间列 */
+  #taskCard { grid-column: 2; }
+  /* 表现卡占右列 */
+  #formView > .card:has(#tagsBox) { grid-column: 3; }
+  .submit-wrap { grid-column: 1 / -1; }
+}
+@media (min-width: 2000px) {
+  #formView { grid-template-columns: 380px 1.1fr 1.3fr; gap: 24px 32px; }
+  #formView .card-title { font-size: 24px; }
+  .chip { min-height: 72px; font-size: 19px; }
+  .input { font-size: 18px; padding: 14px 16px; }
+}
+
+/* 明确三栏落点 */
+@media (min-width: 1200px) {
+  #identityCard { grid-column: 1; }
+  #moodPreviewCard { grid-column: 1; }
+  #pastTaskCard { grid-column: 2; }
+  #taskCard { grid-column: 2; }
+  #tagsBox { display: flex; gap: 16px; }
+}
