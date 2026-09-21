@@ -689,6 +689,8 @@ function buildCheckTag(t) {
         const ix = arr.indexOf(opt);
         if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); }
         else { arr.push(opt); b.classList.add('active'); }
+        // 一级标签显示已选数量
+        chip.textContent = arr.length ? `${t.label}（已选${arr.length}）` : t.label;
       });
       sub.appendChild(b);
     });
@@ -1011,6 +1013,7 @@ async function loadPastTasks() {
       btn.addEventListener('click', async () => {
         if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
         const grade = btn.dataset.grade, taskId = btn.dataset.task;
+        if (grade === 'none') { sfx.pick(); toast('还没做不记录，继续加油'); loadPastTasks(); return; }
         const res = await supabase.rpc('submit_task', {
           p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
         });
@@ -1204,7 +1207,14 @@ function celebrate(gainedXp, leveledUp) {
   }
   els.successMsg.textContent = msg;
   els.successOverlay.classList.add('show');
-  setTimeout(() => { els.confettiBox.innerHTML = ''; }, 5200);
+  // 点任意处跳过庆祝
+  const dismiss = () => {
+    els.successOverlay.classList.remove('show');
+    els.confettiBox.innerHTML = '';
+    els.successOverlay.removeEventListener('click', dismiss);
+  };
+  els.successOverlay.addEventListener('click', dismiss);
+  setTimeout(dismiss, 5200);
 }
 
 /* ---------- 工具 ---------- */
@@ -1307,6 +1317,13 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+  // "还没做"不写库、不加分，只做界面提示
+  if (grade === 'none') {
+    sfx.pick();
+    const resultEl = els.taskBody.querySelector(`[data-result="${taskId}"]`);
+    if (resultEl) resultEl.textContent = '好的，继续加油完成任务吧！';
+    return;
+  }
   const res = await supabase.rpc('submit_task', {
     p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
   });

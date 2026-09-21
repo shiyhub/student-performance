@@ -685,3 +685,13 @@ body {
 }
 /* v28：填写页不再显示今日心情选择，只在班级墙头像预览 */
 #moodPreviewCard { display: none !important; }
+
+/* v31：任务卡收进中栏（覆盖旧的整行规则） */
+@media (min-width: 1200px) {
+  #formView #taskCard { grid-column: 2; width: 100%; }
+}
+
+/* v32：返回箭头放大醒目 */
+.wall-back { width:56px !important; height:56px !important; left:12px !important; top:50% !important; }
+.wall-back .back-tri { font-size:34px !important; }
+.wall-back::after { content:"返回"; position:absolute; left:64px; top:50%; transform:translateY(-50%); background:#3aa655; color:#fff; font-size:14px; padding:6px 10px; border-radius:8px; white-space:nowrap; }

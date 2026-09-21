@@ -279,9 +279,9 @@ function renderResults(studentName, rows) {
   els.resultTitle.textContent = `${esc(studentName)} 的在校表现`;
 
   state.allRows = rows;
-  state.quick = 'all';
+  state.quick = 'week';
   state.picked = null;
-  state.viewMode = 'detail';
+  state.viewMode = 'summary';
 
   // 在家表现日期默认今天
   els.homeDate.value = todayStr();
