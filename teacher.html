@@ -59,6 +59,19 @@
       <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
     </nav>
 
+    <!-- 今日概览 -->
+    <div class="card overview-card" id="overviewCard">
+      <div class="ov-item"><span class="ov-num" id="ovTotal">-</span><span class="ov-label">全班人数</span></div>
+      <div class="ov-item"><span class="ov-num" id="ovDone">-</span><span class="ov-label">今日已提交</span></div>
+      <div class="ov-item"><span class="ov-num" id="ovUndo">-</span><span class="ov-label">今日未提交</span></div>
+      <div class="ov-item"><span class="ov-num" id="ovTaskDone">-</span><span class="ov-label">任务已评分</span></div>
+      <select id="ovSemester" class="input" style="max-width:160px;margin-left:auto;">
+        <option value="全部">全部学期</option>
+        <option value="2026秋">2026秋</option>
+        <option value="2027春">2027春</option>
+      </select>
+    </div>
+
     <!-- ===== 表现记录 ===== -->
     <section id="tabRecords">
       <div class="card">

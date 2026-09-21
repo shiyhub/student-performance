@@ -1838,3 +1838,25 @@ async function runBatchAward() {
     btn.disabled = false; btn.textContent = '🚀 一键批量评价';
   }
 }
+
+/* ===== 今日概览 ===== */
+async function loadOverview() {
+  const sem = document.getElementById('ovSemester').value;
+  try {
+    const { data: roster } = await supabase.from('student_info').select('class,student_name');
+    const total = (roster || []).length;
+    const today = new Date().toISOString().slice(0,10);
+    let q = supabase.from('daily_record').select('student_name,class,record_date').eq('record_date', today);
+    if (sem !== '全部') q = q.eq('semester', sem);
+    const { data: recs } = await q;
+    const doneSet = new Set((recs || []).map(r => r.class + '|' + r.student_name));
+    const done = doneSet.size;
+    document.getElementById('ovTotal').textContent = total;
+    document.getElementById('ovDone').textContent = done;
+    document.getElementById('ovUndo').textContent = Math.max(0, total - done);
+    const { count } = await supabase.from('task_submission').select('*', { count: 'exact', head: true }).eq('record_date', today);
+    document.getElementById('ovTaskDone').textContent = count || 0;
+  } catch (e) {}
+}
+document.getElementById('ovSemester')?.addEventListener('change', loadOverview);
+loadOverview();

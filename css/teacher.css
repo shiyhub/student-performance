@@ -336,3 +336,7 @@ body { background: #f3f6f5; }
 .batch-chip { display:inline-flex; align-items:center; gap:6px; background:#fff1db; color:#a86a1c;
   padding:4px 10px; border-radius:8px; font-size:13px; }
 .batch-chip button { border:none; background:transparent; cursor:pointer; font-size:14px; color:#a86a1c; }
+.overview-card { display:flex; align-items:center; gap:28px; padding:14px 22px; margin-bottom:14px; }
+.ov-item { display:flex; flex-direction:column; align-items:center; }
+.ov-num { font-size:28px; font-weight:800; color:#e8821e; }
+.ov-label { font-size:13px; color:#888; }
