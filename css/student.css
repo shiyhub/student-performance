@@ -522,3 +522,10 @@ body {
 .stu-task-grade.on { background:#4caf7d; border-color:#3d9469; color:#fff; font-weight:800; transform:scale(1.03); }
 .stu-task-result { margin-top:10px; font-weight:700; color:#3d9469; min-height:20px; }
 @media (max-width:480px){ .stu-task-grades { grid-template-columns:repeat(2,1fr); } }
+
+/* 多任务 */
+.stu-task { padding:12px 0; border-bottom:1px dashed #ecd9b0; }
+.stu-task:last-child { border-bottom:none; }
+.stu-task-type { display:inline-block; font-size:12px; font-weight:800; padding:2px 10px; border-radius:999px; margin-bottom:6px; }
+.stu-task-type.classwork { background:#dcecfb; color:#2a6fb0; }
+.stu-task-type.homework { background:#ffe6d6; color:#c06a2a; }

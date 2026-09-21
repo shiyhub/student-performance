@@ -193,3 +193,6 @@
 .g-done    { background:#e3f2e9; color:#2f7d55; }
 .g-good    { background:#fff3d6; color:#b07a1a; }
 .g-perfect { background:#ffe0e6; color:#c0395a; }
+.p-task-type { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+.p-task-type.cw { background:#dcecfb; color:#2a6fb0; }
+.p-task-type.hw { background:#ffe6d6; color:#c06a2a; }

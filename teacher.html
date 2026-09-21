@@ -304,6 +304,13 @@
               <label for="taskDate">日期</label>
               <input class="input" id="taskDate" type="date">
             </div>
+            <div class="field">
+              <label for="taskType">类型</label>
+              <select class="input" id="taskType">
+                <option value="classwork">🏫 课堂作业</option>
+                <option value="homework">🏠 家庭作业</option>
+              </select>
+            </div>
             <div class="field full">
               <label for="taskTitle">任务标题</label>
               <input class="input" id="taskTitle" type="text" placeholder="例如：完成数学练习册第12页" maxlength="60">
@@ -314,7 +321,8 @@
             </div>
           </div>
           <button class="btn btn-primary" type="submit">发布任务</button>
-          <span class="text-muted" style="margin-left:10px;">同一天同班再发布会覆盖旧任务</span>
+          <button class="btn btn-ghost" type="button" id="btnCancelTaskEdit" hidden>取消编辑</button>
+          <span class="text-muted" style="margin-left:10px;">同一天可发布多条，按类型排列</span>
         </form>
       </div>
 

@@ -1169,52 +1169,54 @@ async function loadStudentTask() {
     const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
     data = r.data;
   } catch (e) { data = null; }
-  if (!data || !data.task) {
+  const tasks = (data && data.tasks) || [];
+  if (!tasks.length) {
     els.taskBody.innerHTML = '<p class="text-muted">老师今天还没布置任务，先填下面的小表现吧～</p>';
     return;
   }
-  const t = data.task;
-  const my = data.my_grade || 'none';
-  let html = `<div class="stu-task">
-    <div class="stu-task-title">${escapeHtml(t.title)}</div>
-    ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
-    <div class="stu-task-tip">完成了就点下面选一下自己的表现：</div>
-    <div class="stu-task-grades">`;
-  TASK_GRADES.forEach(g => {
-    html += `<button type="button" class="stu-task-grade ${g.key === my ? 'on' : ''}" data-grade="${g.key}">${g.icon} ${g.label}</button>`;
+  let html = '';
+  tasks.forEach(t => {
+    const my = t.my_grade || 'none';
+    const typeLabel = t.task_type === 'homework' ? '🏠 家庭作业' : '🏫 课堂作业';
+    html += `<div class="stu-task">
+      <div class="stu-task-head"><span class="stu-task-type ${t.task_type}">${typeLabel}</span></div>
+      <div class="stu-task-title">${escapeHtml(t.title)}</div>
+      ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
+      <div class="stu-task-grades">`;
+    TASK_GRADES.forEach(g => {
+      html += `<button type="button" class="stu-task-grade ${g.key === my ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`;
+    });
+    html += `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
   });
-  html += '</div><div class="stu-task-result" id="taskResult"></div></div>';
   els.taskBody.innerHTML = html;
 
   els.taskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
-    btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn));
+    btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn));
   });
 }
 
-async function onPickTaskGrade(grade, btn) {
+async function onPickTaskGrade(grade, taskId, btn) {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  const resultEl = document.getElementById('taskResult');
   if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
-  // 需要任务 id
-  const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
-  if (!r.data || !r.data.task) return;
   const res = await supabase.rpc('submit_task', {
-    p_class: cls, p_student: name, p_task_id: r.data.task.id, p_grade: grade
+    p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
   });
   if (res.error) { sfx.oops(); toast('保存失败，请重试'); return; }
   const d = res.data || {};
   sfx.pick();
-  if (grade === 'none') {
-    resultEl.textContent = '好的，继续加油把任务完成吧！';
-  } else {
-    const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
-    resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
-                        : grade === 'good'    ? `真不错，继续保持！${xpGain}`
-                        :                       `完成啦，辛苦啦！${xpGain}`;
-    if (d.mood_awarded) resultEl.textContent += ' 心情+1 😊';
+  const resultEl = els.taskBody.querySelector(`[data-result="${taskId}"]`);
+  if (resultEl) {
+    if (grade === 'none') {
+      resultEl.textContent = '好的，继续加油把任务完成吧！';
+    } else {
+      const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
+      resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
+                          : grade === 'good'    ? `真不错，继续保持！${xpGain}`
+                          :                       `完成啦，辛苦啦！${xpGain}`;
+      if (d.mood_awarded) resultEl.textContent += ' 心情+1 😊';
+    }
   }
-  // 刷新本地经验/等级显示
   const row = state.roster.find(s => s.class === cls && s.student_name === name);
   if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
   renderIdentityLevel();

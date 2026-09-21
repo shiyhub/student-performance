@@ -197,7 +197,7 @@ create or replace function public.get_student_tasks(
   p_class   text,
   p_student text,
   p_parent  text,
-  p_days    int default 14
+  p_days    int default 7
 )
 returns jsonb
 language plpgsql
@@ -230,7 +230,7 @@ begin
           left join public.task_submission s
             on s.task_id = d.id and s.student_name = btrim(p_student)
          where d.class = btrim(p_class)
-           and d.task_date >= current_date - (coalesce(p_days,14) || ' days')::interval
+           and d.task_date >= current_date - (coalesce(p_days,7) || ' days')::interval
          order by d.task_date desc, d.create_at desc
       ) t
     ), '[]'::jsonb)

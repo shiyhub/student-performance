@@ -709,9 +709,13 @@ function renderTasks(tasks) {
   els.tasksList.innerHTML = tasks.map(t => {
     const g = gradeMap[t.grade] || gradeMap.none;
     const d = (t.task_date || '').slice(0, 10);
+    const typeTag = t.task_type === 'homework'
+      ? '<span class="p-task-type hw">家庭作业</span>'
+      : t.task_type === 'classwork'
+        ? '<span class="p-task-type cw">课堂作业</span>' : '';
     return `<div class="task-row">
       <div class="task-row-main">
-        <div class="task-row-date">${escapeHtmlP(d)}</div>
+        <div class="task-row-date">${escapeHtmlP(d)} ${typeTag}</div>
         <div class="task-row-title">${escapeHtmlP(t.title)}</div>
         ${t.detail ? `<div class="task-row-detail">${escapeHtmlP(t.detail)}</div>` : ''}
       </div>

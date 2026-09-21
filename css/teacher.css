@@ -319,3 +319,12 @@ body { background: #f3f6f5; }
 .task-grade-row { display:flex; flex-wrap:wrap; gap:6px; }
 .task-grade-btn { border:1.5px solid #ddd; background:#fafafa; border-radius:999px; padding:4px 10px; font-size:13px; cursor:pointer; }
 .task-grade-btn.on { background:#4caf7d; border-color:#4caf7d; color:#fff; font-weight:700; }
+
+/* 多任务 */
+.task-card-block { margin-bottom: 16px; }
+.task-type-tag { display:inline-block; font-size:12px; font-weight:800; padding:2px 8px; border-radius:999px; margin-right:8px; }
+.task-type-tag.classwork { background:#dcecfb; color:#2a6fb0; }
+.task-type-tag.homework { background:#ffe6d6; color:#c06a2a; }
+.task-del-btn { margin-left:8px; border:none; background:transparent; cursor:pointer; font-size:15px; }
+.task-edit-btn { margin-left:8px; border:none; background:transparent; cursor:pointer; font-size:15px; }
+.task-edit-btn:hover, .task-del-btn:hover { transform:scale(1.15); }

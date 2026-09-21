@@ -1521,27 +1521,64 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const cls = document.getElementById('taskClass').value;
   const date = document.getElementById('taskDate').value || todayStr();
+  const type = document.getElementById('taskType').value || 'classwork';
   const title = document.getElementById('taskTitle').value.trim();
   const detail = document.getElementById('taskDetail').value.trim();
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
-  // 同班同日：有旧任务则覆盖标题说明，没有则新建
-  const { data: old } = await supabase.from('daily_task')
-    .select('id').eq('class', cls).eq('task_date', date).limit(1).maybeSingle();
-  if (old) {
-    const { error } = await supabase.from('daily_task').update({ title, detail }).eq('id', old.id);
-    if (error) { toast('发布失败：' + error.message); return; }
+  if (editingTaskId) {
+    const { error } = await supabase.from('daily_task')
+      .update({ class: cls, task_date: date, task_type: type, title, detail })
+      .eq('id', editingTaskId);
+    if (error) { toast('保存失败：' + error.message); return; }
+    toast('任务已更新');
+    cancelTaskEdit();
   } else {
-    const { error } = await supabase.from('daily_task').insert({ class: cls, task_date: date, title, detail });
+    const { error } = await supabase.from('daily_task')
+      .insert({ class: cls, task_date: date, task_type: type, title, detail });
     if (error) { toast('发布失败：' + error.message); return; }
+    toast('任务已发布，学生端今天就能看到啦');
   }
   document.getElementById('taskTitle').value = '';
   document.getElementById('taskDetail').value = '';
-  toast('任务已发布，学生端今天就能看到啦');
   loadTaskReport();
 });
 
+document.getElementById('btnCancelTaskEdit')?.addEventListener('click', () => {
+  cancelTaskEdit();
+  document.getElementById('taskTitle').value = '';
+  document.getElementById('taskDetail').value = '';
+});
+
+let editingTaskId = null;
+function cancelTaskEdit() {
+  editingTaskId = null;
+  const btn = document.querySelector('#taskForm button[type="submit"]');
+  if (btn) { btn.textContent = '发布任务'; }
+  const cancelBtn = document.getElementById('btnCancelTaskEdit');
+  if (cancelBtn) cancelBtn.hidden = true;
+  const note = document.querySelector('#taskForm .text-muted');
+  if (note) note.textContent = '同一天可发布多条，按类型排列';
+}
+function beginTaskEdit(t) {
+  editingTaskId = t.id;
+  document.getElementById('taskClass').value = document.getElementById('reportClass').value;
+  document.getElementById('taskDate').value = (t.task_date || '').slice(0, 10);
+  document.getElementById('taskType').value = t.task_type || 'classwork';
+  document.getElementById('taskTitle').value = t.title;
+  document.getElementById('taskDetail').value = t.detail || '';
+  const btn = document.querySelector('#taskForm button[type="submit"]');
+  if (btn) btn.textContent = '💾 保存修改';
+  const cancelBtn = document.getElementById('btnCancelTaskEdit');
+  if (cancelBtn) cancelBtn.hidden = false;
+  const note = document.querySelector('#taskForm .text-muted');
+  if (note) note.textContent = '正在编辑这条任务，保存后生效；点"取消编辑"回到新建模式';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 document.getElementById('btnLoadReport')?.addEventListener('click', loadTaskReport);
+
+const TASK_TYPE_LABEL = { classwork: '🏫 课堂作业', homework: '🏠 家庭作业' };
 
 async function loadTaskReport() {
   const cls = document.getElementById('reportClass').value;
@@ -1549,33 +1586,53 @@ async function loadTaskReport() {
   const box = document.getElementById('taskReportBox');
   if (!cls) { box.innerHTML = '<p class="text-muted">请先选班级</p>'; return; }
   box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
-  const { data, error } = await supabase.rpc('get_class_task_report', { p_class: cls, p_date: date });
-  if (error) { box.innerHTML = '<p class="text-muted">加载失败：' + esc(error.message) + '</p>'; return; }
 
-  const t = data && data.task;
-  if (!t) {
+  // 全班名单（用于补齐未提交学生）
+  const [{ data: stuRes }, { data, error }] = await Promise.all([
+    supabase.from('student_info').select('student_name').eq('class', cls).order('student_name'),
+    supabase.rpc('get_class_task_report', { p_class: cls, p_date: date })
+  ]);
+  if (error) { box.innerHTML = '<p class="text-muted">加载失败：' + esc(error.message) + '</p>'; return; }
+  const allStudents = (stuRes || []).map(s => s.student_name);
+  const tasks = (data && data.tasks) || [];
+  if (!tasks.length) {
     box.innerHTML = '<p class="text-muted">这一天还没有发布任务。在上方发布后学生就能看到。</p>';
     return;
   }
-  const students = (data && data.students) || [];
-  const counts = { none: 0, done: 0, good: 0, perfect: 0 };
-  students.forEach(s => counts[s.grade] = (counts[s.grade] || 0) + 1);
-  let html = `<div class="task-banner">
-      <div><b>${esc(t.title)}</b>${t.detail ? '<br><span class="text-muted">' + esc(t.detail) + '</span>' : ''}</div>
-      <div class="task-stats">⏳未完成 ${counts.none || 0} · ✅完成 ${counts.done || 0} · 👍优秀 ${counts.good || 0} · 🏆完美 ${counts.perfect || 0}</div>
-    </div>
-    <div class="task-stu-grid">`;
-  students.forEach(s => {
-    html += `<div class="task-stu" data-student="${esc(s.student_name)}" data-task="${t.id}">
-      <div class="task-stu-name">${esc(s.student_name)}</div>
-      <div class="task-grade-row">
-        ${gradeBtn('none', s.grade, '未完成')}
-        ${gradeBtn('done', s.grade, '完成')}
-        ${gradeBtn('good', s.grade, '优秀A')}
-        ${gradeBtn('perfect', s.grade, '完美A+')}
-      </div></div>`;
+
+  let html = '';
+  tasks.forEach(t => {
+    const sub = t.submissions || {};
+    const counts = { none: 0, done: 0, good: 0, perfect: 0 };
+    allStudents.forEach(name => {
+      const g = (sub[name] && sub[name].grade) || 'none';
+      counts[g] = (counts[g] || 0) + 1;
+    });
+    html += `<div class="task-card-block">
+      <div class="task-banner">
+        <div>
+          <span class="task-type-tag ${t.task_type}">${TASK_TYPE_LABEL[t.task_type] || t.task_type}</span>
+          <b>${esc(t.title)}</b>
+          <button type="button" class="task-edit-btn" data-edit-id="${t.id}" data-title="${esc(t.title)}" data-detail="${esc(t.detail||'')}" data-type="${t.task_type}" data-date="${(t.task_date||'').slice(0,10)}" title="编辑">✏️</button>
+          <button type="button" class="task-del-btn" data-del="${t.id}" title="删除这条任务">🗑</button>
+          ${t.detail ? '<br><span class="text-muted">' + esc(t.detail) + '</span>' : ''}
+        </div>
+        <div class="task-stats">⏳未完成 ${counts.none} · ✅完成 ${counts.done} · 👍优秀 ${counts.good} · 🏆完美 ${counts.perfect}</div>
+      </div>
+      <div class="task-stu-grid">`;
+    allStudents.forEach(name => {
+      const g = (sub[name] && sub[name].grade) || 'none';
+      html += `<div class="task-stu" data-student="${esc(name)}" data-task="${t.id}">
+        <div class="task-stu-name">${esc(name)}</div>
+        <div class="task-grade-row">
+          ${gradeBtn('none', g, '未完成')}
+          ${gradeBtn('done', g, '完成')}
+          ${gradeBtn('good', g, '优秀A')}
+          ${gradeBtn('perfect', g, '完美A+')}
+        </div></div>`;
+    });
+    html += '</div></div>';
   });
-  html += '</div>';
   box.innerHTML = html;
 
   box.querySelectorAll('.task-grade-btn').forEach(btn => {
@@ -1590,6 +1647,25 @@ async function loadTaskReport() {
       if (error) { toast('保存失败：' + error.message); return; }
       toast(student + ' 已评为：' + btn.textContent.trim());
       loadTaskReport();
+    });
+  });
+  box.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('确定删除这条任务吗？学生已获得的经验会保留。')) return;
+      const { error } = await supabase.rpc('delete_daily_task', { p_task_id: btn.dataset.del });
+      if (error) { toast('删除失败：' + error.message); return; }
+      toast('已删除'); loadTaskReport();
+    });
+  });
+  box.querySelectorAll('[data-edit-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      beginTaskEdit({
+        id: btn.dataset.editId,
+        title: btn.dataset.title,
+        detail: btn.dataset.detail,
+        task_type: btn.dataset.type,
+        task_date: btn.dataset.date
+      });
     });
   });
 }
