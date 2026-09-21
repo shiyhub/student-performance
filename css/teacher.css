@@ -328,3 +328,11 @@ body { background: #f3f6f5; }
 .task-del-btn { margin-left:8px; border:none; background:transparent; cursor:pointer; font-size:15px; }
 .task-edit-btn { margin-left:8px; border:none; background:transparent; cursor:pointer; font-size:15px; }
 .task-edit-btn:hover, .task-del-btn:hover { transform:scale(1.15); }
+.batch-students { display:flex; flex-wrap:wrap; gap:8px; }
+.batch-pill { display:inline-flex; align-items:center; padding:7px 14px; border-radius:999px;
+  background:#f1f4f2; color:#445; font-size:14px; cursor:pointer; border:2px solid transparent; user-select:none; }
+.batch-pill.on { background:#dcefe2; border-color:#57b47f; color:#2c7a4e; font-weight:700; }
+.chips-row { display:flex; flex-wrap:wrap; gap:8px; }
+.batch-chip { display:inline-flex; align-items:center; gap:6px; background:#fff1db; color:#a86a1c;
+  padding:4px 10px; border-radius:8px; font-size:13px; }
+.batch-chip button { border:none; background:transparent; cursor:pointer; font-size:14px; color:#a86a1c; }

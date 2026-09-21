@@ -661,9 +661,11 @@ function buildCheckTag(t) {
       b.textContent = opt;
       b.addEventListener('click', () => {
         sfx.sub();
-        state.checkOption[t.id] = opt;
-        sub.querySelectorAll('.sub-chip').forEach(x =>
-          x.classList.toggle('active', x === b));
+        if (!Array.isArray(state.checkOption[t.id])) state.checkOption[t.id] = [];
+        const arr = state.checkOption[t.id];
+        const ix = arr.indexOf(opt);
+        if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); }
+        else { arr.push(opt); b.classList.add('active'); }
       });
       sub.appendChild(b);
     });
@@ -677,11 +679,11 @@ function buildTextTag(t) {
   wrap.className = 'text-tag';
   const label = document.createElement('label');
   label.textContent = t.label;
-  const input = document.createElement('input');
+  const input = document.createElement('textarea');
   input.className = 'input';
-  input.type = 'text';
-  input.maxLength = 100;
-  input.placeholder = '填写今天的内容（选填）';
+  input.rows = 3;
+  input.maxLength = 600;
+  input.placeholder = '填写今天的内容（选填，最多 600 字）';
   input.addEventListener('input', () => { state.textValues[t.id] = input.value; updateMood(); });
   wrap.appendChild(label);
   wrap.appendChild(input);
@@ -966,16 +968,18 @@ async function onSubmit() {
   for (const t of state.tags) {
     if (t.tag_type === 'check') {
       if (state.checkChosen[t.id]) {
-        const subVal = (state.checkOption[t.id] || '').trim();
-        if (Array.isArray(t.options) && t.options.length && !subVal) {
+        const opts = state.checkOption[t.id];
+        const subArr = Array.isArray(opts) ? opts : (opts ? [opts] : []);
+        if (Array.isArray(t.options) && t.options.length && !subArr.length) {
           sfx.oops();
           return toast(`请为「${t.label}」再选一个具体项目`);
         }
+        const subVal = subArr.join('、');
         items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive', xp: tagXpOf(t) });
       }
     } else {
       const v = (state.textValues[t.id] || '').trim();
-      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive', xp: tagXpOf(t) });
+      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 600), category: t.category || 'positive', xp: tagXpOf(t) });
     }
   }
 

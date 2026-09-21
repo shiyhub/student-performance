@@ -55,6 +55,7 @@
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
       <button class="tab-btn" data-tab="task">📋 每日任务</button>
+      <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
       <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
     </nav>
 
@@ -343,6 +344,47 @@
           </div>
         </div>
         <div id="taskReportBox"></div>
+      </div>
+    </section>
+
+    <!-- ===== 批量评价 ===== -->
+    <section id="tabBatch" hidden>
+      <div class="card">
+        <div class="card-title">🎖️ 批量打标签</div>
+        <p class="text-muted">全班/多日都遵守纪律时，选一个标签，一次给多个学生、多个日期批量打上。经验和心情会按规则自动计算。</p>
+        <div class="grid">
+          <div class="field">
+            <label for="batchClass">班级</label>
+            <select class="input" id="batchClass"><option value="">请选择班级</option></select>
+          </div>
+          <div class="field">
+            <label for="batchTag">选择标签</label>
+            <select class="input" id="batchTag"><option value="">请先选班级加载标签</option></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>选择日期（可多选，按住 Ctrl/⌘ 多选）</label>
+          <input class="input" id="batchDates" type="date">
+          <div class="row" style="margin-top:6px;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" type="button" id="btnAddBatchDate">＋ 加入日期</button>
+            <button class="btn btn-ghost" type="button" id="btnBatchToday">只加今天</button>
+            <button class="btn btn-ghost" type="button" id="btnBatchClearDates">清空日期</button>
+          </div>
+          <div id="batchDateChips" class="chips-row" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="field">
+          <label>选择学生（可点全选/全不选）</label>
+          <div class="row" style="margin-bottom:8px;gap:8px;">
+            <button class="btn btn-ghost" type="button" id="btnBatchAll">全选</button>
+            <button class="btn btn-ghost" type="button" id="btnBatchNone">全不选</button>
+          </div>
+          <div id="batchStudentBox" class="batch-students"></div>
+        </div>
+
+        <button class="btn btn-primary" type="button" id="btnBatchGo">🚀 一键批量评价</button>
+        <span id="batchResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
     </section>
   </main>

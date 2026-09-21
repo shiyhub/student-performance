@@ -529,3 +529,53 @@ body {
 .stu-task-type { display:inline-block; font-size:12px; font-weight:800; padding:2px 10px; border-radius:999px; margin-bottom:6px; }
 .stu-task-type.classwork { background:#dcecfb; color:#2a6fb0; }
 .stu-task-type.homework { background:#ffe6d6; color:#c06a2a; }
+
+/* ===== v16：左侧三角返回 + 横屏双栏 + UI 放大 ===== */
+
+/* 左侧三角返回箭头 */
+.wall-back {
+  position: fixed; left: 0; top: 50%; transform: translateY(-50%);
+  width: 46px; height: 96px; padding: 0; margin: 0;
+  border: none; border-radius: 0 18px 18px 0;
+  background: linear-gradient(180deg,#5cc892,#3da770);
+  color: #fff; cursor: pointer; z-index: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 3px 4px 14px rgba(61,167,112,.4);
+}
+.back-tri { font-size: 46px; font-weight: 800; line-height: 0; margin-top: -4px; }
+.wall-back:hover { width: 54px; }
+
+/* 横屏 / 宽屏：表单双栏，整体放大 */
+@media (min-width: 900px) and (orientation: landscape) {
+  #formView { max-width: 1280px; padding-left: 60px; }
+  #formView .card { padding: 22px 26px; }
+  #formView .card-title { font-size: 22px; }
+  /* 两栏排布：身份/星级/心情在左，任务+标签+提交在右 */
+  #formView {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 18px;
+    align-items: start;
+  }
+  #formView .s-header { grid-column: 1 / -1; }
+  #formView .submit-wrap { grid-column: 1 / -1; }
+  #formView .task-card { grid-column: 1 / -1; }
+  .chip { min-height: 56px; font-size: 17px; }
+  .sub-chip { font-size: 16px; padding: 9px 20px; }
+  .input { font-size: 17px; padding: 12px 14px; }
+  textarea.input { font-size: 17px; line-height: 1.6; }
+  .stu-task-grade { font-size: 17px; padding: 12px 8px; }
+  .mp-avatar { width: 96px; height: 96px; flex-basis: 96px; font-size: 56px; }
+  .mp-level { font-size: 30px; }
+  .submit-wrap .btn { min-height: 66px; font-size: 21px; }
+  .back-tri { font-size: 56px; }
+}
+
+/* 竖屏大屏（教室竖屏/平板竖握）也放大一点 */
+@media (min-width: 900px) and (orientation: portrait) {
+  #formView { max-width: 760px; }
+  #formView .card { padding: 22px 24px; }
+  .chip { min-height: 60px; font-size: 18px; }
+  .input { font-size: 18px; padding: 12px 14px; }
+  .submit-wrap .btn { min-height: 66px; font-size: 21px; }
+}

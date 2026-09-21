@@ -223,7 +223,7 @@ function switchTab(name) {
   // 逐页切换，元素缺失时不报错（防止缓存旧 HTML 与新 JS 不同步）
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags',
-    exam: 'tabExam', task: 'tabTask', tools: 'tabTools'
+    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', tools: 'tabTools'
   };
   Object.entries(panes).forEach(([key, id]) => {
     const el = document.getElementById(id);
@@ -234,6 +234,7 @@ function switchTab(name) {
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
   if (name === 'tools') fillPreviewClasses();
   if (name === 'task') activateTaskTab();
+  if (name === 'batch') activateBatchTab();
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -1671,4 +1672,113 @@ async function loadTaskReport() {
 }
 function gradeBtn(grade, cur, label) {
   return `<button type="button" class="task-grade-btn ${grade === cur ? 'on' : ''}" data-grade="${grade}">${label}</button>`;
+}
+
+/* ================= 批量评价 ================= */
+const batchState = { dates: [], students: [], loaded: false };
+
+async function activateBatchTab() {
+  if (!batchState.loaded) {
+    batchState.loaded = true;
+    await loadBatchClasses();
+    document.getElementById('batchClass').addEventListener('change', loadBatchTagsAndStudents);
+    document.getElementById('btnAddBatchDate').addEventListener('click', addBatchDate);
+    document.getElementById('btnBatchToday').addEventListener('click', () => {
+      document.getElementById('batchDates').value = todayStr(); addBatchDate();
+    });
+    document.getElementById('btnBatchClearDates').addEventListener('click', () => {
+      batchState.dates = []; renderBatchDates();
+    });
+    document.getElementById('btnBatchAll').addEventListener('click', () => {
+      batchState.students = batchState.allStudents || []; renderBatchStudents();
+    });
+    document.getElementById('btnBatchNone').addEventListener('click', () => {
+      batchState.students = []; renderBatchStudents();
+    });
+    document.getElementById('btnBatchGo').addEventListener('click', runBatchAward);
+  }
+}
+
+async function loadBatchClasses() {
+  const sel = document.getElementById('batchClass');
+  const { data: students } = await supabase.from('student_info').select('class').order('class');
+  const classes = Array.from(new Set((students || []).map(s => s.class))).sort();
+  sel.innerHTML = '<option value="">请选择班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+async function loadBatchTagsAndStudents() {
+  const cls = document.getElementById('batchClass').value;
+  const tagSel = document.getElementById('batchTag');
+  const box = document.getElementById('batchStudentBox');
+  if (!cls) { tagSel.innerHTML = '<option value="">请先选班级</option>'; box.innerHTML=''; return; }
+  // 学生
+  const { data: students } = await supabase.from('student_info')
+    .select('student_name').eq('class', cls).order('student_name');
+  batchState.allStudents = (students || []).map(s => s.student_name);
+  batchState.students = batchState.allStudents.slice();
+  renderBatchStudents();
+  // 标签
+  const { data: tags } = await supabase.from('behavior_tags')
+    .select('id,label,category,xp_value').eq('is_active', true).order('sort_order');
+  tagSel.innerHTML = '<option value="">请选择标签</option>' +
+    (tags || []).map(t => `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${esc(t.label)}</option>`).join('');
+}
+
+function renderBatchStudents() {
+  const box = document.getElementById('batchStudentBox');
+  const all = batchState.allStudents || [];
+  box.innerHTML = all.map(n => {
+    const on = batchState.students.includes(n);
+    return `<label class="batch-pill ${on?'on':''}"><input type="checkbox" value="${esc(n)}" ${on?'checked':''} style="display:none">${esc(n)}</label>`;
+  }).join('');
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    const v = cb.value;
+    if (cb.checked && !batchState.students.includes(v)) batchState.students.push(v);
+    if (!cb.checked) batchState.students = batchState.students.filter(x => x !== v);
+    cb.closest('.batch-pill').classList.toggle('on', cb.checked);
+  }));
+}
+
+function addBatchDate() {
+  const v = document.getElementById('batchDates').value;
+  if (!v) return toast('请选一个日期');
+  if (!batchState.dates.includes(v)) batchState.dates.push(v);
+  batchState.dates.sort();
+  renderBatchDates();
+}
+
+function renderBatchDates() {
+  const box = document.getElementById('batchDateChips');
+  box.innerHTML = batchState.dates.map(d =>
+    `<span class="batch-chip">${d} <button type="button" data-x="${d}">×</button></span>`).join('');
+  box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    batchState.dates = batchState.dates.filter(x => x !== b.dataset.x);
+    renderBatchDates();
+  }));
+}
+
+async function runBatchAward() {
+  const cls = document.getElementById('batchClass').value;
+  const tagId = document.getElementById('batchTag').value;
+  const result = document.getElementById('batchResult');
+  if (!cls || !tagId) return toast('请先选班级和标签');
+  if (!batchState.dates.length) return toast('请至少加一个日期');
+  if (!batchState.students.length) return toast('请至少选一个学生');
+  const btn = document.getElementById('btnBatchGo');
+  btn.disabled = true; btn.textContent = '正在写入…';
+  result.textContent = '';
+  try {
+    const { data, error } = await supabase.rpc('batch_award_tag', {
+      p_class: cls, p_dates: batchState.dates, p_students: batchState.students, p_tag_id: Number(tagId)
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    result.textContent = '✅ ' + (row && row.message ? row.message : '完成');
+    toast('批量评价完成！');
+  } catch (e) {
+    result.textContent = '❌ ' + (e.message || '失败');
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 一键批量评价';
+  }
 }
