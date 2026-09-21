@@ -1009,7 +1009,19 @@ async function loadPastTasks() {
     }).join('');
     els.pastTaskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
       btn.addEventListener('click', async () => {
-        await onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn);
+        if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+        const grade = btn.dataset.grade, taskId = btn.dataset.task;
+        const res = await supabase.rpc('submit_task', {
+          p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
+        });
+        if (res.error) { sfx.oops(); toast('保存失败：' + res.error.message); return; }
+        const d = res.data || {};
+        sfx.pick();
+        const xpGain = (d.xp_delta || 0) > 0 ? ` 经验+${d.xp_delta}` : '';
+        toast(grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存');
+        const row = state.roster.find(s => s.class === cls && s.student_name === name);
+        if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+        renderIdentityLevel();
         loadPastTasks();
       });
     });
