@@ -403,10 +403,7 @@ function openStudentDetail(name) {
     : '还没有提交过表现记录';
   els.detailBody.innerHTML = renderRecordTimeline(rows);
   state.detailName = name;
-  // 只有看自己（与已保存身份一致）才显示"写表现"，防止替别人提交
-  let savedMe = '';
-  try { savedMe = (JSON.parse(localStorage.getItem('sp_identity') || '{}')).studentName || ''; } catch(e){}
-  els.detailFoot.hidden = !savedMe || name !== savedMe;
+  els.detailFoot.hidden = false;
   els.detailModal.classList.add('show');
 }
 
