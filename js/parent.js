@@ -142,9 +142,10 @@ function init() {
 /* ---------------- 查询 ---------------- */
 
 async function onQuery() {
-  const cls = (lockedClass || els.inpClass.value || '').trim();
-  const student = els.inpStudent.value.trim();
-  const parent = els.inpParent.value.trim();
+  const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
+  const cls = norm(lockedClass || els.inpClass.value || '');
+  const student = norm(els.inpStudent.value);
+  const parent = norm(els.inpParent.value);
   if (!cls || !student || !parent) {
     toast(lockedClass ? '学生姓名和家长姓名都要填写哦' : '班级、学生姓名、家长姓名都要填写哦');
     return;

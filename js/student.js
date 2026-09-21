@@ -159,7 +159,8 @@ const state = {
   tags: [],
   checkChosen: {},   // 勾选型标签：{ [tagId]: true }
   checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
-  textValues: {}
+  textValues: {},
+  doneItems: {}   // 当天已提交过的二级项：{ [tagId]: Set(已选value) }
 };
 
 init();
@@ -597,6 +598,7 @@ async function loadTags() {
     if (typeof t.score !== 'number') t.score = t.category === 'negative' ? -1 : 1;
   });
   state.tags = data;
+  await loadDoneItems();
   els.posGrid.innerHTML = '';
   els.negGrid.innerHTML = '';
   els.textTagsBox.innerHTML = '';
@@ -618,6 +620,31 @@ async function loadTags() {
   }
   els.tagsBox.hidden = false;
   updateMood();
+}
+
+// 加载当天已提交过的二级项，置灰不可重复得分
+async function loadDoneItems() {
+  state.doneItems = {};
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return;
+  try {
+    const { data } = await supabase.from('daily_record')
+      .select('behavior')
+      .eq('class', cls).eq('student_name', name)
+      .eq('record_date', todayStr())
+      .order('create_at', { ascending: false });
+    (data || []).forEach(r => {
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      items.forEach(it => {
+        const tid = it.id;
+        if (it.value) {
+          if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
+          state.doneItems[tid].add(it.value);
+        }
+      });
+    });
+  } catch (e) { /* 忽略 */ }
 }
 
 function buildCheckTag(t) {
@@ -644,6 +671,13 @@ function buildCheckTag(t) {
       b.type = 'button';
       b.className = 'sub-chip';
       b.textContent = opt;
+      // 当天已打过的具体二级项：置灰不可再选
+      const doneSet = state.doneItems[t.id];
+      if (doneSet && doneSet.has(opt)) {
+        b.classList.add('done');
+        b.disabled = true;
+        b.textContent = opt + ' ✓';
+      }
       b.addEventListener('click', () => {
         sfx.sub();
         if (!Array.isArray(state.checkOption[t.id])) state.checkOption[t.id] = [];
@@ -968,8 +1002,9 @@ function closeDetail() { els.detailModal.classList.remove('show'); }
 async function onSubmit() {
   if (!ready) return toast('系统尚未配置完成，请联系老师');
   if (state.readonly) { sfx.oops(); return toast('老师预览模式下不能提交记录哦～'); }
-  const cls = els.inpClass.value.trim();
-  const name = els.inpName.value.trim();
+  const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
+  const cls = norm(els.inpClass.value);
+  const name = norm(els.inpName.value);
   if (!cls) { sfx.oops(); return toast('请先填写班级'); }
   if (!name) { sfx.oops(); return toast('请先填写姓名'); }
   updateMood();
@@ -1025,12 +1060,11 @@ async function onSubmit() {
       return;
     }
 
-    const { error: insertError } = await supabase.from('daily_record').insert({
-      class: cls,
-      student_name: name,
-      record_date: todayStr(),
-      self_evaluation: null,   // 打星模块已移除
-      behavior: { mood: MOOD_BY_LEVEL(state.moodLevel).key, items }
+    const { data: subRes, error: insertError } = await supabase.rpc('submit_today', {
+      p_class: cls,
+      p_student: name,
+      p_mood: MOOD_BY_LEVEL(state.moodLevel).key,
+      p_items: items
     });
     if (insertError) {
       sfx.oops();
@@ -1041,16 +1075,27 @@ async function onSubmit() {
       }
       return;
     }
+    if (!subRes || subRes.ok === false) {
+      sfx.oops();
+      toast(subRes && subRes.reason === 'no_student'
+        ? '没有找到你的名字，请检查班级和姓名'
+        : '提交失败，请重试');
+      return;
+    }
+    // 合并模式下提示
+    if (subRes.merged) {
+      // 当天已有记录，本次为补充合并
+    }
 
-    // 乐观更新经验/等级（数据库触发器会按各标签配置的 xp_value 做同样的累加）
-    const gainedXp = items.reduce((s, i) => s + (Number(i.xp) || 0), 0);
+    // 以服务端返回的差额经验为准（合并场景只加新增部分）
+    const gainedXp = Number(subRes.xp_delta || 0);
     let leveledUp = false;
     if (gainedXp > 0) {
       const row = state.roster.find(s => s.class === cls && s.student_name === name);
       if (row) {
         const beforeLv = Number(row.level) || 1;
-        row.xp = (Number(row.xp) || 0) + gainedXp;
-        row.level = levelFromXp(row.xp);
+        row.xp = Number(subRes.xp != null ? subRes.xp : (Number(row.xp) || 0) + gainedXp);
+        row.level = subRes.level || levelFromXp(row.xp);
         leveledUp = row.level > beforeLv;
       }
     }
@@ -1060,6 +1105,7 @@ async function onSubmit() {
     celebrate(gainedXp, leveledUp);
     resetSelections();
     renderMoodPreview();
+    loadTags();   // 刷新当天已打项，立即置灰
   } catch (e) {
     sfx.oops();
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
