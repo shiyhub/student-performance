@@ -361,6 +361,22 @@ async function deleteRecord(id) {
   loadRecords();
 }
 
+// 批量删除所选记录
+document.getElementById('btnRecCheckAll')?.addEventListener('click', () => {
+  const boxes = document.querySelectorAll('.rec-check');
+  const anyUnchecked = [...boxes].some(b => !b.checked);
+  boxes.forEach(b => b.checked = anyUnchecked);
+});
+document.getElementById('btnBatchDelRec')?.addEventListener('click', async () => {
+  const ids = [...document.querySelectorAll('.rec-check:checked')].map(b => b.value);
+  if (!ids.length) return toast('请先勾选要删除的记录');
+  if (!confirm(`确定删除选中的 ${ids.length} 条记录吗？删除后不可恢复，经验也会相应扣回。`)) return;
+  const { error } = await supabase.from('daily_record').delete().in('id', ids);
+  if (error) { toast('批量删除失败：' + error.message); return; }
+  toast('已删除 ' + ids.length + ' 条');
+  loadRecords();
+});
+
 async function deleteHomeNote(id) {
   if (!confirm('确定删除这条家长留言吗？删除后不可恢复。')) return;
   const { error } = await supabase.from('home_note').delete().eq('id', id);
@@ -723,6 +739,7 @@ function renderRecordCard(r) {
 
   return `<div class="rec-card">
             <div class="rec-meta">
+              <input type="checkbox" class="rec-check" value="${r.id}" title="选择">
               <span class="class-pill">${esc(r.class)}</span>
               <b>${esc(r.student_name)}</b>
               <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
@@ -1843,7 +1860,7 @@ async function runBatchAward() {
 async function loadOverview() {
   const sem = document.getElementById('ovSemester').value;
   try {
-    const { data: roster } = await supabase.from('student_info').select('class,student_name');
+    const { data: roster } = await supabase.from('student_directory').select('class,student_name');
     const total = (roster || []).length;
     const today = new Date().toISOString().slice(0,10);
     let q = supabase.from('daily_record').select('student_name,class,record_date').eq('record_date', today);
