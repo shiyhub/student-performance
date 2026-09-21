@@ -155,6 +155,16 @@ async function onQuery() {
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
   try {
+    // 先校验三要素，给出具体原因
+    const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_parent: parent });
+    const v = vRes.data;
+    if (v && v.ok === false) {
+      els.mismatchBanner.textContent = v.reason === 'no_student'
+        ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
+        : '学生找到了，但家长姓名对不上，请核对家长姓名（可请老师在名单里确认登记的家长名）。';
+      els.mismatchBanner.hidden = false;
+      return;
+    }
     const [recRes, paperRes, taskRes] = await Promise.all([
       supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_parent: parent }),
       supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_parent: parent }),
@@ -166,9 +176,7 @@ async function onQuery() {
     const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
     const tasks = taskData.tasks || [];
     if (!records.length && !papers.length && !tasks.length) {
-      els.mismatchBanner.textContent = lockedClass
-        ? '信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。'
-        : '三项信息不匹配，查不到记录。请核对班级、学生姓名和家长姓名后再试。';
+      els.mismatchBanner.textContent = '校验通过，但还没有任何记录；稍后再来看看。';
       els.mismatchBanner.hidden = false;
       return;
     }
@@ -378,9 +386,19 @@ function renderDetailList(rows) {
   groups.forEach(g => {
     html += `<div class="day-head">
                <span>${formatDate(g.date)}</span>
-               <span class="day-count">${g.rows.length} 条</span>
+               <span class="day-count">${g.rows.length > 1 ? `合并 ${g.rows.length} 条` : ''}</span>
              </div>`;
-    g.rows.forEach(r => { html += renderRecordCard(r); });
+    // 同一天多条：合并为一张卡（表现项合并、心情取最后一条、评语合并）
+    const merged = {
+      id: g.rows[g.rows.length - 1].id,
+      record_date: g.date,
+      behavior: {
+        mood: (g.rows[g.rows.length - 1].behavior || {}).mood,
+        items: g.rows.flatMap(r => (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [])
+      },
+      teacher_comment: g.rows.map(r => (r.teacher_comment || '').trim()).filter(Boolean).join('；')
+    };
+    html += renderRecordCard(merged);
   });
   return html;
 }
