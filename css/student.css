@@ -696,3 +696,10 @@ body {
 .wall-back .back-tri { font-size:34px !important; }
 .wall-back::after { content:"返回"; position:absolute; left:64px; top:50%; transform:translateY(-50%); background:#3aa655; color:#fff; font-size:14px; padding:6px 10px; border-radius:8px; white-space:nowrap; }
 .mate-badge.xp-badge { background:#fff3e0; color:#e8821e; font-weight:700; }
+.class-progress { margin-top:14px; }
+.cp-row { display:flex; justify-content:space-between; font-size:14px; color:#666; margin:6px 0 4px; }
+.cp-row b { color:#e8821e; }
+.cp-bar { height:12px; background:#f0e6d6; border-radius:8px; overflow:hidden; }
+.cp-fill { height:100%; width:0; background:linear-gradient(90deg,#ffb347,#ff8c42); border-radius:8px; transition:width .6s; }
+.cp-bar.green { background:#dfeee2; }
+.cp-fill.green { background:linear-gradient(90deg,#7bc98a,#3aa655); }

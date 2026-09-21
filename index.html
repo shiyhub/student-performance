@@ -36,6 +36,18 @@
     <p class="field-hint" style="margin:0;">
       点<b>自己的头像</b>，就能直接记录今天的表现；点其他同学的头像，可以看看 TA 的表现。
     </p>
+    <div class="class-progress" id="classProgress">
+      <div class="cp-row">
+        <span>🧡 班级经验 <b id="cpXp">0</b></span>
+        <span id="cpNext">距 Lv2 还需 400</span>
+      </div>
+      <div class="cp-bar"><div class="cp-fill" id="cpFill"></div></div>
+      <div class="cp-row">
+        <span>📅 今日已填写 <b id="cpDone">0</b>/<span id="cpTotal">0</span> 人</span>
+        <span id="cpPct">0%</span>
+      </div>
+      <div class="cp-bar green"><div class="cp-fill green" id="cpFillGreen"></div></div>
+    </div>
   </section>
 
   <div id="wallLoading" class="loading-row"><span class="spinner"></span>正在加载同学们…</div>

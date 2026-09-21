@@ -346,6 +346,24 @@ function renderWall() {
   els.matesGrid.innerHTML = html;
   els.matesGrid.hidden = false;
 
+  // 班级经验进度 + 今日完成进度
+  const doneToday = state.roster.filter(s => recs.some(r => r.student_name === s.student_name && r.record_date === today)).length;
+  const total = state.roster.length || 1;
+  const cp = id => document.getElementById(id);
+  if (cp('cpXp')) {
+    cp('cpXp').textContent = classXp;
+    const prevXp = CLASS_LEVELS[classLv - 1] || 0;
+    const nextXp = CLASS_LEVELS[classLv] || null;
+    cp('cpNext').textContent = nextXp ? `Lv${classLv} → 再${nextXp - classXp} 升 Lv${classLv+1}` : `Lv${classLv} 满级`;
+    const pct = nextXp ? Math.min(100, (classXp - prevXp) / (nextXp - prevXp) * 100) : 100;
+    cp('cpFill').style.width = pct + '%';
+    cp('cpDone').textContent = doneToday;
+    cp('cpTotal').textContent = state.roster.length;
+    const p2 = Math.round(doneToday / total * 100);
+    cp('cpPct').textContent = p2 + '%';
+    cp('cpFillGreen').style.width = p2 + '%';
+  }
+
   $$('.mate', els.matesGrid).forEach(btn => {
     btn.addEventListener('click', () => {
       sfx.tap();
@@ -382,8 +400,8 @@ function openClassDetail(avg, todayCount) {
   els.detailAvatar.textContent = '🌈';
   els.detailAvatar.style.background = 'linear-gradient(135deg,#ffe6c9,#d8f0e2)';
   els.detailName.textContent = state.currentClass + ' · 全班';
-  els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条${avg ? ' · 平均 ⭐' + avg : ''}`;
-  els.detailBody.innerHTML = renderClassRanking() + renderRecordTimeline(state.records);
+  els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条`;
+  els.detailBody.innerHTML = renderRecordTimeline(state.records);
   state.detailName = '';
   els.detailFoot.hidden = true;
   els.detailModal.classList.add('show');
@@ -1019,7 +1037,6 @@ async function loadPastTasks() {
       btn.addEventListener('click', async () => {
         if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
         const grade = btn.dataset.grade, taskId = btn.dataset.task;
-        if (grade === 'none') { sfx.pick(); toast('还没做不记录，继续加油'); loadPastTasks(); return; }
         const res = await supabase.rpc('submit_task', {
           p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
         });
@@ -1323,13 +1340,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
-  // "还没做"不写库、不加分，只做界面提示
-  if (grade === 'none') {
-    sfx.pick();
-    const resultEl = els.taskBody.querySelector(`[data-result="${taskId}"]`);
-    if (resultEl) resultEl.textContent = '好的，继续加油完成任务吧！';
-    return;
-  }
+  // "还没做"也提交：用于撤销之前的评分、回退经验
   const res = await supabase.rpc('submit_task', {
     p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
   });

@@ -474,7 +474,6 @@ function renderSummary(rows) {
   return `<div class="sum-card">
             <div class="sum-overview">
               <div><span class="sum-big">${rows.length}</span><span class="sum-sub">条记录</span></div>
-              <div><span class="sum-big">${avg === null ? '—' : '★' + avg.toFixed(1)}</span><span class="sum-sub">平均星级</span></div>
               <div class="sum-range">${rangeTxt}</div>
             </div>
             <div class="sum-moods">${moodLine || '<span class="text-muted">暂无心情数据</span>'}</div>
