@@ -223,7 +223,7 @@ function switchTab(name) {
   // 逐页切换，元素缺失时不报错（防止缓存旧 HTML 与新 JS 不同步）
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags',
-    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', tools: 'tabTools'
+    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools'
   };
   Object.entries(panes).forEach(([key, id]) => {
     const el = document.getElementById(id);
@@ -235,6 +235,7 @@ function switchTab(name) {
   if (name === 'tools') fillPreviewClasses();
   if (name === 'task') activateTaskTab();
   if (name === 'batch') activateBatchTab();
+  if (name === 'stats') activateStatsTab();
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -1915,3 +1916,154 @@ async function loadOverview() {
 }
 document.getElementById('ovSemester')?.addEventListener('change', loadOverview);
 loadOverview();
+
+/* ================= 数据统计 ================= */
+const statsState = { loaded: false };
+function monthAgo() { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); }
+function todayStrLocal() { const d = new Date(); return d.toISOString().slice(0,10); }
+
+async function activateStatsTab() {
+  if (statsState.loaded) return;
+  statsState.loaded = true;
+  document.getElementById('statsFrom').value = monthAgo();
+  document.getElementById('statsTo').value = todayStrLocal();
+  const clsSel = document.getElementById('statsClass');
+  const { data: stu } = await supabase.from('student_info').select('class,student_name').order('student_name');
+  const classes = Array.from(new Set((stu||[]).map(s=>s.class))).sort();
+  clsSel.innerHTML = '<option value="">全部班级</option>' + classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const stuSel = document.getElementById('statsStudent');
+  stuSel.innerHTML = '<option value="">全班汇总</option>' + (stu||[]).map(s=>`<option value="${esc(s.student_name)}">${esc(s.class)} · ${esc(s.student_name)}</option>`).join('');
+  const { data: tasks } = await supabase.from('daily_task').select('id,title,task_date,task_type').order('task_date',{ascending:false}).limit(200);
+  document.getElementById('statsTask').innerHTML = '<option value="">不按任务</option>' + (tasks||[]).map(t=>`<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('');
+  const { data: allTags } = await supabase.from('behavior_tags').select('id,label,options,category').eq('is_active',true);
+  let opt = '<option value="">不按小项</option>';
+  (allTags||[]).forEach(t => {
+    opt += `<option value="TAG::${t.label}">${esc(t.label)}（全部）</option>`;
+    (t.options||[]).forEach(o => { opt += `<option value="OPT::${esc(o)}">　└ ${esc(o)}</option>`; });
+  });
+  document.getElementById('statsTag').innerHTML = opt;
+  document.getElementById('btnStatsGo').addEventListener('click', runStats);
+}
+
+async function runStats() {
+  const cls = document.getElementById('statsClass').value;
+  const from = document.getElementById('statsFrom').value;
+  const to = document.getElementById('statsTo').value;
+  const student = document.getElementById('statsStudent').value;
+  const category = document.getElementById('statsCategory').value;
+  const out = document.getElementById('statsOut');
+  out.innerHTML = '<div class="text-muted">统计中…</div>';
+
+  let q = supabase.from('daily_record').select('class,student_name,record_date,behavior,teacher_comment').order('record_date',{ascending:false});
+  if (cls) q = q.eq('class', cls);
+  if (from) q = q.gte('record_date', from);
+  if (to) q = q.lte('record_date', to);
+  if (student) q = q.eq('student_name', student);
+  const { data: recs, error } = await q;
+  if (error) { out.innerHTML = '<div class="text-muted">加载失败：'+esc(error.message)+'</div>'; return; }
+
+  // 标签计数
+  const tagCount = {};
+  let posTotal=0, negTotal=0, totalItems=0;
+  (recs||[]).forEach(r => {
+    ((r.behavior&&r.behavior.items)||[]).forEach(it => {
+      if (category && it.category !== category) return;
+      const label = it.label || '(未命名)';
+      tagCount[label] = tagCount[label] || {pos:0,neg:0};
+      if (it.category==='negative') { tagCount[label].neg++; negTotal++; }
+      else { tagCount[label].pos++; posTotal++; }
+      totalItems++;
+    });
+  });
+  const tagRows = Object.entries(tagCount).sort((a,b)=>(b[1].pos+b[1].neg)-(a[1].pos+a[1].neg));
+
+  // 任务评分统计
+  let tq = supabase.from('task_submission').select('student_name,grade,task_id,class,task_date');
+  if (cls) tq = tq.eq('class', cls);
+  if (student) tq = tq.eq('student_name', student);
+  if (from) tq = tq.gte('task_date', from);
+  if (to) tq = tq.lte('task_date', to);
+  const { data: subs } = await tq;
+  const gradeCount = {none:0,done:0,good:0,perfect:0};
+  (subs||[]).forEach(s=>{ if(gradeCount[s.grade]!=null) gradeCount[s.grade]++; });
+
+  // 单个学生历史时间线
+  let timelineHtml = '';
+  if (student) {
+    timelineHtml = '<h3 style="margin:14px 0 6px;">🕘 '+esc(student)+' 历史表现</h3>';
+    const list = (recs||[]).slice(0,60);
+    if (!list.length) timelineHtml += '<div class="text-muted">该时间段没有记录。</div>';
+    list.forEach(r => {
+      const items = ((r.behavior&&r.behavior.items)||[]).map(it =>
+        `<span class="batch-chip" style="${it.category==='negative'?'background:#fde3e3;color:#c0392b;':''}">${esc(it.label)}</span>`).join(' ');
+      const comment = r.teacher_comment ? `<div style="color:#888;margin-top:4px;">💬 ${esc(r.teacher_comment)}</div>` : '';
+      timelineHtml += `<div style="border-bottom:1px dashed #eee;padding:8px 0;">
+        <b>${esc(r.record_date&&r.record_date.slice(0,10))}</b>
+        <span style="margin-left:8px;">${items||'<span class="text-muted">无标签</span>'}</span>${comment}</div>`;
+    });
+  }
+
+  const { data: roster } = await supabase.from('student_info').select('class,student_name');
+  let allStudents = (roster||[]).map(r=>r.student_name);
+  if (cls) allStudents = (roster||[]).filter(r=>r.class===cls).map(r=>r.student_name);
+
+  // 任务谁做到/没做到
+  let taskHtml = '';
+  const taskId = document.getElementById('statsTask').value;
+  if (taskId) {
+    const { data: subs } = await supabase.from('task_submission').select('student_name,grade').eq('task_id', taskId);
+    const doneMap = {}; (subs||[]).forEach(s=> doneMap[s.student_name]=s.grade);
+    const did = allStudents.filter(n=>doneMap[n]);
+    const not = allStudents.filter(n=>!doneMap[n]);
+    const gname = {none:'未完成',done:'完成',good:'优秀A',perfect:'完美A+'};
+    taskHtml = `<h3 style="margin-top:16px;">📋 任务完成情况</h3>
+      <div style="color:#27ae60;">✅ 已完成（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}${doneMap[n]&&doneMap[n]!=='done'?'·'+gname[doneMap[n]]:''}</span>`).join(' ')||'无人'}</div>
+      <div style="color:#c0392b;margin-top:8px;">❌ 未完成（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部完成🎉'}</div>`;
+  }
+
+  // 小项谁做到/没做到（如背了某课）
+  let tagHtml = '';
+  const tagSel = document.getElementById('statsTag').value;
+  if (tagSel) {
+    const [mode, val] = tagSel.split('::');
+    const didSet = new Set();
+    (recs||[]).forEach(r => {
+      ((r.behavior&&r.behavior.items)||[]).forEach(it => {
+        if (mode==='OPT' && it.label===val) didSet.add(r.student_name);
+        if (mode==='TAG' && it.label===val) didSet.add(r.student_name);
+      });
+    });
+    const did = allStudents.filter(n=>didSet.has(n));
+    const not = allStudents.filter(n=>!didSet.has(n));
+    tagHtml = `<h3 style="margin-top:16px;">🏷️ 「${esc(val)}」达成情况</h3>
+      <div style="color:#27ae60;">✅ 已做到（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}</span>`).join(' ')||'无人'}</div>
+      <div style="color:#c0392b;margin-top:8px;">❌ 还没做到（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部做到🎉'}</div>`;
+  }
+
+  out.innerHTML = `
+    <div class="grid" style="gap:10px;margin-bottom:14px;">
+      <div class="stat-box"><div class="stat-num">${(recs||[]).length}</div><div class="text-muted">总记录天数</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#27ae60;">${posTotal}</div><div class="text-muted">积极表现</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#c0392b;">${negTotal}</div><div class="text-muted">需要加油</div></div>
+      <div class="stat-box"><div class="stat-num">${totalItems}</div><div class="text-muted">标签总次数</div></div>
+    </div>
+    ${taskHtml}
+    ${tagHtml}
+    <h3 style="margin-top:16px;">🏷️ 各标签次数</h3>
+    <table class="tbl" style="width:100%;border-collapse:collapse;">
+      <tr style="text-align:left;"><th style="padding:6px;border-bottom:2px solid #eee;">标签</th><th>积极</th><th>消极</th><th>合计</th></tr>
+      ${tagRows.map(([k,v])=>`<tr>
+        <td style="padding:6px;border-bottom:1px solid #f3f3f3;">${esc(k)}</td>
+        <td style="color:#27ae60;">${v.pos}</td>
+        <td style="color:#c0392b;">${v.neg}</td>
+        <td><b>${v.pos+v.neg}</b></td></tr>`).join('') || '<tr><td colspan=4 class="text-muted">无数据</td></tr>'}
+    </table>
+    <h3 style="margin-top:16px;">✅ 任务评级分布</h3>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <span>⏳ 未完成：<b>${gradeCount.none}</b></span>
+      <span>✅ 完成：<b>${gradeCount.done}</b></span>
+      <span>👍 优秀A：<b style="color:#e67e22;">${gradeCount.good}</b></span>
+      <span>🏆 完美A+：<b style="color:#f1c40f;">${gradeCount.perfect}</b></span>
+    </div>
+    ${timelineHtml}`;
+}
