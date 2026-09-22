@@ -793,3 +793,9 @@ html,body{background:#e8e6e1 !important;}
 .wall-top .wall-class-card{flex:1;margin:0;}
 .mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .mate.seat-empty{background:transparent;border:1.5px dashed #d8cfc4;min-height:140px;}
+#wallView .s-header{justify-content:center;text-align:center;}
+#wallView .s-title{font-size:2em !important;}
+#wallView .s-date{margin-left:0;}
+.wall-class-left{flex:0 0 16.66% !important;}
+.wall-class-left .mate{min-height:150px;}
+.wall-top .wall-class-card{margin-left:8px;}
