@@ -1709,13 +1709,26 @@ function gradeBtn(grade, cur, label) {
 }
 
 /* ================= 批量评价 ================= */
-const batchState = { dates: [], students: [], loaded: false };
+const batchState = { dates: [], students: [], loaded: false, tagList: [] };
+
+function renderAwardOptionPick() {
+  const tagId = document.getElementById('awardTag').value;
+  const tag = (batchState.tagList || []).find(t => t.id === tagId);
+  const field = document.getElementById('awardOptionField');
+  const sel = document.getElementById('awardOption');
+  const opts = (tag && tag.options) || [];
+  if (!opts.length) { field.hidden = true; sel.innerHTML = '<option value="">请选择</option>'; return; }
+  field.hidden = false;
+  sel.innerHTML = '<option value="">（不选则记为父标签）</option>' +
+    opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+}
 
 async function activateBatchTab() {
   if (!batchState.loaded) {
     batchState.loaded = true;
     await loadBatchClasses();
     document.getElementById('awardClass').addEventListener('change', loadBatchTagsAndStudents);
+    document.getElementById('awardTag').addEventListener('change', renderAwardOptionPick);
     document.getElementById('btnAddAwardDate').addEventListener('click', addBatchDate);
     document.getElementById('btnAwardToday').addEventListener('click', () => {
       document.getElementById('awardDates').value = todayStr(); addBatchDate();
@@ -1796,19 +1809,16 @@ async function loadBatchTagsAndStudents() {
   batchState.allStudents = (students || []).map(s => s.student_name);
   batchState.students = batchState.allStudents.slice();
   renderBatchStudents();
-  // 标签：二级标签必须选到具体小项；有下级的父标签不直接可选
+  // 标签：正常加载全部；有二级选项(如优秀作业)时再弹出小项
   const { data: tags } = await supabase.from('behavior_tags')
-    .select('id,label,category,xp_value,parent_id').eq('is_active', true).order('sort_order');
-  const list = tags || [];
-  const parentIds = new Set(list.map(t => t.parent_id).filter(Boolean));
-  const parentLabel = {};
-  list.forEach(t => { if (t.parent_id) parentLabel[t.id] = (list.find(x => x.id === t.parent_id) || {}).label || ''; });
-  const leaf = list.filter(t => !parentIds.has(t.id));
+    .select('id,label,category,xp_value,options').eq('is_active', true).order('sort_order');
+  batchState.tagList = tags || [];
   tagSel.innerHTML = '<option value="">请选择标签</option>' +
-    leaf.map(t => {
-      const pre = parentLabel[t.id] ? `　└ ${parentLabel[t.id]} / ` : '';
-      return `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${pre}${esc(t.label)}</option>`;
+    batchState.tagList.map(t => {
+      const n = (t.options || []).length;
+      return `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${esc(t.label)}${n?`（含${n}小项）`:''}</option>`;
     }).join('');
+  renderAwardOptionPick();
   loadAwardTasks(cls);
 }
 
@@ -1857,7 +1867,8 @@ async function runBatchAward() {
   result.textContent = '';
   try {
     const { data, error } = await supabase.rpc('batch_award_tag', {
-      p_class: cls, p_dates: batchState.dates, p_students: batchState.students, p_tag_id: Number(tagId)
+      p_class: cls, p_dates: batchState.dates, p_students: batchState.students,
+      p_tag_id: tagId, p_label: document.getElementById('awardOption').value || null
     });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
