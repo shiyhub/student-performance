@@ -744,3 +744,17 @@ body{background:#eef3ee;}
 .diary-col.c2{flex:1.1;}
 .diary-col.c3{flex:1;}
 .red-card{padding:14px;}
+#formView.container{max-width:100% !important;width:100% !important;margin:0 !important;padding:10px 20px !important;}
+#formView .diary3{width:100%;max-width:none;}
+/* ===== 16:9 大屏适配（2K/4K 希沃白板），只做桌面端 ===== */
+#formView.container{
+  max-width: min(96vw, calc(96vh * 16 / 9)) !important;
+  width:100% !important; margin:0 auto !important; padding:1vh 2vw !important;
+  font-size: clamp(14px, 1.1vw, 22px);
+}
+#formView .diary3{gap:1.2vw;width:100%;}
+#formView .diary-col.c1{flex:0 0 20vw;}
+#formView .red-card{padding:1.2vw;border-radius:12px;}
+#formView .card-title{font-size:1.1em;}
+#formView .stu-task-grades button,#formView .stu-task-grade{font-size:0.95em;padding:0.6em 0.8em;}
+#btnSubmit{font-size:1.3em;padding:0.9em;}
