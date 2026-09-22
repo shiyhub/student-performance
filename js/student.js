@@ -1104,7 +1104,7 @@ async function loadPastTasks() {
       const btns = TASK_GRADES.map(g =>
         `<button type="button" class="stu-task-grade sm ${g.key === cur ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`
       ).join('');
-      return `<div class="past-row active">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
+      return `<div class="past-row active stack">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
     }).join('');
     els.pastTaskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
       btn.addEventListener('click', async () => {
