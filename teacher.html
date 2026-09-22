@@ -56,6 +56,7 @@
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
       <button class="tab-btn" data-tab="task">📋 每日任务</button>
       <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
+      <button class="tab-btn" data-tab="stats">📊 数据统计</button>
       <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
     </nav>
 
@@ -435,6 +436,49 @@
         <button class="btn btn-primary" type="button" id="btnTaskGradeGo">🚀 批量给所选学生评等级</button>
         <span id="taskGradeResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
+    </section>
+
+    <!-- ===== 数据统计 ===== -->
+    <section id="tabStats" hidden>
+      <div class="card">
+        <div class="card-title">📊 数据统计</div>
+        <div class="grid">
+          <div class="field">
+            <label for="statsClass">班级</label>
+            <select class="input" id="statsClass"><option value="">全部班级</option></select>
+          </div>
+          <div class="field">
+            <label for="statsFrom">开始日期</label>
+            <input class="input" id="statsFrom" type="date">
+          </div>
+          <div class="field">
+            <label for="statsTo">结束日期</label>
+            <input class="input" id="statsTo" type="date">
+          </div>
+          <div class="field">
+            <label for="statsStudent">查看单个学生</label>
+            <select class="input" id="statsStudent"><option value="">全班汇总</option></select>
+          </div>
+          <div class="field">
+            <label for="statsTask">按任务查：谁完成/没完成</label>
+            <select class="input" id="statsTask"><option value="">不按任务</option></select>
+          </div>
+          <div class="field">
+            <label for="statsTag">按小项查：谁做到/没做到（如背了某课）</label>
+            <select class="input" id="statsTag"><option value="">不按小项</option></select>
+          </div>
+          <div class="field">
+            <label for="statsCategory">表现分类</label>
+            <select class="input" id="statsCategory">
+              <option value="">全部</option>
+              <option value="positive">仅积极表现</option>
+              <option value="negative">仅需要加油</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btnStatsGo">🔍 生成统计</button>
+      </div>
+      <div class="card" id="statsOut" style="margin-top:12px;"><div class="text-muted">选好条件点"生成统计"。</div></div>
     </section>
   </main>
 </div>
