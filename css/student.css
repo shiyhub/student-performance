@@ -799,3 +799,6 @@ html,body{background:#e8e6e1 !important;}
 .wall-class-left{flex:0 0 16.66% !important;}
 .wall-class-left .mate{min-height:150px;}
 .wall-top .wall-class-card{margin-left:8px;}
+
+.diary-col.c2 > .card:first-child{flex:1;display:flex;flex-direction:column;}
+#pastTaskBody{flex:1;overflow-y:auto;}
