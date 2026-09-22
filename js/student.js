@@ -310,7 +310,7 @@ async function loadWall() {
       .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
       .eq('class', cls);
   if (sem && sem !== '全部') recQ.eq('semester', sem);
-  const [rosterRes, recordRes, taskSubRes, taskDefRes] = await Promise.all([
+  const [rosterRes, recordRes, taskDefRes] = await Promise.all([
     supabase.from('student_directory')
       .select('*')
       .eq('class', cls)
@@ -319,9 +319,6 @@ async function loadWall() {
       .order('record_date', { ascending: false })
       .order('create_at', { ascending: false })
       .limit(1000),
-    supabase.from('task_submission')
-      .select('student_name,grade,task_id,task_date')
-      .eq('class', cls).eq('task_date', todayStr()),
     supabase.from('daily_task')
       .select('id,title,task_type')
       .eq('class', cls).eq('task_date', todayStr())
@@ -335,7 +332,16 @@ async function loadWall() {
   state.roster = rosterRes.data || [];
   state.records = recordRes.data || [];
   state.todayTaskDefs = taskDefRes.data || [];
-  state.todayTaskSubs = taskSubRes.data || [];
+  // task_submission 没有 task_date/class 列，按当天任务 id 查提交
+  let todayTaskSubs = [];
+  if (state.todayTaskDefs.length) {
+    const ids = state.todayTaskDefs.map(t => t.id);
+    const subRes = await supabase.from('task_submission')
+      .select('student_name,grade,task_id')
+      .in('task_id', ids);
+    todayTaskSubs = subRes.data || [];
+  }
+  state.todayTaskSubs = todayTaskSubs;
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
