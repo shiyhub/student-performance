@@ -1715,12 +1715,18 @@ function renderAwardOptionPick() {
   const tagId = document.getElementById('awardTag').value;
   const tag = (batchState.tagList || []).find(t => t.id === tagId);
   const field = document.getElementById('awardOptionField');
-  const sel = document.getElementById('awardOption');
+  const box = document.getElementById('awardOptionBox');
   const opts = (tag && tag.options) || [];
-  if (!opts.length) { field.hidden = true; sel.innerHTML = '<option value="">请选择</option>'; return; }
+  if (!opts.length) { field.hidden = true; box.innerHTML = ''; return; }
   field.hidden = false;
-  sel.innerHTML = '<option value="">（不选则记为父标签）</option>' +
-    opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  box.innerHTML = opts.map(o =>
+    `<label class="batch-pill"><input type="checkbox" value="${esc(o)}" style="display:none">${esc(o)}</label>`).join('');
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    cb.closest('.batch-pill').classList.toggle('on', cb.checked);
+  }));
+}
+function selectedAwardOptions() {
+  return [...document.querySelectorAll('#awardOptionBox input:checked')].map(i => i.value);
 }
 
 async function activateBatchTab() {
@@ -1866,13 +1872,20 @@ async function runBatchAward() {
   btn.disabled = true; btn.textContent = '正在写入…';
   result.textContent = '';
   try {
-    const { data, error } = await supabase.rpc('batch_award_tag', {
-      p_class: cls, p_dates: batchState.dates, p_students: batchState.students,
-      p_tag_id: tagId, p_label: document.getElementById('awardOption').value || null
-    });
-    if (error) throw error;
-    const row = Array.isArray(data) ? data[0] : data;
-    result.textContent = '✅ ' + (row && row.message ? row.message : '完成');
+    const opts = selectedAwardOptions();
+    const labels = opts.length ? opts : [null];
+    let total = 0, lastMsg = '';
+    for (const lb of labels) {
+      const { data, error } = await supabase.rpc('batch_award_tag', {
+        p_class: cls, p_dates: batchState.dates, p_students: batchState.students,
+        p_tag_id: tagId, p_label: lb
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      total += (row && row.ok_count) || 0;
+      lastMsg = (row && row.message) || '';
+    }
+    result.textContent = '✅ 共写入 ' + total + ' 条（' + lastMsg + '）';
     toast('批量评价完成！');
   } catch (e) {
     result.textContent = '❌ ' + (e.message || '失败');
