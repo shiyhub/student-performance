@@ -249,6 +249,7 @@ async function loadClasses() {
       applyReadonlyMode();
     }
   });
+  flushPending();
 }
 
 function showDeviceGate() {
@@ -1104,9 +1105,11 @@ async function loadPastTasks() {
       .select('id,title,detail,task_date,task_type,due_time')
       .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
       .order('task_date', { ascending: false });
-    const { data: subs } = await supabase.from('task_submission')
-      .select('task_id,grade').eq('class', cls).eq('student_name', name);
-    const gradeMap = {}; (subs||[]).forEach(s => gradeMap[s.task_id] = s.grade);
+    const taskIds = (tasks||[]).map(t => t.id);
+    const subs = taskIds.length
+      ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds)).data || []
+      : [];
+    const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
     const now = new Date(); now.setHours(0,0,0,0);
@@ -1264,13 +1267,41 @@ async function onSubmit() {
     loadTags();   // 刷新当天已打项，立即置灰
     loadWall();   // 提交后立刻刷新班级墙：今日条数、经验、老师评语同步
   } catch (e) {
-    sfx.oops();
-    toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+    // 断网/网络错误：先存本机，联网自动补传（按人按天合并，不会重复加经验）
+    const offline = !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+    if (offline) {
+      try {
+        const q = JSON.parse(localStorage.getItem('sp_pending') || '[]');
+        q.push({ cls, name, mood: MOOD_BY_LEVEL(state.moodLevel).key, items, at: Date.now() });
+        localStorage.setItem('sp_pending', JSON.stringify(q));
+        sfx.pick();
+        toast('📡 当前没网，已先保存到本机，联网后自动上传');
+      } catch (e2) { sfx.oops(); toast('网络异常'); }
+    } else {
+      sfx.oops();
+      toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+    }
   } finally {
     els.btnSubmit.disabled = false;
     els.btnSubmit.textContent = '提交今天的表现 🎈';
   }
 }
+
+// 启动时 + 联网时，把本机待上传的记录补传
+async function flushPending() {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem('sp_pending') || '[]'); } catch (e) {}
+  if (!q.length || !navigator.onLine) return;
+  const left = [];
+  for (const p of q) {
+    try {
+      await supabase.rpc('submit_today', { p_class: p.cls, p_student: p.name, p_mood: p.mood, p_items: p.items });
+    } catch (e) { left.push(p); }
+  }
+  localStorage.setItem('sp_pending', JSON.stringify(left));
+  if (q.length - left.length > 0) { toast('📡 已自动上传 ' + (q.length-left.length) + ' 条离线记录'); loadWall(); }
+}
+window.addEventListener('online', flushPending);
 
 function resetSelections() {
   state.stars = 0;
