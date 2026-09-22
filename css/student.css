@@ -767,3 +767,15 @@ body{background:#eef3ee;}
 #formView .diary-col.c3{flex:2 !important;}
 #formView #tagsCard,#formView #pastTaskCard,#formView #taskCard{width:100% !important;max-width:none !important;}
 #formView .tag-grid{grid-template-columns:repeat(3,1fr) !important;}
+/* ===== 莫兰迪护眼配色 ===== */
+html,body{background:#e8e6e1 !important;}
+.student-view,.wall-view{background:#e8e6e1;}
+.red-card{background:#f4f1ec;border:1.5px solid #b8a9a0;}
+.red-title{color:#a67b6e !important;}
+.red-sub{background:#efe9e2;border:1px dashed #c9b8ad;}
+.s-header h1.s-title{color:#9c6b5e;}
+.tag-group-title.pos{color:#7a9b76 !important;}
+.tag-group-title.neg{color:#b0857c !important;}
+.tag-grid button{background:#fbf9f5;border:1.5px solid #c9c2b8;}
+.tag-grid button.on{background:#c8d5c0;border-color:#8aa083;}
+#btnSubmit{background:#c9a08e !important;}
