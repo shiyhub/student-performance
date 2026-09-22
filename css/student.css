@@ -717,3 +717,8 @@ body {
 #pastTaskBody::-webkit-scrollbar{width:8px;}
 #pastTaskBody::-webkit-scrollbar-thumb{background:#cfdcd6;border-radius:8px;}
 #btnSubmit{width:100%;max-width:520px;margin:18px auto 0;display:block;font-size:22px;padding:18px;border-radius:16px;}
+.form-columns{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start;}
+.form-col-left{display:flex;flex-direction:column;gap:14px;}
+.form-col-right{position:sticky;top:10px;}
+.duo-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:900px){.form-columns{grid-template-columns:1fr;}.form-col-right{position:static;}}

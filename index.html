@@ -131,17 +131,35 @@
     </div>
   </section>
 
-  <!-- 往日任务回顾（近一周） -->
-  <section class="card" id="pastTaskCard" hidden>
-    <div class="card-title">🗓️ 往日任务（近7天）</div>
-    <div id="pastTaskBody"></div>
-  </section>
+  <!-- 主体两栏：左栏今日任务/背诵/默写，右栏往日任务 -->
+  <div class="form-columns">
+    <div class="form-col-left">
+      <!-- 今日学习任务 -->
+      <section class="card task-card" id="taskCard" hidden>
+        <div class="card-title">📋 今日任务</div>
+        <div id="taskBody"></div>
+      </section>
 
-  <!-- 今日学习任务 -->
-  <section class="card task-card" id="taskCard" hidden>
-    <div class="card-title">📋 今日学习任务</div>
-    <div id="taskBody"></div>
-  </section>
+      <div class="duo-row">
+        <section class="card task-card" id="reciteTaskCard" hidden>
+          <div class="card-title">🎤 背诵任务</div>
+          <div id="reciteTaskBody"></div>
+        </section>
+        <section class="card task-card" id="dictationTaskCard" hidden>
+          <div class="card-title">✏️ 默写任务</div>
+          <div id="dictationTaskBody"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="form-col-right">
+      <!-- 往日任务回顾（近一周） -->
+      <section class="card" id="pastTaskCard" hidden>
+        <div class="card-title">🗓️ 往日任务（近7天）</div>
+        <div id="pastTaskBody"></div>
+      </section>
+    </div>
+  </div>
 
   <!-- 表现标签 -->
   <section class="card" id="tagsCard">

@@ -153,6 +153,8 @@ const els = {
   confettiBox: $('#confettiBox'),
   taskCard: $('#taskCard'),
   taskBody: $('#taskBody'),
+  reciteTaskCard: $('#reciteTaskCard'), reciteTaskBody: $('#reciteTaskBody'),
+  dictationTaskCard: $('#dictationTaskCard'), dictationTaskBody: $('#dictationTaskBody'),
   pastTaskCard: $('#pastTaskCard'),
   pastTaskBody: $('#pastTaskBody')
 };
@@ -1439,27 +1441,34 @@ async function loadStudentTask() {
     data = r.data;
   } catch (e) { data = null; }
   const tasks = (data && data.tasks) || [];
-  if (!tasks.length) {
-    els.taskBody.innerHTML = '<p class="text-muted">老师今天还没布置任务，先填下面的小表现吧～</p>';
-    return;
-  }
-  let html = '';
-  tasks.forEach(t => {
-    const my = t.my_grade || 'none';
-    const typeLabel = t.task_type === 'homework' ? '🏠 家庭作业' : '🏫 课堂作业';
-    html += `<div class="stu-task">
-      <div class="stu-task-head"><span class="stu-task-type ${t.task_type}">${typeLabel}</span></div>
-      <div class="stu-task-title">${escapeHtml(t.title)}</div>
-      ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
-      <div class="stu-task-grades">`;
-    TASK_GRADES.forEach(g => {
-      html += `<button type="button" class="stu-task-grade ${g.key === my ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`;
-    });
-    html += `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
-  });
-  els.taskBody.innerHTML = html;
+  const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
+  const recite = tasks.filter(t => t.task_type === 'recite');
+  const dict = tasks.filter(t => t.task_type === 'dictation');
 
-  els.taskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
+  function cardHtml(list, short) {
+    if (!list.length) return null;
+    return list.map(t => {
+      const my = t.my_grade || 'none';
+      const grades = short
+        ? [['none','⏳ 未完成'],['done','✅ 完成']]
+        : [['none','⏳ 还没做'],['done','✅ 完成了'],['good','👍 优秀 A'],['perfect','🏆 完美 A+']];
+      return `<div class="stu-task">
+        <div class="stu-task-title">${escapeHtml(t.title)}</div>
+        ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
+        <div class="stu-task-grades">` +
+        grades.map(([k,label]) => `<button type="button" class="stu-task-grade ${k===my?'on':''}" data-grade="${k}" data-task="${t.id}">${label}</button>`).join('') +
+        `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
+    }).join('');
+  }
+
+  els.taskCard.hidden = !normal.length;
+  els.taskBody.innerHTML = normal.length ? cardHtml(normal, false) : '';
+  els.reciteTaskCard.hidden = !recite.length;
+  els.reciteTaskBody.innerHTML = recite.length ? cardHtml(recite, true) : '';
+  els.dictationTaskCard.hidden = !dict.length;
+  els.dictationTaskBody.innerHTML = dict.length ? cardHtml(dict, true) : '';
+
+  document.querySelectorAll('.stu-task-grade').forEach(btn => {
     btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn));
   });
 }
@@ -1475,7 +1484,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   if (res.error) { sfx.oops(); toast('保存失败，请重试'); return; }
   const d = res.data || {};
   sfx.pick();
-  const resultEl = els.taskBody.querySelector(`[data-result="${taskId}"]`);
+  const resultEl = document.querySelector(`[data-result="${taskId}"]`);
   if (resultEl) {
     if (grade === 'none') {
       resultEl.textContent = '好的，继续加油把任务完成吧！';
