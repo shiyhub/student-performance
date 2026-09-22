@@ -1204,6 +1204,7 @@ async function onSubmit() {
     resetSelections();
     renderMoodPreview();
     loadTags();   // 刷新当天已打项，立即置灰
+    loadWall();   // 提交后立刻刷新班级墙：今日条数、经验、老师评语同步
   } catch (e) {
     sfx.oops();
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
