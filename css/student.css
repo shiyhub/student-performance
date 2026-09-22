@@ -708,3 +708,7 @@ body {
 .gate-students{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
 .gate-students button{border:2px solid #cfe6d2;background:#f6fbf6;border-radius:20px;padding:8px 14px;font-size:15px;cursor:pointer;}
 .gate-students button:hover{background:#dcefe0;border-color:#9cc7a4;}
+.past-row.stack{flex-direction:column;align-items:stretch;gap:10px;}
+.past-row.stack .past-line1{font-size:22px;}
+.past-row.stack .past-grade{display:flex;gap:10px;flex-wrap:wrap;}
+.past-row.stack .stu-task-grade{font-size:20px;padding:12px 20px;border-radius:14px;}
