@@ -792,3 +792,4 @@ html,body{background:#e8e6e1 !important;}
 .wall-class-left{flex:0 0 180px;}
 .wall-top .wall-class-card{flex:1;margin:0;}
 .mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.mate.seat-empty{background:transparent;border:1.5px dashed #d8cfc4;min-height:140px;}

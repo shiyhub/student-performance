@@ -337,7 +337,7 @@ async function loadWall() {
   state.seatMap = {};
   try {
     const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
-    (seatRes.data||[]).forEach(s => { state.seatMap[s.student_name] = s.seat_row*10 + s.seat_col; });
+    (seatRes.data||[]).forEach(s => { state.seatMap[s.student_name] = (s.seat_row*6 + s.seat_col); });
   } catch(e) {}
   state.todayTaskDefs = taskDefRes.data || [];
   // task_submission 没有 task_date/class 列，按当天任务 id 查提交
@@ -387,15 +387,26 @@ function renderWall() {
   const slot = document.getElementById('wallClassCard');
   if (slot) slot.innerHTML = classCard;
 
-  // 按座位编排排序（若老师设置了座位）
-  const ordered = state.roster.slice();
-  if (state.seatMap && Object.keys(state.seatMap).length) {
-    ordered.sort((a,b) => {
-      const ka = state.seatMap[a.student_name] || 999, kb = state.seatMap[b.student_name] || 999;
-      return ka - kb;
+  // 按座位编排：空位保留，按 seat_row*6+col 定位
+  const useSeat = state.seatMap && Object.keys(state.seatMap).length;
+  const slotOf = {};
+  if (useSeat) Object.entries(state.seatMap).forEach(([n,i]) => slotOf[i] = n);
+  const ordered = [];
+  if (useSeat) {
+    for (let i=0;i<42;i++) {
+      const n = slotOf[i];
+      if (n) ordered.push(state.roster.find(s=>s.student_name===n));
+      else ordered.push(null); // 空位占位
+    }
+    state.roster.forEach(s => {
+      const placed = Object.values(state.seatMap).some(v => v === state.seatMap[s.student_name]);
+      if (!placed) ordered.push(s);
     });
+  } else {
+    state.roster.forEach(s=>ordered.push(s));
   }
   ordered.forEach((s) => {
+    if (!s) { html += `<div class="mate seat-empty"></div>`; return; }
     const mine = recs.filter(r => r.student_name === s.student_name);
     const mineRated = mine.filter(r => Number(r.self_evaluation) > 0);
     const avg = mineRated.length
