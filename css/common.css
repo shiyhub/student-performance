@@ -112,3 +112,21 @@ textarea.input { resize: vertical; min-height: 72px; }
 
 /* ========== 小工具 ========== */
 .text-muted { color: var(--ink-2); font-size: 13px; }
+
+/* ========== 视觉统一整理（消除乱感） ========== */
+.container{max-width:1100px;}
+.card{padding:20px;margin-bottom:16px;border-radius:18px;}
+.card-title{font-size:18px;margin-bottom:14px;}
+.field{margin-bottom:14px;}
+.grid,.filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.btn{width:auto;padding:12px 20px;font-weight:600;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-warn{background:var(--warn);color:#fff;}
+.btn-ghost{background:var(--primary-soft);color:var(--primary-d);}
+.batch-pill,.batch-chip{border-radius:999px;padding:8px 14px;font-size:14px;background:#f1f5f3;}
+.batch-pill.on{background:var(--primary);color:#fff;}
+.chips-row{display:flex;flex-wrap:wrap;gap:8px;}
+.mate{border-radius:18px;transition:transform .12s,box-shadow .12s;}
+.mate:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.mate-badge{font-size:12px;border-radius:999px;padding:2px 10px;}
