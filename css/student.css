@@ -722,3 +722,13 @@ body {
 .form-col-right{position:sticky;top:10px;}
 .duo-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media (max-width:900px){.form-columns{grid-template-columns:1fr;}.form-col-right{position:static;}}
+.diary3{display:flex;gap:14px;align-items:stretch;}
+.diary-col{display:flex;flex-direction:column;gap:14px;}
+.diary-col.c1{flex:0 0 280px;}
+.diary-col.c2{flex:1.2;}
+.diary-col.c3{flex:1;}
+.red-card{background:#fff;border:1.5px solid #e05555;border-radius:12px;}
+.red-title{color:#d23b3b;}
+.red-sub{background:#fff8f8;border:1px dashed #e8a0a0;border-radius:10px;padding:10px;}
+.s-header h1.s-title{color:#d23b3b;}
+@media (max-width:1000px){.diary3{flex-direction:column;}.diary-col.c1{flex:none;}}

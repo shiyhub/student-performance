@@ -94,8 +94,11 @@
     系统还没有连接数据库（Supabase 未配置），暂时不能提交，请联系老师完成部署。
   </div>
 
-  <!-- 身份 -->
-  <section class="card" id="identityCard">
+  <!-- 三栏布局 -->
+  <div class="diary3">
+  <div class="diary-col c1">
+  <!-- 身份（个人信息） -->
+  <section class="card red-card" id="identityCard">
     <button type="button" class="identity-avatar" id="btnPickAvatar">
       <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
       <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
@@ -131,55 +134,55 @@
     </div>
   </section>
 
-  <!-- 主体两栏：左栏今日任务/背诵/默写，右栏往日任务 -->
-  <div class="form-columns">
-    <div class="form-col-left">
-      <!-- 今日学习任务 -->
-      <section class="card task-card" id="taskCard" hidden>
-        <div class="card-title">📋 今日任务</div>
-        <div id="taskBody"></div>
-      </section>
+  <!-- 今日任务（第一栏下方） -->
+  <section class="card red-card task-card" id="taskCard" hidden>
+    <div class="card-title red-title">📋 今日任务</div>
+    <div id="taskBody"></div>
+  </section>
+  </div><!-- /c1 -->
 
-      <div class="duo-row">
-        <section class="card task-card" id="reciteTaskCard" hidden>
-          <div class="card-title">🎤 背诵任务</div>
-          <div id="reciteTaskBody"></div>
-        </section>
-        <section class="card task-card" id="dictationTaskCard" hidden>
-          <div class="card-title">✏️ 默写任务</div>
-          <div id="dictationTaskBody"></div>
-        </section>
-      </div>
-    </div>
-
-    <div class="form-col-right">
-      <!-- 往日任务回顾（近一周） -->
-      <section class="card" id="pastTaskCard" hidden>
-        <div class="card-title">🗓️ 往日任务（近7天）</div>
-        <div id="pastTaskBody"></div>
-      </section>
-    </div>
+  <div class="diary-col c2">
+  <!-- 往日任务（中间大卡） -->
+  <section class="card red-card" id="pastTaskCard" hidden>
+    <div class="card-title red-title">🗓️ 往日任务（近7天）</div>
+    <div id="pastTaskBody"></div>
+  </section>
+  <div class="duo-row">
+    <section class="card red-card task-card" id="reciteTaskCard" hidden>
+      <div class="card-title red-title">🎤 背诵任务</div>
+      <div id="reciteTaskBody"></div>
+    </section>
+    <section class="card red-card task-card" id="dictationTaskCard" hidden>
+      <div class="card-title red-title">✏️ 默写任务</div>
+      <div id="dictationTaskBody"></div>
+    </section>
   </div>
+  </div><!-- /c2 -->
 
-  <!-- 表现标签 -->
-  <section class="card" id="tagsCard">
-    <div class="card-title">📝 今天的小表现</div>
+  <div class="diary-col c3">
+  <!-- 表现标签（第三栏） -->
+  <section class="card red-card" id="tagsCard">
+    <div class="card-title red-title">📝 今天的小表现</div>
     <div id="tagsLoading" class="loading-row"><span class="spinner"></span>正在加载表现项目…</div>
     <div id="tagsBox" hidden>
-      <div class="tag-group">
-        <div class="tag-group-title pos">🌟 积极表现</div>
+      <div class="tag-group red-sub">
+        <div class="tag-group-title pos red-title">🌟 积极表现</div>
         <div class="tag-grid" id="posGrid"></div>
         <div id="textTagsBox"></div>
       </div>
-      <div class="tag-group" id="negGroup">
-        <div class="tag-group-title neg">💧 需要加油</div>
+      <div class="tag-group red-sub" id="negGroup">
+        <div class="tag-group-title neg red-title">💧 消极表现</div>
         <div class="tag-grid" id="negGrid"></div>
       </div>
+      <div class="tag-group red-sub">
+        <div class="tag-group-title red-title">🌱 提升方向</div>
+        <div class="text-muted" style="padding:8px;min-height:48px;">（在这里写下今天想改进的地方）</div>
+      </div>
     </div>
-    <div id="tagsFailed" class="banner banner-info" hidden>
-      表现项目暂时加载失败，不影响提交星级。
-    </div>
+    <div id="tagsFailed" class="banner banner-info" hidden>表现项目暂时加载失败。</div>
   </section>
+  </div><!-- /c3 -->
+  </div><!-- /diary3 -->
 
   <div class="submit-wrap">
     <button class="btn btn-warn" id="btnSubmit">提交今天的表现 🎈</button>
