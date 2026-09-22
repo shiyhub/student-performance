@@ -171,6 +171,13 @@ async function onQuery() {
       supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_parent: parent })
     ]);
     if (recRes.error) throw recRes.error;
+    // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
+    try {
+      const { data: tags } = await supabase.from('behavior_tags').select('label,options').eq('is_active', true);
+      const m = {};
+      (tags || []).forEach(t => (t.options || []).forEach(o => { m[o] = t.label; }));
+      window.__tagOptionMap = m;
+    } catch (e) {}
     const records = recRes.data || [];
     const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
     const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
@@ -501,14 +508,18 @@ function renderRecordCard(r) {
   if (items.length) {
     itemsHtml = '<ul class="item-list">';
     items.forEach(it => {
-      const label = esc(it.label || '');
       const neg = it.category === 'negative';
+      let label = it.label || '';
+      // 若该标签是某个一级标签下的小项，前面补上一级名（如 欠作业·语文作业）
+      const pLabel = (window.__tagOptionMap || {})[label];
+      if (pLabel && label.indexOf(pLabel) !== 0) label = pLabel + '·' + label;
+      label = (neg ? '⚠️ ' : '') + escapeHtmlP(label);
       const liCls = neg ? ' class="item-neg"' : '';
       const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
       if (it.type === 'text') {
-        itemsHtml += `<li${liCls}><b>${label}：</b>${esc(it.value || '')}</li>`;
+        itemsHtml += `<li${liCls}><b>${label}：</b>${escapeHtmlP(it.value || '')}</li>`;
       } else if (it.value) {
-        itemsHtml += `<li${liCls}>${tick}${label} <span class="item-sub">· ${esc(it.value)}</span></li>`;
+        itemsHtml += `<li${liCls}>${tick}${label} <span class="item-sub">· ${escapeHtmlP(it.value)}</span></li>`;
       } else {
         itemsHtml += `<li${liCls}>${tick}${label}</li>`;
       }
@@ -718,7 +729,7 @@ if (els.paperViewModal) {
 function renderTasks(tasks) {
   if (!tasks || !tasks.length) { els.tasksCard.hidden = true; els.tasksList.innerHTML = ''; return; }
   const gradeMap = {
-    none:    { label: '无表现', cls: 'g-none', icon: '⏳' },
+    none:    { label: '未完成', cls: 'g-none', icon: '⏳' },
     done:    { label: '完成',   cls: 'g-done', icon: '✅' },
     good:    { label: '优秀 A', cls: 'g-good', icon: '👍' },
     perfect: { label: '完美 A+', cls: 'g-perfect', icon: '🏆' }
