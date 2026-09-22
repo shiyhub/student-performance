@@ -1087,6 +1087,8 @@ function showForm(presetName) {
   window.scrollTo({ top: 0 });
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
+  resetSelections();
+  loadTags();
   loadStudentTask();
   loadPastTasks();
 }
