@@ -42,8 +42,10 @@
     系统还没有连接数据库（Supabase 未配置），暂时不能查看，请联系老师完成部署。
   </div>
 
-  <section class="card">
-    <div class="wall-class-row">
+  <div class="wall-top">
+    <div id="wallClassCard" class="wall-class-left"></div>
+    <section class="card wall-class-card">
+      <div class="wall-class-row">
       <label for="wallClass">我的班级</label>
       <select class="input" id="wallClass"></select>
       <label for="wallSemester">学期</label>
@@ -68,7 +70,8 @@
       </div>
       <div class="cp-bar green"><div class="cp-fill green" id="cpFillGreen"></div></div>
     </div>
-  </section>
+    </section>
+  </div>
 
   <div id="wallLoading" class="loading-row"><span class="spinner"></span>正在加载同学们…</div>
   <div id="matesGrid" class="mates" hidden></div>

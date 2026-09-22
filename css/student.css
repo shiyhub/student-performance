@@ -779,3 +779,16 @@ html,body{background:#e8e6e1 !important;}
 .tag-grid button{background:#fbf9f5;border:1.5px solid #c9c2b8;}
 .tag-grid button.on{background:#c8d5c0;border-color:#8aa083;}
 #btnSubmit{background:#c9a08e !important;}
+.s-header{padding:6px 0 4px;display:flex;align-items:center;gap:12px;}
+.s-header .s-mascot{flex:0 0 auto;}
+.s-header .s-title{margin:0;font-size:1.3em;}
+.s-header .s-date{margin-left:auto;}
+.mate-class-all{grid-column:1/-1;max-width:220px;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;}
+.mate-class-all{grid-column:auto;max-width:none;}
+.wall-class-card{display:flex;align-items:center;gap:12px;}
+.wall-class-card .class-progress{flex:1;}
+.wall-top{display:flex;gap:14px;align-items:stretch;}
+.wall-class-left{flex:0 0 180px;}
+.wall-top .wall-class-card{flex:1;margin:0;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}

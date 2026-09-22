@@ -378,12 +378,14 @@ function renderWall() {
 
   let html = '';
 
-  // 全班汇总卡：显示班级经验与等级，点击仍可看记录数详情
-  html += `<button class="mate mate-class-all" data-detail="__all__">
+  // 全班汇总卡放到标题栏左侧
+  const classCard = `<button class="mate mate-class-all" data-detail="__all__" style="width:100%;margin:0;">
       <span class="mate-avatar">🌈</span>
       <span class="mate-badge xp-badge">🧡 ${classXp} 经验</span>
       <span class="mate-name">全班 ${classLvText}</span>
     </button>`;
+  const slot = document.getElementById('wallClassCard');
+  if (slot) slot.innerHTML = classCard;
 
   // 按座位编排排序（若老师设置了座位）
   const ordered = state.roster.slice();
