@@ -685,3 +685,121 @@ body {
 }
 /* v28：填写页不再显示今日心情选择，只在班级墙头像预览 */
 #moodPreviewCard { display: none !important; }
+
+/* v31：任务卡收进中栏（覆盖旧的整行规则） */
+@media (min-width: 1200px) {
+  #formView #taskCard { grid-column: 2; width: 100%; }
+}
+
+/* v32：返回箭头放大醒目 */
+.wall-back { width:56px !important; height:56px !important; left:12px !important; top:50% !important; }
+.wall-back .back-tri { font-size:34px !important; }
+.wall-back::after { content:"返回"; position:absolute; left:64px; top:50%; transform:translateY(-50%); background:#3aa655; color:#fff; font-size:14px; padding:6px 10px; border-radius:8px; white-space:nowrap; }
+.mate-badge.xp-badge { background:#fff3e0; color:#e8821e; font-weight:700; }
+.class-progress { margin-top:14px; }
+.cp-row { display:flex; justify-content:space-between; font-size:14px; color:#666; margin:6px 0 4px; }
+.cp-row b { color:#e8821e; }
+.cp-bar { height:12px; background:#f0e6d6; border-radius:8px; overflow:hidden; }
+.cp-fill { height:100%; width:0; background:linear-gradient(90deg,#ffb347,#ff8c42); border-radius:8px; transition:width .6s; }
+.cp-bar.green { background:#dfeee2; }
+.cp-fill.green { background:linear-gradient(90deg,#7bc98a,#3aa655); }
+.device-gate{position:fixed;inset:0;background:linear-gradient(160deg,#eaf6ec,#fdf3e3);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;}
+.gate-card{background:#fff;border-radius:20px;padding:26px;max-width:640px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.12);}
+.gate-students{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.gate-students button{border:2px solid #cfe6d2;background:#f6fbf6;border-radius:20px;padding:8px 14px;font-size:15px;cursor:pointer;}
+.gate-students button:hover{background:#dcefe0;border-color:#9cc7a4;}
+.past-row.stack{flex-direction:column;align-items:stretch;gap:10px;}
+.past-row.stack .past-line1{font-size:22px;}
+.past-row.stack .past-grade{display:flex;gap:10px;flex-wrap:wrap;}
+.past-row.stack .stu-task-grade{font-size:20px;padding:12px 20px;border-radius:14px;}
+.task-badge{background:#e8f0ff;color:#2b6cb0;}
+#pastTaskBody{max-height:340px;overflow-y:auto;padding-right:8px;}
+#pastTaskBody::-webkit-scrollbar{width:8px;}
+#pastTaskBody::-webkit-scrollbar-thumb{background:#cfdcd6;border-radius:8px;}
+#btnSubmit{width:100%;max-width:520px;margin:18px auto 0;display:block;font-size:22px;padding:18px;border-radius:16px;}
+.form-columns{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start;}
+.form-col-left{display:flex;flex-direction:column;gap:14px;}
+.form-col-right{position:sticky;top:10px;}
+.duo-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:900px){.form-columns{grid-template-columns:1fr;}.form-col-right{position:static;}}
+.diary3{display:flex;gap:14px;align-items:stretch;}
+.diary-col{display:flex;flex-direction:column;gap:14px;}
+.diary-col.c1{flex:0 0 280px;}
+.diary-col.c2{flex:1.2;}
+.diary-col.c3{flex:1;}
+.red-card{background:#fff;border:1.5px solid #e05555;border-radius:12px;}
+.red-title{color:#d23b3b;}
+.red-sub{background:#fff8f8;border:1px dashed #e8a0a0;border-radius:10px;padding:10px;}
+.s-header h1.s-title{color:#d23b3b;}
+@media (max-width:1000px){.diary3{flex-direction:column;}.diary-col.c1{flex:none;}}
+html,body{background:#eef3ee !important;}
+body{background:#eef3ee;}
+.student-view,.wall-view{background:#eef3ee;}
+.red-card{background:#fdfbf7;}
+.diary-col{background:transparent;}
+.container{background:transparent;}
+#formView{max-width:none !important;width:100%;padding:16px 24px;}
+.diary3{gap:18px;}
+.diary-col.c1{flex:0 0 320px;}
+.diary-col.c2{flex:1.1;}
+.diary-col.c3{flex:1;}
+.red-card{padding:14px;}
+#formView.container{max-width:100% !important;width:100% !important;margin:0 !important;padding:10px 20px !important;}
+#formView .diary3{width:100%;max-width:none;}
+/* ===== 16:9 大屏适配（2K/4K 希沃白板），只做桌面端 ===== */
+#formView.container{
+  max-width: min(96vw, calc(96vh * 16 / 9)) !important;
+  width:100% !important; margin:0 auto !important; padding:1vh 2vw !important;
+  font-size: clamp(14px, 1.1vw, 22px);
+}
+#formView .diary3{gap:1.2vw;width:100%;}
+#formView .diary-col.c1{flex:0 0 20vw;}
+#formView .red-card{padding:1.2vw;border-radius:12px;}
+#formView .card-title{font-size:1.1em;}
+#formView .stu-task-grades button,#formView .stu-task-grade{font-size:0.95em;padding:0.6em 0.8em;}
+#btnSubmit{font-size:1.3em;padding:0.9em;}
+/* 强制三栏铺满 */
+#formView{display:flex;flex-direction:column;align-items:stretch;}
+#formView .diary3{display:flex;flex-direction:row;width:100% !important;max-width:none !important;flex:1;}
+#formView .diary-col{width:auto !important;}
+#formView .diary-col.c1{flex:0 0 22vw !important;}
+#formView .diary-col.c2{flex:2 !important;}
+#formView .diary-col.c3{flex:2 !important;}
+#formView #tagsCard,#formView #pastTaskCard,#formView #taskCard{width:100% !important;max-width:none !important;}
+#formView .tag-grid{grid-template-columns:repeat(3,1fr) !important;}
+/* ===== 莫兰迪护眼配色 ===== */
+html,body{background:#e8e6e1 !important;}
+.student-view,.wall-view{background:#e8e6e1;}
+.red-card{background:#f4f1ec;border:1.5px solid #b8a9a0;}
+.red-title{color:#a67b6e !important;}
+.red-sub{background:#efe9e2;border:1px dashed #c9b8ad;}
+.s-header h1.s-title{color:#9c6b5e;}
+.tag-group-title.pos{color:#7a9b76 !important;}
+.tag-group-title.neg{color:#b0857c !important;}
+.tag-grid button{background:#fbf9f5;border:1.5px solid #c9c2b8;}
+.tag-grid button.on{background:#c8d5c0;border-color:#8aa083;}
+#btnSubmit{background:#c9a08e !important;}
+.s-header{padding:6px 0 4px;display:flex;align-items:center;gap:12px;}
+.s-header .s-mascot{flex:0 0 auto;}
+.s-header .s-title{margin:0;font-size:1.3em;}
+.s-header .s-date{margin-left:auto;}
+.mate-class-all{grid-column:1/-1;max-width:220px;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;}
+.mate-class-all{grid-column:auto;max-width:none;}
+.wall-class-card{display:flex;align-items:center;gap:12px;}
+.wall-class-card .class-progress{flex:1;}
+.wall-top{display:flex;gap:14px;align-items:stretch;}
+.wall-class-left{flex:0 0 180px;}
+.wall-top .wall-class-card{flex:1;margin:0;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.mate.seat-empty{background:transparent;border:1.5px dashed #d8cfc4;min-height:140px;}
+#wallView .s-header{justify-content:center;text-align:center;}
+#wallView .s-title{font-size:2em !important;}
+#wallView .s-date{margin-left:0;}
+.wall-class-left{flex:0 0 16.66% !important;}
+.wall-class-left .mate{min-height:150px;}
+.wall-top .wall-class-card{margin-left:8px;}
+.diary-col.c2{display:flex;flex-direction:column;}
+.diary-col.c2 > #pastTaskCard{flex:1;min-height:300px;display:flex;flex-direction:column;}
+.diary-col.c2 > #pastTaskCard #pastTaskBody{flex:1;overflow-y:auto;}
+.diary-col.c2 > .duo-row{flex:0 0 auto;margin-top:14px;}
