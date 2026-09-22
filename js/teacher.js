@@ -2113,10 +2113,13 @@ async function loadSeat() {
   (data||[]).forEach(s => seatState.placed[s.seat_row+'_'+s.seat_col] = s.student_name);
   const stu = await supabase.from('student_info').select('student_name').eq('class', cls);
   const names = (stu.data||[]).map(s=>s.student_name);
+  seatAllNames = names;
   renderSeat(names);
 }
 let seatSelected = null;
+let seatAllNames = [];
 function renderSeat(allNames) {
+  allNames = allNames || seatAllNames;
   document.querySelectorAll('.seat-cell').forEach(cell => {
     const name = seatState.placed[cell.dataset.key];
     cell.innerHTML = name ? `<span class="seat-chip" draggable="true" data-name="${name}" style="cursor:move;background:#c8d5c0;padding:4px 10px;border-radius:8px;">${name}</span>` : '';
@@ -2139,7 +2142,7 @@ function placeAt(key, name) {
   // 若该学生已在别处，先移走
   for (const k in seatState.placed) if (seatState.placed[k]===name) delete seatState.placed[k];
   seatState.placed[key] = name;
-  loadSeat();
+  renderSeat();
 }
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnSeatSave');
