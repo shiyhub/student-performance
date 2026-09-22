@@ -310,7 +310,7 @@ async function loadWall() {
       .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
       .eq('class', cls);
   if (sem && sem !== '全部') recQ.eq('semester', sem);
-  const [rosterRes, recordRes] = await Promise.all([
+  const [rosterRes, recordRes, taskSubRes, taskDefRes] = await Promise.all([
     supabase.from('student_directory')
       .select('*')
       .eq('class', cls)
@@ -318,7 +318,13 @@ async function loadWall() {
     recQ
       .order('record_date', { ascending: false })
       .order('create_at', { ascending: false })
-      .limit(1000)
+      .limit(1000),
+    supabase.from('task_submission')
+      .select('student_name,grade,task_id,task_date')
+      .eq('class', cls).eq('task_date', todayStr()),
+    supabase.from('daily_task')
+      .select('id,title,task_type')
+      .eq('class', cls).eq('task_date', todayStr())
   ]);
 
   els.wallLoading.hidden = true;
@@ -328,6 +334,8 @@ async function loadWall() {
   }
   state.roster = rosterRes.data || [];
   state.records = recordRes.data || [];
+  state.todayTaskDefs = taskDefRes.data || [];
+  state.todayTaskSubs = taskSubRes.data || [];
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
@@ -373,6 +381,12 @@ function renderWall() {
     const todayRecs = mine.filter(r => r.record_date === today);
     const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
     const todayMood = todayRec && todayRec.behavior ? MOOD_MAP[todayRec.behavior.mood] : null;
+    // 今日任务完成情况
+    const totalTasks = (state.todayTaskDefs || []).length;
+    const subMap = {};
+    (state.todayTaskSubs || []).forEach(x => { if (x.student_name === s.student_name && x.grade && x.grade !== 'none') subMap[x.task_id] = x.grade; });
+    const doneTasks = Object.keys(subMap).length;
+    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">📋 ${doneTasks}/${totalTasks}</span>` : '';
     const todayLevel = todayMood
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
@@ -387,6 +401,7 @@ function renderWall() {
         ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
+        ${taskBadge}
         <span class="mate-name">${esc(s.student_name)}</span>
       </button>`;
   });

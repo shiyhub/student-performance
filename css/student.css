@@ -712,3 +712,4 @@ body {
 .past-row.stack .past-line1{font-size:22px;}
 .past-row.stack .past-grade{display:flex;gap:10px;flex-wrap:wrap;}
 .past-row.stack .stu-task-grade{font-size:20px;padding:12px 20px;border-radius:14px;}
+.task-badge{background:#e8f0ff;color:#2b6cb0;}
