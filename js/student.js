@@ -221,8 +221,8 @@ async function loadClasses() {
     return;
   }
 
-  let saved = '';
-  try { saved = (JSON.parse(localStorage.getItem('sp_identity') || '{}')).class || ''; } catch (e) {}
+  let saved = '', savedMe = '';
+  try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; savedMe = o.studentName || ''; } catch (e) {}
   const params = new URLSearchParams(location.search);
   const fromUrl = (params.get('class') || '').trim();
   state.currentClass = state.classes.includes(fromUrl) ? fromUrl
@@ -236,12 +236,49 @@ async function loadClasses() {
   els.wallClass.innerHTML = state.classes
     .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
     .join('');
+
+  // 设备信任门：没记住身份且非老师预览 → 先选名字
+  if (!savedMe && !state.readonly) {
+    showDeviceGate();
+    return;
+  }
+
   loadWall().then(() => {
     if (state.readonly && state.previewName) {
       showForm(state.previewName);
       applyReadonlyMode();
     }
   });
+}
+
+function showDeviceGate() {
+  const gate = document.getElementById('deviceGate');
+  const clsSel = document.getElementById('gateClass');
+  const nameInput = document.getElementById('gateName');
+  const err = document.getElementById('gateError');
+  wallView.hidden = true;
+  gate.hidden = false;
+  clsSel.innerHTML = state.classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  let roster = [];
+  const loadRoster = async () => {
+    const cls = clsSel.value;
+    const { data } = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    roster = (data||[]).map(s => (s.student_name||'').trim());
+  };
+  clsSel.addEventListener('change', loadRoster);
+  loadRoster();
+  const go = async () => {
+    const cls = clsSel.value;
+    const name = (nameInput.value || '').trim();
+    if (!name) { err.textContent = '请输入姓名'; return; }
+    if (!roster.includes(name)) { err.textContent = '名单里没有这个名字，请核对班级和姓名'; return; }
+    localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
+    state.currentClass = cls;
+    gate.hidden = true; wallView.hidden = false;
+    loadWall();
+  };
+  document.getElementById('gateGo').addEventListener('click', go);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 }
 
 function applyReadonlyMode() {

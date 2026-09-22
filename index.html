@@ -9,6 +9,24 @@
 </head>
 <body>
 
+<!-- 陌生设备：先选名字才能进墙 -->
+<div id="deviceGate" class="device-gate" hidden>
+  <div class="gate-card">
+    <h2>👋 你好呀，你是哪位同学？</h2>
+    <p class="text-muted">第一次在这台设备上使用，请选你的名字（这台设备会记住你，下次直接进）</p>
+    <div class="field">
+      <label>班级</label>
+      <select class="input" id="gateClass"></select>
+    </div>
+    <div class="field">
+      <label>你的姓名（必须和名单一致）</label>
+      <input class="input" id="gateName" type="text" maxlength="20" placeholder="输入你的真实姓名">
+    </div>
+    <button class="btn btn-primary" id="gateGo" style="margin-top:10px;">进班级墙</button>
+    <div id="gateError" class="text-muted" style="color:#c0392b;margin-top:8px;"></div>
+  </div>
+</div>
+
 <!-- ================= 视图一：班级头像墙（默认主页） ================= -->
 <div class="container" id="wallView">
 
