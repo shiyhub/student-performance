@@ -1910,8 +1910,18 @@ async function loadOverview() {
     document.getElementById('ovTotal').textContent = total;
     document.getElementById('ovDone').textContent = done;
     document.getElementById('ovUndo').textContent = Math.max(0, total - done);
-    const { count } = await supabase.from('task_submission').select('*', { count: 'exact', head: true }).eq('record_date', today);
-    document.getElementById('ovTaskDone').textContent = count || 0;
+    let taskDone = 0;
+    try {
+      const { data: tdefs } = await supabase.from('daily_task').select('id').eq('task_date', today);
+      if (tdefs && tdefs.length) {
+        const { count } = await supabase.from('task_submission')
+          .select('*', { count: 'exact', head: true })
+          .in('task_id', tdefs.map(t=>t.id))
+          .neq('grade', 'none');
+        taskDone = count || 0;
+      }
+    } catch (e) {}
+    document.getElementById('ovTaskDone').textContent = taskDone;
   } catch (e) {}
 }
 document.getElementById('ovSemester')?.addEventListener('change', loadOverview);
@@ -1977,12 +1987,9 @@ async function runStats() {
   });
   const tagRows = Object.entries(tagCount).sort((a,b)=>(b[1].pos+b[1].neg)-(a[1].pos+a[1].neg));
 
-  // 任务评分统计
-  let tq = supabase.from('task_submission').select('student_name,grade,task_id,class,task_date');
-  if (cls) tq = tq.eq('class', cls);
+  // 任务评分统计（task_submission 只有 student_name/grade/task_id）
+  let tq = supabase.from('task_submission').select('student_name,grade,task_id');
   if (student) tq = tq.eq('student_name', student);
-  if (from) tq = tq.gte('task_date', from);
-  if (to) tq = tq.lte('task_date', to);
   const { data: subs } = await tq;
   const gradeCount = {none:0,done:0,good:0,perfect:0};
   (subs||[]).forEach(s=>{ if(gradeCount[s.grade]!=null) gradeCount[s.grade]++; });
