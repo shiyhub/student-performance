@@ -2111,19 +2111,28 @@ async function loadSeat() {
   const names = (stu.data||[]).map(s=>s.student_name);
   renderSeat(names);
 }
+let seatSelected = null;
 function renderSeat(allNames) {
   document.querySelectorAll('.seat-cell').forEach(cell => {
     const name = seatState.placed[cell.dataset.key];
     cell.innerHTML = name ? `<span class="seat-chip" draggable="true" data-name="${name}" style="cursor:move;background:#c8d5c0;padding:4px 10px;border-radius:8px;">${name}</span>` : '';
+    cell.onclick = () => {
+      const cur = seatState.placed[cell.dataset.key];
+      if (cur) { delete seatState.placed[cell.dataset.key]; renderSeat(allNames); return; }
+      if (seatSelected) { placeAt(cell.dataset.key, seatSelected); seatSelected = null; }
+    };
   });
   const placedSet = new Set(Object.values(seatState.placed));
   const pool = document.getElementById('seatPool');
-  pool.innerHTML = allNames.filter(n=>!placedSet.has(n)).map(n=>`<span class="seat-chip" draggable="true" data-name="${n}" style="cursor:move;background:#eee;padding:4px 10px;border-radius:8px;">${n}</span>`).join('');
+  pool.innerHTML = allNames.filter(n=>!placedSet.has(n)).map(n=>`<span class="seat-chip" draggable="true" data-name="${n}" style="cursor:pointer;background:${seatSelected===n?'#c9a08e':'#eee'};padding:4px 10px;border-radius:8px;">${n}</span>`).join('');
   document.querySelectorAll('.seat-chip').forEach(chip => {
     chip.draggable = true;
     chip.ondragstart = e => e.dataTransfer.setData('text/plain', chip.dataset.name);
-    chip.onclick = () => { // 点座位上的人清空
-      const cell = chip.closest('.seat-cell'); if(cell){ delete seatState.placed[cell.dataset.key]; renderSeat(allNames); }
+    chip.onclick = () => {
+      const inCell = chip.closest('.seat-cell');
+      if (inCell) { delete seatState.placed[inCell.dataset.key]; renderSeat(allNames); return; }
+      seatSelected = chip.dataset.name;
+      renderSeat(allNames);
     };
   });
 }
