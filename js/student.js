@@ -192,7 +192,7 @@ function init() {
     els.wallConfigBanner.hidden = false;
     els.configBanner.hidden = false;
     els.btnSubmit.disabled = true;
-    els.btnGoWrite.disabled = true;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
     els.wallLoading.hidden = true;
     els.tagsLoading.hidden = true;
     els.tagsFailed.hidden = false;
@@ -219,7 +219,7 @@ async function loadClasses() {
   if (!state.classes.length) {
     els.wallLoading.hidden = true;
     els.wallEmpty.hidden = false;
-    els.btnGoWrite.disabled = true;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
     return;
   }
 
@@ -334,6 +334,11 @@ async function loadWall() {
   }
   state.roster = rosterRes.data || [];
   state.records = recordRes.data || [];
+  state.seatMap = {};
+  try {
+    const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
+    (seatRes.data||[]).forEach(s => { state.seatMap[s.student_name] = s.seat_row*10 + s.seat_col; });
+  } catch(e) {}
   state.todayTaskDefs = taskDefRes.data || [];
   // task_submission 没有 task_date/class 列，按当天任务 id 查提交
   let todayTaskSubs = [];
@@ -380,8 +385,15 @@ function renderWall() {
       <span class="mate-name">全班 ${classLvText}</span>
     </button>`;
 
-  // 每个同学
-  state.roster.forEach((s, i) => {
+  // 按座位编排排序（若老师设置了座位）
+  const ordered = state.roster.slice();
+  if (state.seatMap && Object.keys(state.seatMap).length) {
+    ordered.sort((a,b) => {
+      const ka = state.seatMap[a.student_name] || 999, kb = state.seatMap[b.student_name] || 999;
+      return ka - kb;
+    });
+  }
+  ordered.forEach((s) => {
     const mine = recs.filter(r => r.student_name === s.student_name);
     const mineRated = mine.filter(r => Number(r.self_evaluation) > 0);
     const avg = mineRated.length
@@ -838,7 +850,7 @@ function toggleCheckTag(tag, chip, wrap) {
 
 function bindEvents() {
   // 墙 ↔ 表单
-  els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
+  if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
   els.btnBackWall.addEventListener('click', () => { sfx.back(); showWall(); });
   els.wallClass.addEventListener('change', () => {
     state.currentClass = els.wallClass.value;

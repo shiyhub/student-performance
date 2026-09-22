@@ -236,6 +236,7 @@ function switchTab(name) {
   if (name === 'task') activateTaskTab();
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
+  if (name === 'seat') activateSeatTab();
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -2074,3 +2075,74 @@ async function runStats() {
     </div>
     ${timelineHtml}`;
 }
+
+/* ---------------- 座位编排 ---------------- */
+let seatState = { rows: 7, cols: 6, placed: {} }; // key "r_c" -> name
+async function activateSeatTab() {
+  const sel = document.getElementById('seatClass');
+  if (sel && !sel.options.length) {
+    const { data } = await supabase.from('student_info').select('class').order('class');
+    const cls = [...new Set((data||[]).map(s=>s.class).filter(Boolean))];
+    sel.innerHTML = cls.map(c=>`<option value="${c}">${c}</option>`).join('');
+    sel.onchange = loadSeat;
+  }
+  buildSeatGrid();
+  await loadSeat();
+}
+function buildSeatGrid() {
+  const board = document.getElementById('seatBoard');
+  board.innerHTML = '';
+  for (let r=0;r<seatState.rows;r++) for (let c=0;c<seatState.cols;c++) {
+    const cell = document.createElement('div');
+    cell.className = 'seat-cell';
+    cell.dataset.key = r+'_'+c;
+    cell.style.cssText='min-height:56px;border:1.5px dashed #c9b8ad;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center;background:#f4f1ec;';
+    cell.ondragover = e => e.preventDefault();
+    cell.ondrop = e => { e.preventDefault(); const name=e.dataTransfer.getData('text/plain'); placeAt(cell.dataset.key, name); };
+    board.appendChild(cell);
+  }
+}
+async function loadSeat() {
+  const cls = document.getElementById('seatClass').value;
+  seatState.placed = {};
+  const { data } = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', cls);
+  (data||[]).forEach(s => seatState.placed[s.seat_row+'_'+s.seat_col] = s.student_name);
+  const stu = await supabase.from('student_info').select('student_name').eq('class', cls);
+  const names = (stu.data||[]).map(s=>s.student_name);
+  renderSeat(names);
+}
+function renderSeat(allNames) {
+  document.querySelectorAll('.seat-cell').forEach(cell => {
+    const name = seatState.placed[cell.dataset.key];
+    cell.innerHTML = name ? `<span class="seat-chip" draggable="true" data-name="${name}" style="cursor:move;background:#c8d5c0;padding:4px 10px;border-radius:8px;">${name}</span>` : '';
+  });
+  const placedSet = new Set(Object.values(seatState.placed));
+  const pool = document.getElementById('seatPool');
+  pool.innerHTML = allNames.filter(n=>!placedSet.has(n)).map(n=>`<span class="seat-chip" draggable="true" data-name="${n}" style="cursor:move;background:#eee;padding:4px 10px;border-radius:8px;">${n}</span>`).join('');
+  document.querySelectorAll('.seat-chip').forEach(chip => {
+    chip.draggable = true;
+    chip.ondragstart = e => e.dataTransfer.setData('text/plain', chip.dataset.name);
+    chip.onclick = () => { // 点座位上的人清空
+      const cell = chip.closest('.seat-cell'); if(cell){ delete seatState.placed[cell.dataset.key]; renderSeat(allNames); }
+    };
+  });
+}
+function placeAt(key, name) {
+  // 若该学生已在别处，先移走
+  for (const k in seatState.placed) if (seatState.placed[k]===name) delete seatState.placed[k];
+  seatState.placed[key] = name;
+  loadSeat();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnSeatSave');
+  if (btn) btn.onclick = async () => {
+    const cls = document.getElementById('seatClass').value;
+    await supabase.from('seat_grid').delete().eq('class', cls);
+    const rows = Object.entries(seatState.placed).map(([k,name]) => {
+      const [r,c] = k.split('_').map(Number);
+      return { class: cls, seat_row: r, seat_col: c, student_name: name };
+    });
+    if (rows.length) await supabase.from('seat_grid').upsert(rows);
+    toast('座位已保存');
+  };
+});
