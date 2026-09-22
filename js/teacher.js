@@ -1731,20 +1731,26 @@ async function activateBatchTab() {
     });
     document.getElementById('btnAwardGo').addEventListener('click', runBatchAward);
     document.getElementById('btnTaskGradeGo').addEventListener('click', runBatchTaskGrade);
+    document.getElementById('awardTaskDate').value = todayStr();
+    document.getElementById('awardTaskDate').addEventListener('change', () => {
+      const cls = document.getElementById('awardClass').value;
+      if (cls) loadAwardTasks(cls);
+    });
   }
 }
 
 async function loadAwardTasks(cls) {
   const sel = document.getElementById('awardTask');
   if (!cls) { sel.innerHTML = '<option value="">选班级后加载</option>'; return; }
-  const today = todayStr();
+  const d = document.getElementById('awardTaskDate').value || todayStr();
   const { data: tasks } = await supabase.from('daily_task')
     .select('id,title,task_date,task_type')
-    .eq('class', cls)
-    .gte('task_date', today)
-    .order('task_date', { ascending: false });
+    .eq('class', cls).eq('task_date', d)
+    .order('task_type');
   sel.innerHTML = '<option value="">请选择任务</option>' +
-    (tasks || []).map(t => `<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('');
+    ((tasks && tasks.length)
+      ? tasks.map(t => `<option value="${t.id}">${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('')
+      : '<option value="" disabled>当天没有任务</option>');
 }
 
 async function runBatchTaskGrade() {
@@ -1790,11 +1796,19 @@ async function loadBatchTagsAndStudents() {
   batchState.allStudents = (students || []).map(s => s.student_name);
   batchState.students = batchState.allStudents.slice();
   renderBatchStudents();
-  // 标签
+  // 标签：二级标签必须选到具体小项；有下级的父标签不直接可选
   const { data: tags } = await supabase.from('behavior_tags')
-    .select('id,label,category,xp_value').eq('is_active', true).order('sort_order');
+    .select('id,label,category,xp_value,parent_id').eq('is_active', true).order('sort_order');
+  const list = tags || [];
+  const parentIds = new Set(list.map(t => t.parent_id).filter(Boolean));
+  const parentLabel = {};
+  list.forEach(t => { if (t.parent_id) parentLabel[t.id] = (list.find(x => x.id === t.parent_id) || {}).label || ''; });
+  const leaf = list.filter(t => !parentIds.has(t.id));
   tagSel.innerHTML = '<option value="">请选择标签</option>' +
-    (tags || []).map(t => `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${esc(t.label)}</option>`).join('');
+    leaf.map(t => {
+      const pre = parentLabel[t.id] ? `　└ ${parentLabel[t.id]} / ` : '';
+      return `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${pre}${esc(t.label)}</option>`;
+    }).join('');
   loadAwardTasks(cls);
 }
 
