@@ -342,3 +342,6 @@ body { background: #f3f6f5; }
 .ov-label { font-size:13px; color:#888; }
 .stat-box{background:#f6f9f6;border-radius:12px;padding:14px 18px;text-align:center;}
 .stat-num{font-size:26px;font-weight:700;}
+#tabSeat{max-width:1000px;margin:0 auto;}
+#seatBoard{max-width:900px;margin:0 auto;}
+#seatPool{max-width:900px;margin:0 auto;}
