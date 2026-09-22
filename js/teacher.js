@@ -2097,10 +2097,14 @@ function buildSeatGrid() {
     cell.className = 'seat-cell';
     cell.dataset.key = r+'_'+c;
     cell.style.cssText='min-height:56px;border:1.5px dashed #c9b8ad;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center;background:#f4f1ec;';
-    cell.ondragover = e => e.preventDefault();
-    cell.ondrop = e => { e.preventDefault(); const name=e.dataTransfer.getData('text/plain'); placeAt(cell.dataset.key, name); };
     board.appendChild(cell);
   }
+  board.onclick = e => {
+    const cell = e.target.closest('.seat-cell'); if(!cell) return;
+    const cur = seatState.placed[cell.dataset.key];
+    if (cur) { delete seatState.placed[cell.dataset.key]; renderSeat(); return; }
+    if (seatSelected) { placeAt(cell.dataset.key, seatSelected); seatSelected = null; }
+  };
 }
 async function loadSeat() {
   const cls = document.getElementById('seatClass').value;
@@ -2116,11 +2120,6 @@ function renderSeat(allNames) {
   document.querySelectorAll('.seat-cell').forEach(cell => {
     const name = seatState.placed[cell.dataset.key];
     cell.innerHTML = name ? `<span class="seat-chip" draggable="true" data-name="${name}" style="cursor:move;background:#c8d5c0;padding:4px 10px;border-radius:8px;">${name}</span>` : '';
-    cell.onclick = () => {
-      const cur = seatState.placed[cell.dataset.key];
-      if (cur) { delete seatState.placed[cell.dataset.key]; renderSeat(allNames); return; }
-      if (seatSelected) { placeAt(cell.dataset.key, seatSelected); seatSelected = null; }
-    };
   });
   const placedSet = new Set(Object.values(seatState.placed));
   const pool = document.getElementById('seatPool');
