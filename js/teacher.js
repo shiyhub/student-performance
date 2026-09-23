@@ -191,10 +191,12 @@ async function onLogin(e) {
   els.loginError.hidden = true;
   els.btnLogin.disabled = true;
   els.btnLogin.textContent = '登录中…';
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     els.loginError.textContent = '登录失败：' + friendlyAuthError(error.message);
     els.loginError.hidden = false;
+  } else if (data && data.user) {
+    enterApp(data.user);
   }
   els.btnLogin.disabled = false;
   els.btnLogin.textContent = '登录';
