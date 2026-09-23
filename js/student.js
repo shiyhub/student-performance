@@ -329,11 +329,23 @@ async function loadWall() {
 
   els.wallLoading.hidden = true;
   if (rosterRes.error || recordRes.error) {
-    els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">数据加载失败，请稍后刷新重试。</span>';
-    return;
+    // 离线：用上次缓存的名单继续渲染
+    const cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null');
+    if (cache) {
+      state.roster = cache.roster || [];
+      state.records = cache.records || [];
+      state.seatMap = cache.seatMap || {};
+      state.todayTaskDefs = cache.tasks || [];
+      state.todayTaskSubs = [];
+      els.wallLoading.innerHTML = '<div class="banner banner-info" style="margin:0;">当前离线，显示上次缓存数据，提交会自动保存。</div>';
+    } else {
+      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">数据加载失败，请稍后刷新重试。</span>';
+      return;
+    }
+  } else {
+    state.roster = rosterRes.data || [];
+    state.records = recordRes.data || [];
   }
-  state.roster = rosterRes.data || [];
-  state.records = recordRes.data || [];
   state.seatMap = {};
   try {
     const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
@@ -350,6 +362,7 @@ async function loadWall() {
     todayTaskSubs = subRes.data || [];
   }
   state.todayTaskSubs = todayTaskSubs;
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs })); } catch(e) {}
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
