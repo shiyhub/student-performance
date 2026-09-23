@@ -279,7 +279,7 @@ function showDeviceGate() {
     const cls = clsSel.value;
     const name = (nameInput.value || '').trim();
     if (!name) { err.textContent = '请输入姓名'; return; }
-    if (!roster.includes(name)) { err.textContent = '名单里没有这个名字，请核对班级和姓名'; return; }
+    if (roster.length && !roster.includes(name)) { err.textContent = '名单里没有这个名字，请核对班级和姓名'; return; }
     localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
     state.currentClass = cls;
     gate.hidden = true; wallView.hidden = false;
