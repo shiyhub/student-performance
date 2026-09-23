@@ -1175,6 +1175,7 @@ async function loadPastTasks() {
         if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
         renderIdentityLevel();
         loadPastTasks();
+        loadWall();
       });
     });
   } catch(e) { els.pastTaskBody.innerHTML = ''; }
