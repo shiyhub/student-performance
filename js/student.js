@@ -1136,7 +1136,7 @@ async function loadPastTasks() {
       .order('task_date', { ascending: false });
     const taskIds = (tasks||[]).map(t => t.id);
     const subs = taskIds.length
-      ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds)).data || []
+      ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)).data || []
       : [];
     const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
