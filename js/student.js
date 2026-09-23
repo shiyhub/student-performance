@@ -212,10 +212,15 @@ async function loadClasses() {
     .from('student_directory')
     .select('class');
   if (error) {
-    els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败，请稍后刷新重试。</span>';
-    return;
+    try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
+    if (!state.classes.length) {
+      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败，请稍后刷新重试。</span>';
+      return;
+    }
+  } else {
+    state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
+    try { localStorage.setItem('sp_classes', JSON.stringify(state.classes)); } catch(e) {}
   }
-  state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
   if (!state.classes.length) {
     els.wallLoading.hidden = true;
     els.wallEmpty.hidden = false;
