@@ -153,6 +153,8 @@ const els = {
   confettiBox: $('#confettiBox'),
   taskCard: $('#taskCard'),
   taskBody: $('#taskBody'),
+  reciteTaskCard: $('#reciteTaskCard'), reciteTaskBody: $('#reciteTaskBody'),
+  dictationTaskCard: $('#dictationTaskCard'), dictationTaskBody: $('#dictationTaskBody'),
   pastTaskCard: $('#pastTaskCard'),
   pastTaskBody: $('#pastTaskBody')
 };
@@ -190,7 +192,7 @@ function init() {
     els.wallConfigBanner.hidden = false;
     els.configBanner.hidden = false;
     els.btnSubmit.disabled = true;
-    els.btnGoWrite.disabled = true;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
     els.wallLoading.hidden = true;
     els.tagsLoading.hidden = true;
     els.tagsFailed.hidden = false;
@@ -217,12 +219,12 @@ async function loadClasses() {
   if (!state.classes.length) {
     els.wallLoading.hidden = true;
     els.wallEmpty.hidden = false;
-    els.btnGoWrite.disabled = true;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
     return;
   }
 
-  let saved = '';
-  try { saved = (JSON.parse(localStorage.getItem('sp_identity') || '{}')).class || ''; } catch (e) {}
+  let saved = '', savedMe = '';
+  try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; savedMe = o.studentName || ''; } catch (e) {}
   const params = new URLSearchParams(location.search);
   const fromUrl = (params.get('class') || '').trim();
   state.currentClass = state.classes.includes(fromUrl) ? fromUrl
@@ -236,12 +238,50 @@ async function loadClasses() {
   els.wallClass.innerHTML = state.classes
     .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
     .join('');
+
+  // 设备信任门：没记住身份且非老师预览 → 先选名字
+  if (!savedMe && !state.readonly) {
+    showDeviceGate();
+    return;
+  }
+
   loadWall().then(() => {
     if (state.readonly && state.previewName) {
       showForm(state.previewName);
       applyReadonlyMode();
     }
   });
+  flushPending();
+}
+
+function showDeviceGate() {
+  const gate = document.getElementById('deviceGate');
+  const clsSel = document.getElementById('gateClass');
+  const nameInput = document.getElementById('gateName');
+  const err = document.getElementById('gateError');
+  wallView.hidden = true;
+  gate.hidden = false;
+  clsSel.innerHTML = state.classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  let roster = [];
+  const loadRoster = async () => {
+    const cls = clsSel.value;
+    const { data } = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    roster = (data||[]).map(s => (s.student_name||'').trim());
+  };
+  clsSel.addEventListener('change', loadRoster);
+  loadRoster();
+  const go = async () => {
+    const cls = clsSel.value;
+    const name = (nameInput.value || '').trim();
+    if (!name) { err.textContent = '请输入姓名'; return; }
+    if (!roster.includes(name)) { err.textContent = '名单里没有这个名字，请核对班级和姓名'; return; }
+    localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
+    state.currentClass = cls;
+    gate.hidden = true; wallView.hidden = false;
+    loadWall();
+  };
+  document.getElementById('gateGo').addEventListener('click', go);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 }
 
 function applyReadonlyMode() {
@@ -273,7 +313,7 @@ async function loadWall() {
       .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
       .eq('class', cls);
   if (sem && sem !== '全部') recQ.eq('semester', sem);
-  const [rosterRes, recordRes] = await Promise.all([
+  const [rosterRes, recordRes, taskDefRes] = await Promise.all([
     supabase.from('student_directory')
       .select('*')
       .eq('class', cls)
@@ -281,7 +321,10 @@ async function loadWall() {
     recQ
       .order('record_date', { ascending: false })
       .order('create_at', { ascending: false })
-      .limit(1000)
+      .limit(1000),
+    supabase.from('daily_task')
+      .select('id,title,task_type')
+      .eq('class', cls).eq('task_date', todayStr())
   ]);
 
   els.wallLoading.hidden = true;
@@ -291,6 +334,22 @@ async function loadWall() {
   }
   state.roster = rosterRes.data || [];
   state.records = recordRes.data || [];
+  state.seatMap = {};
+  try {
+    const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
+    (seatRes.data||[]).forEach(s => { state.seatMap[s.student_name] = (s.seat_row*6 + s.seat_col); });
+  } catch(e) {}
+  state.todayTaskDefs = taskDefRes.data || [];
+  // task_submission 没有 task_date/class 列，按当天任务 id 查提交
+  let todayTaskSubs = [];
+  if (state.todayTaskDefs.length) {
+    const ids = state.todayTaskDefs.map(t => t.id);
+    const subRes = await supabase.from('task_submission')
+      .select('student_name,grade,task_id')
+      .in('task_id', ids);
+    todayTaskSubs = subRes.data || [];
+  }
+  state.todayTaskSubs = todayTaskSubs;
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
@@ -319,15 +378,35 @@ function renderWall() {
 
   let html = '';
 
-  // 全班汇总卡：显示班级经验与等级，点击仍可看记录数详情
-  html += `<button class="mate mate-class-all" data-detail="__all__">
+  // 全班汇总卡放到标题栏左侧
+  const classCard = `<button class="mate mate-class-all" data-detail="__all__" style="width:100%;margin:0;">
       <span class="mate-avatar">🌈</span>
       <span class="mate-badge xp-badge">🧡 ${classXp} 经验</span>
       <span class="mate-name">全班 ${classLvText}</span>
     </button>`;
+  const slot = document.getElementById('wallClassCard');
+  if (slot) slot.innerHTML = classCard;
 
-  // 每个同学
-  state.roster.forEach((s, i) => {
+  // 按座位编排：空位保留，按 seat_row*6+col 定位
+  const useSeat = state.seatMap && Object.keys(state.seatMap).length;
+  const slotOf = {};
+  if (useSeat) Object.entries(state.seatMap).forEach(([n,i]) => slotOf[i] = n);
+  const ordered = [];
+  if (useSeat) {
+    for (let i=0;i<42;i++) {
+      const n = slotOf[i];
+      if (n) ordered.push(state.roster.find(s=>s.student_name===n));
+      else ordered.push(null); // 空位占位
+    }
+    state.roster.forEach(s => {
+      const placed = Object.values(state.seatMap).some(v => v === state.seatMap[s.student_name]);
+      if (!placed) ordered.push(s);
+    });
+  } else {
+    state.roster.forEach(s=>ordered.push(s));
+  }
+  ordered.forEach((s) => {
+    if (!s) { html += `<div class="mate seat-empty"></div>`; return; }
     const mine = recs.filter(r => r.student_name === s.student_name);
     const mineRated = mine.filter(r => Number(r.self_evaluation) > 0);
     const avg = mineRated.length
@@ -336,6 +415,12 @@ function renderWall() {
     const todayRecs = mine.filter(r => r.record_date === today);
     const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
     const todayMood = todayRec && todayRec.behavior ? MOOD_MAP[todayRec.behavior.mood] : null;
+    // 今日任务完成情况
+    const totalTasks = (state.todayTaskDefs || []).length;
+    const subMap = {};
+    (state.todayTaskSubs || []).forEach(x => { if (x.student_name === s.student_name && x.grade && x.grade !== 'none') subMap[x.task_id] = x.grade; });
+    const doneTasks = Object.keys(subMap).length;
+    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">📋 ${doneTasks}/${totalTasks}</span>` : '';
     const todayLevel = todayMood
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
@@ -350,6 +435,7 @@ function renderWall() {
         ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
+        ${taskBadge}
         <span class="mate-name">${esc(s.student_name)}</span>
       </button>`;
   });
@@ -403,10 +489,7 @@ function openStudentDetail(name) {
     : '还没有提交过表现记录';
   els.detailBody.innerHTML = renderRecordTimeline(rows);
   state.detailName = name;
-  // 只有看自己（与已保存身份一致）才显示"写表现"，防止替别人提交
-  let savedMe = '';
-  try { savedMe = (JSON.parse(localStorage.getItem('sp_identity') || '{}')).studentName || ''; } catch(e){}
-  els.detailFoot.hidden = !savedMe || name !== savedMe;
+  els.detailFoot.hidden = false;
   els.detailModal.classList.add('show');
 }
 
@@ -780,7 +863,7 @@ function toggleCheckTag(tag, chip, wrap) {
 
 function bindEvents() {
   // 墙 ↔ 表单
-  els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
+  if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
   els.btnBackWall.addEventListener('click', () => { sfx.back(); showWall(); });
   els.wallClass.addEventListener('change', () => {
     state.currentClass = els.wallClass.value;
@@ -1031,6 +1114,8 @@ function showForm(presetName) {
   window.scrollTo({ top: 0 });
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
+  resetSelections();
+  loadTags();
   loadStudentTask();
   loadPastTasks();
 }
@@ -1047,10 +1132,13 @@ async function loadPastTasks() {
   try {
     const { data: tasks } = await supabase.from('daily_task')
       .select('id,title,detail,task_date,task_type,due_time')
-      .eq('class', cls).gte('task_date', sinceStr).order('task_date', { ascending: false });
-    const { data: subs } = await supabase.from('task_submission')
-      .select('task_id,grade').eq('class', cls).eq('student_name', name);
-    const gradeMap = {}; (subs||[]).forEach(s => gradeMap[s.task_id] = s.grade);
+      .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
+      .order('task_date', { ascending: false });
+    const taskIds = (tasks||[]).map(t => t.id);
+    const subs = taskIds.length
+      ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)).data || []
+      : [];
+    const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
     const now = new Date(); now.setHours(0,0,0,0);
@@ -1069,7 +1157,7 @@ async function loadPastTasks() {
       const btns = TASK_GRADES.map(g =>
         `<button type="button" class="stu-task-grade sm ${g.key === cur ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`
       ).join('');
-      return `<div class="past-row active">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
+      return `<div class="past-row active stack">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
     }).join('');
     els.pastTaskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -1087,6 +1175,7 @@ async function loadPastTasks() {
         if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
         renderIdentityLevel();
         loadPastTasks();
+        loadWall();
       });
     });
   } catch(e) { els.pastTaskBody.innerHTML = ''; }
@@ -1206,14 +1295,43 @@ async function onSubmit() {
     resetSelections();
     renderMoodPreview();
     loadTags();   // 刷新当天已打项，立即置灰
+    loadWall();   // 提交后立刻刷新班级墙：今日条数、经验、老师评语同步
   } catch (e) {
-    sfx.oops();
-    toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+    // 断网/网络错误：先存本机，联网自动补传（按人按天合并，不会重复加经验）
+    const offline = !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+    if (offline) {
+      try {
+        const q = JSON.parse(localStorage.getItem('sp_pending') || '[]');
+        q.push({ cls, name, mood: MOOD_BY_LEVEL(state.moodLevel).key, items, at: Date.now() });
+        localStorage.setItem('sp_pending', JSON.stringify(q));
+        sfx.pick();
+        toast('📡 当前没网，已先保存到本机，联网后自动上传');
+      } catch (e2) { sfx.oops(); toast('网络异常'); }
+    } else {
+      sfx.oops();
+      toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+    }
   } finally {
     els.btnSubmit.disabled = false;
     els.btnSubmit.textContent = '提交今天的表现 🎈';
   }
 }
+
+// 启动时 + 联网时，把本机待上传的记录补传
+async function flushPending() {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem('sp_pending') || '[]'); } catch (e) {}
+  if (!q.length || !navigator.onLine) return;
+  const left = [];
+  for (const p of q) {
+    try {
+      await supabase.rpc('submit_today', { p_class: p.cls, p_student: p.name, p_mood: p.mood, p_items: p.items });
+    } catch (e) { left.push(p); }
+  }
+  localStorage.setItem('sp_pending', JSON.stringify(left));
+  if (q.length - left.length > 0) { toast('📡 已自动上传 ' + (q.length-left.length) + ' 条离线记录'); loadWall(); }
+}
+window.addEventListener('online', flushPending);
 
 function resetSelections() {
   state.stars = 0;
@@ -1349,27 +1467,34 @@ async function loadStudentTask() {
     data = r.data;
   } catch (e) { data = null; }
   const tasks = (data && data.tasks) || [];
-  if (!tasks.length) {
-    els.taskBody.innerHTML = '<p class="text-muted">老师今天还没布置任务，先填下面的小表现吧～</p>';
-    return;
-  }
-  let html = '';
-  tasks.forEach(t => {
-    const my = t.my_grade || 'none';
-    const typeLabel = t.task_type === 'homework' ? '🏠 家庭作业' : '🏫 课堂作业';
-    html += `<div class="stu-task">
-      <div class="stu-task-head"><span class="stu-task-type ${t.task_type}">${typeLabel}</span></div>
-      <div class="stu-task-title">${escapeHtml(t.title)}</div>
-      ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
-      <div class="stu-task-grades">`;
-    TASK_GRADES.forEach(g => {
-      html += `<button type="button" class="stu-task-grade ${g.key === my ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`;
-    });
-    html += `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
-  });
-  els.taskBody.innerHTML = html;
+  const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
+  const recite = tasks.filter(t => t.task_type === 'recite');
+  const dict = tasks.filter(t => t.task_type === 'dictation');
 
-  els.taskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
+  function cardHtml(list, short) {
+    if (!list.length) return null;
+    return list.map(t => {
+      const my = t.my_grade || 'none';
+      const grades = short
+        ? [['none','⏳ 未完成'],['done','✅ 完成']]
+        : [['none','⏳ 还没做'],['done','✅ 完成了'],['good','👍 优秀 A'],['perfect','🏆 完美 A+']];
+      return `<div class="stu-task">
+        <div class="stu-task-title">${escapeHtml(t.title)}</div>
+        ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
+        <div class="stu-task-grades">` +
+        grades.map(([k,label]) => `<button type="button" class="stu-task-grade ${k===my?'on':''}" data-grade="${k}" data-task="${t.id}">${label}</button>`).join('') +
+        `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
+    }).join('');
+  }
+
+  els.taskCard.hidden = !normal.length;
+  els.taskBody.innerHTML = normal.length ? cardHtml(normal, false) : '';
+  els.reciteTaskCard.hidden = !recite.length;
+  els.reciteTaskBody.innerHTML = recite.length ? cardHtml(recite, true) : '';
+  els.dictationTaskCard.hidden = !dict.length;
+  els.dictationTaskBody.innerHTML = dict.length ? cardHtml(dict, true) : '';
+
+  document.querySelectorAll('.stu-task-grade').forEach(btn => {
     btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn));
   });
 }
@@ -1385,7 +1510,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   if (res.error) { sfx.oops(); toast('保存失败，请重试'); return; }
   const d = res.data || {};
   sfx.pick();
-  const resultEl = els.taskBody.querySelector(`[data-result="${taskId}"]`);
+  const resultEl = document.querySelector(`[data-result="${taskId}"]`);
   if (resultEl) {
     if (grade === 'none') {
       resultEl.textContent = '好的，继续加油把任务完成吧！';
