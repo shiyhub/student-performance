@@ -731,8 +731,10 @@ async function loadTags() {
 
   els.tagsLoading.hidden = true;
   if (error || !data) {
-    els.tagsFailed.hidden = false;
-    return;
+    try { data = JSON.parse(localStorage.getItem('sp_tags') || 'null'); } catch(e) {}
+    if (!data) { els.tagsFailed.hidden = false; return; }
+  } else {
+    try { localStorage.setItem('sp_tags', JSON.stringify(data)); } catch(e) {}
   }
   // 兼容旧数据
   data.forEach(t => {
@@ -1148,14 +1150,22 @@ async function loadPastTasks() {
   const p = n => String(n).padStart(2, '0');
   const sinceStr = `${since.getFullYear()}-${p(since.getMonth()+1)}-${p(since.getDate())}`;
   try {
-    const { data: tasks } = await supabase.from('daily_task')
+    let tasks = (await supabase.from('daily_task')
       .select('id,title,detail,task_date,task_type,due_time')
       .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
-      .order('task_date', { ascending: false });
-    const taskIds = (tasks||[]).map(t => t.id);
-    const subs = taskIds.length
-      ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)).data || []
-      : [];
+      .order('task_date', { ascending: false })).data;
+    if (tasks) { try { localStorage.setItem('sp_past_' + cls, JSON.stringify(tasks)); } catch(e) {} }
+    else { try { tasks = JSON.parse(localStorage.getItem('sp_past_' + cls) || '[]'); } catch(e) { tasks = []; } }
+    const taskIds = tasks.map(t => t.id);
+    let subs = [];
+    try {
+      subs = taskIds.length
+        ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)).data || []
+        : [];
+      try { localStorage.setItem('sp_past_subs_' + cls + '_' + name, JSON.stringify(subs)); } catch(e) {}
+    } catch(e) {
+      try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
+    }
     const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
@@ -1485,7 +1495,10 @@ async function loadStudentTask() {
   try {
     const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
     data = r.data;
-  } catch (e) { data = null; }
+    if (data) try { localStorage.setItem('sp_task_' + cls, JSON.stringify(data)); } catch(e) {}
+  } catch (e) {
+    try { data = JSON.parse(localStorage.getItem('sp_task_' + cls) || 'null'); } catch(e2) { data = null; }
+  }
   const tasks = (data && data.tasks) || [];
   const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
   const recite = tasks.filter(t => t.task_type === 'recite');
