@@ -1322,9 +1322,11 @@ async function onSubmit() {
         const q = JSON.parse(localStorage.getItem('sp_pending') || '[]');
         q.push({ cls, name, mood: MOOD_BY_LEVEL(state.moodLevel).key, items, at: Date.now() });
         localStorage.setItem('sp_pending', JSON.stringify(q));
-        sfx.pick();
-        toast('📡 当前没网，已先保存到本机，联网后自动上传');
-      } catch (e2) { sfx.oops(); toast('网络异常'); }
+        sfx.success();
+        toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢');
+        resetSelections();
+        renderMoodPreview();
+      } catch (e2) { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
       toast('提交失败：' + ((e && e.message) || '请稍后再试'));
