@@ -1627,12 +1627,22 @@ async function loadTaskReport() {
   box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
 
   // 全班名单（用于补齐未提交学生）
-  const [{ data: stuRes }, { data, error }] = await Promise.all([
+  const [{ data: stuRes }, rpcRes, seatRes] = await Promise.all([
     supabase.from('student_info').select('student_name').eq('class', cls).order('student_name'),
-    supabase.rpc('get_class_task_report', { p_class: cls, p_date: date })
+    supabase.rpc('get_class_task_report', { p_class: cls, p_date: date }),
+    supabase.from('seat_grid').select('student_name, seat_row, seat_col').eq('class', cls)
   ]);
+  const data = rpcRes && rpcRes.data, error = rpcRes && rpcRes.error;
   if (error) { box.innerHTML = '<p class="text-muted">加载失败：' + esc(error.message) + '</p>'; return; }
-  const allStudents = (stuRes || []).map(s => s.student_name);
+  // v106：按座位表排序——已排座位的按 排→列 在前，未排座位的按姓名跟在后面
+  const seatMap = {};
+  (seatRes && seatRes.data || []).forEach(s => { seatMap[s.student_name] = { r: s.seat_row, c: s.seat_col }; });
+  const allStudents = (stuRes || []).map(s => s.student_name).slice().sort((a, b) => {
+    const sa = seatMap[a], sb = seatMap[b];
+    if (sa && sb) return (sa.r - sb.r) || (sa.c - sb.c);
+    if (sa) return -1; if (sb) return 1;
+    return a.localeCompare(b, 'zh');
+  });
   const tasks = (data && data.tasks) || [];
   if (!tasks.length) {
     box.innerHTML = '<p class="text-muted">这一天还没有发布任务。在上方发布后学生就能看到。</p>';
@@ -1661,8 +1671,10 @@ async function loadTaskReport() {
       <div class="task-stu-grid">`;
     allStudents.forEach(name => {
       const g = (sub[name] && sub[name].grade) || 'none';
+      const st = seatMap[name];
+      const seatTag = st ? `<span class="task-stu-seat">${st.r + 1}排${st.c + 1}座</span>` : '';
       html += `<div class="task-stu" data-student="${esc(name)}" data-task="${t.id}">
-        <div class="task-stu-name">${esc(name)}</div>
+        <div class="task-stu-name">${esc(name)}${seatTag}</div>
         <div class="task-grade-row">
           ${gradeBtn('none', g, '未完成')}
           ${gradeBtn('done', g, '完成')}
