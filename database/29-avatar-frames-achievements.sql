@@ -1,25 +1,24 @@
 -- ============================================================================
--- 增量升级 29：头像框 + 成就系统
+-- 增量升级 29：头像框 + 成就系统（v105 修正版）
 --   1. student_info 增加 frame 列（头像框 key；NULL = 无框）
---   2. student_directory 视图带上 frame，班级墙直接渲染每个人的头像框
+--   2. student_directory 视图末尾追加 frame 列（Postgres 不允许在列中间插入）
 --   3. student_metrics(班级, 姓名)：从已有数据实时计算成就指标
---      （累计记录天数 / 连续打卡 / 积极次数 / 任务完成 / 完美A+ / 班级排名）
 --   4. get_student_profile(班级, 姓名)：一次返回 头像/等级/头像框/指标/成就列表
 --   5. set_student_frame(班级, 姓名, 头像框)：学生经 RPC 佩戴头像框，
 --      服务端校验该框是否已解锁（按成就/等级），防作弊
--- 安全可重复执行。跑完后到学生端点自己头像 → 底部出现「✨ 头像框」，
--- 左栏出现「🏅 我的成就」。
+-- 安全可重复执行。整段一次运行即可。
 -- ============================================================================
 
 -- 1) 名单表加头像框列 -------------------------------------------------------
 alter table public.student_info add column if not exists frame text;
 
--- 2) 重建班级通讯录视图（多带一列 frame）------------------------------------
+-- 2) 重建班级通讯录视图：frame 必须放在所有旧列之后，
+--    否则 Postgres 报 42P16 cannot change name of view column ----------
 create or replace view public.student_directory as
-  select id, class, student_name, avatar, frame, xp, level
+  select id, class, student_name, avatar, xp, level, frame
   from public.student_info;
 
-comment on view public.student_directory is '学生端班级墙只读视图：班级、学生姓名、头像、头像框、经验、等级';
+comment on view public.student_directory is '学生端班级墙只读视图：班级、学生姓名、头像、经验、等级、头像框';
 grant select on public.student_directory to anon, authenticated;
 
 -- 3) 成就小工具：把指标包成一个徽章对象 -------------------------------------
@@ -177,14 +176,13 @@ revoke execute on function public.get_student_profile(text, text) from public;
 grant  execute on function public.get_student_profile(text, text) to anon, authenticated;
 
 -- 6) 学生佩戴头像框：白名单 + 服务端校验解锁条件 -----------------------------
---    解锁条件与前端展示一致：
---      bronze  铜环  = 连续打卡 3 天（成就 streak3）
---      silver  银环  = 连续打卡 7 天（成就 streak7）
---      gold    金环  = 升到 Lv.5
---      rainbow 彩虹环 = 升到 Lv.7
---      star    星光环 = 累计 20 次积极表现（成就 active20）
---      heart   爱心环 = 5 次完美 A+（成就 perfect5）
---      crown   皇冠环 = 班级经验前三（成就 top3）
+--    bronze  铜环  = 连续打卡 3 天（成就 streak3）
+--    silver  银环  = 连续打卡 7 天（成就 streak7）
+--    gold    金环  = 升到 Lv.5
+--    rainbow 彩虹环 = 升到 Lv.7
+--    star    星光环 = 累计 20 次积极表现（成就 active20）
+--    heart   爱心环 = 5 次完美 A+（成就 perfect5）
+--    crown   皇冠环 = 班级经验前三（成就 top3）
 create or replace function public.set_student_frame(
   p_class  text,
   p_student text,
@@ -248,6 +246,6 @@ grant  execute on function public.set_student_frame(text, text, text) to anon, a
 notify pgrst, 'reload schema';
 
 -- 自检（可选）：
---   select student_name, frame, xp, level from student_info order by xp desc limit 5;
+--   select student_name, avatar, xp, level, frame from public.student_directory order by xp desc limit 5;
 --   select public.get_student_profile('六年级一班','某学生');
---   select public.set_student_frame('六年级一班','某学生','gold');
+-- （注：内容由AI生成）
