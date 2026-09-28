@@ -73,6 +73,19 @@ const MASTER_KEYS = MASTER_GROUPS.reduce((arr, g) => {
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
 const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600];
+
+/* ---------- v105：头像框（CSS 光环）与成就 ---------- */
+// 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
+const FRAMES = [
+  { key: 'none',    name: '无框',   icon: '⚪', need: '默认佩戴' },
+  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '连续打卡 3 天' },
+  { key: 'silver',  name: '银环',   icon: '🥈', need: '连续打卡 7 天' },
+  { key: 'gold',    name: '金环',   icon: '🥇', need: '升到 Lv.5' },
+  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.7 满级' },
+  { key: 'star',    name: '星光环', icon: '⭐', need: '累计 20 次积极表现' },
+  { key: 'heart',   name: '爱心环', icon: '💗', need: '获得 5 次完美 A+' },
+  { key: 'crown',   name: '皇冠环', icon: '👑', need: '班级经验前三' }
+];
 const XP_PER_POSITIVE = 2;
 const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
@@ -156,7 +169,8 @@ const els = {
   reciteTaskCard: $('#reciteTaskCard'), reciteTaskBody: $('#reciteTaskBody'),
   dictationTaskCard: $('#dictationTaskCard'), dictationTaskBody: $('#dictationTaskBody'),
   pastTaskCard: $('#pastTaskCard'),
-  pastTaskBody: $('#pastTaskBody')
+  pastTaskBody: $('#pastTaskBody'),
+  achCard: $('#achCard'), achGrid: $('#achGrid'), achCount: $('#achCount')
 };
 
 const state = {
@@ -170,6 +184,8 @@ const state = {
   stars: 0,
   moodLevel: 3,
   myAvatar: null,    // 学生本次选择/已保存的头像 emoji（null 时按姓名自动分配）
+  myFrame: null,     // v105：本次选择/已佩戴的头像框 key（null=跟随名单）
+  profile: null,     // v105：get_student_profile 返回的成就档案
   tags: [],
   checkChosen: {},   // 勾选型标签：{ [tagId]: true }
   checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
@@ -445,11 +461,12 @@ function renderWall() {
 
     const av = avatarForName(s.student_name, s.avatar);
     const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
+    const frameCls = s.frame ? ` framed frame-${s.frame}` : '';
     const lvBadge = (Number(s.level) || 1) > 1
       ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
-        <span class="mate-avatar${ringCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
+        <span class="mate-avatar${ringCls}${frameCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
         ${lvBadge}
         ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
@@ -497,6 +514,7 @@ function openStudentDetail(name) {
   const rosterRow = state.roster.find(s => s.student_name === name);
   const av = avatarForName(name, rosterRow && rosterRow.avatar);
   paintAvatar(els.detailAvatar, av);
+  applyFrameTo(els.detailAvatar, rosterRow && rosterRow.frame);
   els.detailName.textContent = name;
   const rated = rows.filter(r => Number(r.self_evaluation) > 0);
   const avg = rated.length
@@ -718,8 +736,11 @@ function renderIdentityLevel() {
   const wrap = document.querySelector('.identity-avatar');
   if (wrap) {
     wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
-    if (lv >= 3) wrap.classList.add('frame-l' + lv);
+    if (!row || !row.frame) {
+      if (lv >= 3) wrap.classList.add('frame-l' + Math.min(5, lv));
+    }
   }
+  applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
 
 async function loadTags() {
@@ -1029,6 +1050,9 @@ function openAvatarPicker() {
   masterSec.appendChild(masterGrid);
   els.avatarPicker.appendChild(masterSec);
 
+  // —— 头像框（v105）——
+  buildFrameSection();
+
   renderMoodPreview();
   els.avatarModal.classList.add('show');
 }
@@ -1118,6 +1142,131 @@ async function persistAvatar(key) {
   }
 }
 
+/* ---------------- v105：头像框 ---------------- */
+function applyFrameTo(el, frameKey) {
+  if (!el) return;
+  FRAMES.forEach(f => el.classList.remove('frame-' + f.key));
+  el.classList.remove('framed');
+  const k = (frameKey && FRAME_CLASS[frameKey]) ? frameKey : 'none';
+  if (k !== 'none') el.classList.add('framed', 'frame-' + k);
+}
+
+const FRAME_CLASS = {
+  none:'', bronze:'frame-bronze', silver:'frame-silver', gold:'frame-gold',
+  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown'
+};
+
+function buildFrameSection() {
+  const sec = document.createElement('div');
+  sec.className = 'avatar-sec';
+  sec.innerHTML = `<div class="avatar-sec-title">✨ 头像框<span class="avatar-sec-tip">达成成就自动解锁，点一下佩戴</span></div>`;
+  const grid = document.createElement('div');
+  grid.className = 'frame-grid';
+  const row = currentRosterRow();
+  const curFrame = state.myFrame || (row && row.frame) || 'none';
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  FRAMES.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
+    const unlocked = f.key === 'none' || unlockedSet.has(f.key);
+    b.innerHTML = `<span class="fc-ring"></span><span>${f.icon}</span>` +
+      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+    b.addEventListener('click', () => {
+      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      onChooseFrame(f.key, b);
+    });
+    grid.appendChild(b);
+  });
+  sec.appendChild(grid);
+  els.avatarPicker.appendChild(sec);
+}
+
+async function onChooseFrame(key, btn) {
+  sfx.pick();
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { toast('请先填好班级和姓名'); return; }
+  try {
+    const { data, error } = await supabase.rpc('set_student_frame', {
+      p_class: cls, p_student: name, p_frame: key
+    });
+    if (error) throw error;
+    if (!data || data.ok === false) {
+      toast(data && data.reason === 'locked' ? '这个头像框还没解锁哦，继续加油～' : '保存失败，请重试');
+      return;
+    }
+    state.myFrame = key;
+    const row = currentRosterRow();
+    if (row) row.frame = key;
+    els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
+    applyFrameTo(els.identityAvatarEmoji, key);
+    toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
+    setTimeout(() => els.avatarModal.classList.remove('show'), 260);
+  } catch (e) {
+    toast('网络不好，头像框没保存上，请重试');
+  }
+}
+
+/* ---------------- v105：成就 ---------------- */
+async function loadProfile() {
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!ready || !cls || !name) { if (els.achCard) els.achCard.hidden = true; return; }
+  let data;
+  try {
+    const r = await supabase.rpc('get_student_profile', { p_class: cls, p_student: name });
+    if (r.error) throw r.error;
+    data = r.data;
+  } catch (e) {
+    if (els.achCard) els.achCard.hidden = true;
+    return;
+  }
+  if (!data || data.ok === false) { if (els.achCard) els.achCard.hidden = true; return; }
+
+  state.profile = data;
+  state.myFrame = data.frame || 'none';
+
+  // 已解锁头像框集合（与服务端 set_student_frame 同口径）
+  const achs = data.achievements || [];
+  const un = new Set(['none']);
+  const has = k => achs.some(a => a.key === k && a.unlocked);
+  if (has('streak3')) un.add('bronze');
+  if (has('streak7')) un.add('silver');
+  if (Number(data.level) >= 5) un.add('gold');
+  if (Number(data.level) >= 7) un.add('rainbow');
+  if (has('active20')) un.add('star');
+  if (has('perfect5')) un.add('heart');
+  if (has('top3')) un.add('crown');
+  data.unlocked_frames = Array.from(un);
+
+  renderAchievements(achs);
+  applyFrameTo(els.identityAvatarEmoji, state.myFrame);
+
+  // 新解锁成就：对比本机已见列表，逐个弹提示
+  const seenKey = 'sp_seen_ach_' + cls + '_' + name;
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch (e) {}
+  const seenSet = new Set(seen);
+  const fresh = achs.filter(a => a.unlocked && !seenSet.has(a.key));
+  if (fresh.length) fresh.forEach(a => toast(`🏅 解锁成就「${a.name}」${a.icon}`));
+  if (fresh.length) sfx.success();
+  try { localStorage.setItem(seenKey, JSON.stringify(achs.filter(a => a.unlocked).map(a => a.key))); } catch (e) {}
+}
+
+function renderAchievements(achs) {
+  if (!els.achGrid) return;
+  els.achCard.hidden = false;
+  const done = achs.filter(a => a.unlocked).length;
+  els.achCount.textContent = `${done}/${achs.length}`;
+  els.achGrid.innerHTML = achs.map(a => `
+    <div class="ach-item ${a.unlocked ? 'unlocked' : 'locked'}">
+      <div class="ach-ic">${a.unlocked ? a.icon : '🔒'}</div>
+      <div class="ach-n">${esc(a.name)}</div>
+      <div class="ach-p">${a.unlocked ? esc(a.desc) : `${a.cur}/${a.target}`}</div>
+    </div>`).join('');
+}
+
 function showForm(presetName) {
   if (!state.currentClass) { toast('请先选择班级'); return; }
   els.inpClass.value = state.currentClass;
@@ -1131,6 +1280,7 @@ function showForm(presetName) {
   state.myAvatar = null;   // 进入表单先显示该学生已保存的头像
   els.wallView.hidden = true;
   els.formView.hidden = false;
+  loadProfile();           // v105：拉取成就与已解锁头像框
   window.scrollTo({ top: 0 });
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
@@ -1324,6 +1474,7 @@ async function onSubmit() {
     renderMoodPreview();
     loadTags();   // 刷新当天已打项，立即置灰
     loadWall();   // 提交后立刻刷新班级墙：今日条数、经验、老师评语同步
+    loadProfile();// v105：检查是否解锁新成就
   } catch (e) {
     // 断网/网络错误：先存本机，联网自动补传（按人按天合并，不会重复加经验）
     const offline = !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
@@ -1558,6 +1709,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const row = state.roster.find(s => s.class === cls && s.student_name === name);
   if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
   renderIdentityLevel();
+  loadProfile();
   loadStudentTask();
 }
 function escapeHtml(s) {

@@ -807,3 +807,77 @@ html,body{background:#e8e6e1 !important;}
 .diary3{align-items:stretch;}
 .diary-col.c2{height:100%;}
 .diary-col.c2 > #pastTaskCard{flex:1 1 auto;max-height:none;}
+
+/* ============================================================
+   v105：头像框（CSS 光环，无需图片素材）
+   ============================================================ */
+.mate-avatar, .identity-avatar-emoji, .detail-avatar, .mp-avatar { position: relative; }
+/* 身份头像原来 overflow:hidden 会裁掉外圈光环，佩戴框时放开 */
+.identity-avatar-emoji.framed { overflow: visible; }
+.framed::before {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  pointer-events: none; z-index: 2;
+}
+.frame-bronze.framed::before  { border: 3px solid #cd7f32; }
+.frame-silver.framed::before  { border: 3px solid #b9c4d4; }
+.frame-gold.framed::before    { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.65); }
+.frame-star.framed::before    { border: 3px dashed #ffd54a; }
+.frame-heart.framed::before   { border: 3px solid #ff8fb1; }
+.frame-crown.framed::before   { border: 3px solid #f5b945; box-shadow: 0 0 12px rgba(245,185,69,.8); }
+.frame-rainbow.framed::before {
+  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+@media (min-width: 1400px) { .framed::before { inset: -5px; border-width: 4px; } }
+
+/* ---- 头像框选择区 ---- */
+.frame-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; padding: 2px; }
+.frame-choice {
+  position: relative; aspect-ratio: 1/1; border-radius: 50%;
+  background: #fff; border: 3px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; transition: transform .12s;
+}
+.frame-choice:hover { transform: translateY(-3px); }
+.frame-choice.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(31,157,107,.28); }
+.frame-choice .fc-ring { position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; }
+.frame-choice.fc-bronze  .fc-ring { border: 3px solid #cd7f32; }
+.frame-choice.fc-silver  .fc-ring { border: 3px solid #b9c4d4; }
+.frame-choice.fc-gold    .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 8px rgba(245,185,69,.6); }
+.frame-choice.fc-star    .fc-ring { border: 3px dashed #ffd54a; }
+.frame-choice.fc-heart   .fc-ring { border: 3px solid #ff8fb1; }
+.frame-choice.fc-crown   .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.75); }
+.frame-choice.fc-rainbow .fc-ring {
+  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+.frame-choice .fc-lock {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(255,255,255,.78); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align:center; padding:0 4px;
+  font-size: 12px; color: #8a9a92; gap: 1px;
+}
+.frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
+.frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
+
+/* ============================================================
+   v105：成就徽章墙
+   ============================================================ */
+.ach-count { font-size: 13px; font-weight: 700; color: #e07a3f; }
+.ach-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.ach-item {
+  text-align: center; padding: 8px 4px 7px; border-radius: 14px;
+  background: #f7faf8; border: 1.5px solid transparent;
+}
+.ach-item .ach-ic { font-size: 26px; line-height: 1.2; }
+.ach-item .ach-n  { font-size: 12px; font-weight: 800; color: #5a6b62; margin-top: 2px; }
+.ach-item .ach-p  { font-size: 10.5px; color: #9aa8a0; margin-top: 1px; }
+.ach-item.unlocked { background: #fff7e6; border-color: #f5b945; }
+.ach-item.unlocked .ach-n { color: #b07a1a; }
+.ach-item.locked { opacity: .6; filter: grayscale(.8); }
+@media (min-width: 700px) {
+  .ach-grid { grid-template-columns: repeat(6, minmax(0,1fr)); }
+  .frame-grid { grid-template-columns: repeat(8, minmax(0,1fr)); }
+}

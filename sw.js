@@ -1,5 +1,5 @@
 /* 离线 Service Worker：缓存网页外壳，断网也能打开 */
-const CACHE = 'sp-cache-v1';
+const CACHE = 'sp-cache-v2';
 const ASSETS = [
   './',
   './index.html',
