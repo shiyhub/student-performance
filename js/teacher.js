@@ -97,6 +97,78 @@ const els = {
   btnRecSave: $('#btnRecSave')
 };
 
+/* ---------- v107：统一离线层辅助（老师端） ---------- */
+const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+async function cacheRead(key, fetcher) {
+  if (!window.Offline || !window.Offline.online) {
+    const v = await window.Offline.get(key);
+    return { data: v && v.data, fromCache: true };
+  }
+  try {
+    const res = await fetcher();
+    if (res && !res.error) await window.Offline.set(key, { data: res.data });
+    return res;
+  } catch (e) {
+    const v = await window.Offline.get(key);
+    return { data: v && v.data, fromCache: true };
+  }
+}
+async function syncRunner(op) {
+  const p = op.params || {};
+  try {
+    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data }; }
+    if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error }; }
+    if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error }; }
+    if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error }; }
+    if (op.name === 'seat_save') {
+      const del = await supabase.from('seat_grid').delete().eq('class', p.class);
+      if (del.error) return { ok: false };
+      if (p.rows.length) { const up = await supabase.from('seat_grid').upsert(p.rows); if (up.error) return { ok: false }; }
+      return { ok: true };
+    }
+  } catch (e) { throw e; }
+  return { ok: false };
+}
+async function runWrite(op) {
+  if (!window.Offline || !window.Offline.online) {
+    await window.Offline.enqueue(op);
+    return { ok: true, queued: true };
+  }
+  try {
+    const r = await syncRunner(op);
+    if (r.ok) return { ok: true, queued: false, res: r.data };
+    return { ok: false, queued: false };
+  } catch (e) {
+    if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
+    return { ok: false, queued: false };
+  }
+}
+async function flushOfflineQueue() {
+  if (!window.Offline || !window.Offline.online) return;
+  const n = await window.Offline.drain(syncRunner);
+  if (n > 0) { toast('📡 已同步 ' + n + ' 条离线操作'); loadTaskReport(); }
+}
+let teacherBanner = null;
+function ensureOfflineBanner() {
+  if (teacherBanner || !document.body) return;
+  teacherBanner = document.createElement('div');
+  teacherBanner.id = 'offlineBanner';
+  teacherBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4e6b5c;color:#fff;text-align:center;font-size:13px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15);';
+  teacherBanner.textContent = '📴 离线模式：显示本地缓存，批改/发布会先保存，联网后自动同步';
+  teacherBanner.hidden = true;
+  document.body.appendChild(teacherBanner);
+}
+if (window.Offline) {
+  window.Offline.subscribe(v => {
+    ensureOfflineBanner();
+    if (teacherBanner) teacherBanner.hidden = v;
+    if (v) flushOfflineQueue();
+  });
+}
+function saveLocalSession(user) {
+  try { localStorage.setItem('sp_teacher_session', JSON.stringify({ email: user.email, ts: Date.now() })); } catch (e) {}
+}
+
 const loaded = { students: false, tags: false };
 // 供"帮学生记录"弹窗复用的缓存
 const cache = { students: [], tags: [] };
@@ -170,9 +242,14 @@ function init() {
     });
   });
 
-  // 恢复登录会话
+  // 恢复登录会话（离线时用本机已登录会话）
+  let localSession = null;
+  try { localSession = JSON.parse(localStorage.getItem('sp_teacher_session') || 'null'); } catch (e) {}
   supabase.auth.getSession().then(({ data }) => {
-    if (data.session) enterApp(data.session.user);
+    if (data.session) { saveLocalSession(data.session.user); enterApp(data.session.user); }
+    else if (localSession && !navigator.onLine) enterApp({ email: localSession.email });
+  }).catch(() => {
+    if (localSession && !navigator.onLine) enterApp({ email: localSession.email });
   });
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) enterApp(session.user);
@@ -196,6 +273,7 @@ async function onLogin(e) {
     els.loginError.textContent = '登录失败：' + friendlyAuthError(error.message);
     els.loginError.hidden = false;
   } else if (data && data.user) {
+    saveLocalSession(data.user);
     enterApp(data.user);
   }
   els.btnLogin.disabled = false;
@@ -213,6 +291,7 @@ function enterApp(user) {
   loadClassesAndRecords();
 }
 function leaveApp() {
+  try { localStorage.removeItem('sp_teacher_session'); } catch (e) {}
   els.appView.hidden = true;
   els.loginView.hidden = false;
   els.inpPassword.value = '';
@@ -1564,17 +1643,14 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
   if (editingTaskId) {
-    const { error } = await supabase.from('daily_task')
-      .update({ class: cls, task_date: date, task_type: type, title, detail, due_time: due })
-      .eq('id', editingTaskId);
-    if (error) { toast('保存失败：' + error.message); return; }
-    toast('任务已更新');
+    const wr = await runWrite({ name: 'task_update', params: { id: editingTaskId, data: { class: cls, task_date: date, task_type: type, title, detail, due_time: due } } });
+    if (!wr.ok) { toast('保存失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '任务已更新');
     cancelTaskEdit();
   } else {
-    const { error } = await supabase.from('daily_task')
-      .insert({ class: cls, task_date: date, task_type: type, title, detail, due_time: due });
-    if (error) { toast('发布失败：' + error.message); return; }
-    toast('任务已发布，学生端今天就能看到啦');
+    const wr = await runWrite({ name: 'task_insert', params: { class: cls, task_date: date, task_type: type, title, detail, due_time: due } });
+    if (!wr.ok) { toast('发布失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后发布 ✅' : '任务已发布，学生端今天就能看到啦');
   }
   document.getElementById('taskTitle').value = '';
   document.getElementById('taskDetail').value = '';
@@ -1627,17 +1703,32 @@ async function loadTaskReport() {
   box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
 
   // 全班名单（用于补齐未提交学生）
-  const [{ data: stuRes }, rpcRes, seatRes] = await Promise.all([
-    supabase.from('student_info').select('student_name').eq('class', cls).order('student_name'),
-    supabase.rpc('get_class_task_report', { p_class: cls, p_date: date }),
-    supabase.from('seat_grid').select('student_name, seat_row, seat_col').eq('class', cls)
-  ]);
-  const data = rpcRes && rpcRes.data, error = rpcRes && rpcRes.error;
-  if (error) { box.innerHTML = '<p class="text-muted">加载失败：' + esc(error.message) + '</p>'; return; }
+  let stuRes = null, rpcRes = {}, seatRes = null, offlineFailed = false;
+  try {
+    [stuRes, rpcRes, seatRes] = await Promise.all([
+      supabase.from('student_info').select('student_name').eq('class', cls).order('student_name'),
+      supabase.rpc('get_class_task_report', { p_class: cls, p_date: date }),
+      supabase.from('seat_grid').select('student_name, seat_row, seat_col').eq('class', cls)
+    ]);
+  } catch (e) { offlineFailed = true; }
+  let data = rpcRes && rpcRes.data, error = rpcRes && rpcRes.error;
+  if (offlineFailed || error) {
+    const v = await window.Offline.get('taskreport_' + cls + '_' + date);
+    if (v) {
+      stuRes = { data: (v.allStudents || []).map(n => ({ student_name: n })) };
+      seatRes = { data: Object.entries(v.seatMap || {}).map(([n, st]) => ({ student_name: n, seat_row: st.r, seat_col: st.c })) };
+      data = v.tasks || [];
+    } else {
+      box.innerHTML = offlineFailed
+        ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
+        : '<p class="text-muted">加载失败：' + esc(error.message) + '</p>';
+      return;
+    }
+  }
   // v106：按座位表排序——已排座位的按 排→列 在前，未排座位的按姓名跟在后面
   const seatMap = {};
   (seatRes && seatRes.data || []).forEach(s => { seatMap[s.student_name] = { r: s.seat_row, c: s.seat_col }; });
-  const allStudents = (stuRes || []).map(s => s.student_name).slice().sort((a, b) => {
+  const allStudents = ((stuRes && stuRes.data) || []).map(s => s.student_name).slice().sort((a, b) => {
     const sa = seatMap[a], sb = seatMap[b];
     if (sa && sb) return (sa.r - sb.r) || (sa.c - sb.c);
     if (sa) return -1; if (sb) return 1;
@@ -1685,6 +1776,7 @@ async function loadTaskReport() {
     html += '</div></div>';
   });
   box.innerHTML = html;
+  await window.Offline.set('taskreport_' + cls + '_' + date, { allStudents, tasks, seatMap });
 
   box.querySelectorAll('.task-grade-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1692,20 +1784,18 @@ async function loadTaskReport() {
       const student = card.dataset.student;
       const taskId = card.dataset.task;
       const grade = btn.dataset.grade;
-      const { error } = await supabase.rpc('submit_task', {
-        p_class: cls, p_student: student, p_task_id: taskId, p_grade: grade
-      });
-      if (error) { toast('保存失败：' + error.message); return; }
-      toast(student + ' 已评为：' + btn.textContent.trim());
+      const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: student, p_task_id: taskId, p_grade: grade } });
+      if (!wr.ok) { toast('保存失败，请重试'); return; }
+      toast(wr.queued ? student + ' 已离线保存，联网后同步 ✅' : student + ' 已评为：' + btn.textContent.trim());
       loadTaskReport();
     });
   });
   box.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('确定删除这条任务吗？学生已获得的经验会保留。')) return;
-      const { error } = await supabase.rpc('delete_daily_task', { p_task_id: btn.dataset.del });
-      if (error) { toast('删除失败：' + error.message); return; }
-      toast('已删除'); loadTaskReport();
+      const wr = await runWrite({ name: 'task_delete', params: { p_task_id: btn.dataset.del } });
+      if (!wr.ok) { toast('删除失败，请重试'); return; }
+      toast(wr.queued ? '已离线删除，联网后同步 ✅' : '已删除'); loadTaskReport();
     });
   });
   box.querySelectorAll('[data-edit-id]').forEach(btn => {
@@ -2123,12 +2213,32 @@ function buildSeatGrid() {
 async function loadSeat() {
   const cls = document.getElementById('seatClass').value;
   seatState.placed = {};
-  const { data } = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', cls);
-  (data||[]).forEach(s => seatState.placed[s.seat_row+'_'+s.seat_col] = s.student_name);
-  const stu = await supabase.from('student_info').select('student_name').eq('class', cls);
-  const names = (stu.data||[]).map(s=>s.student_name);
-  seatAllNames = names;
-  renderSeat(names);
+  let seatData = null, nameData = null, failed = false;
+  try {
+    [seatData, nameData] = await Promise.all([
+      supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', cls),
+      supabase.from('student_info').select('student_name').eq('class', cls)
+    ]);
+  } catch (e) { failed = true; }
+  if (failed || !seatData || !nameData) {
+    const v = await window.Offline.get('seat_' + cls);
+    if (v && v.placed) {
+      (v.placed || []).forEach(x => seatState.placed[x.r + '_' + x.c] = x.name);
+      seatAllNames = v.names || [];
+      renderSeat(seatAllNames);
+      toast('离线模式：显示上次保存的座位表，改动会先存本地');
+      return;
+    }
+    toast('座位表加载失败，请联网后重试');
+    return;
+  }
+  (seatData.data || []).forEach(s => seatState.placed[s.seat_row + '_' + s.seat_col] = s.student_name);
+  seatAllNames = (nameData.data || []).map(s => s.student_name);
+  await window.Offline.set('seat_' + cls, {
+    placed: Object.entries(seatState.placed).map(([k, name]) => { const [r, c] = k.split('_').map(Number); return { r, c, name }; }),
+    names: seatAllNames
+  });
+  renderSeat(seatAllNames);
 }
 let seatSelected = null;
 let seatAllNames = [];
@@ -2162,12 +2272,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnSeatSave');
   if (btn) btn.onclick = async () => {
     const cls = document.getElementById('seatClass').value;
-    await supabase.from('seat_grid').delete().eq('class', cls);
     const rows = Object.entries(seatState.placed).map(([k,name]) => {
       const [r,c] = k.split('_').map(Number);
       return { class: cls, seat_row: r, seat_col: c, student_name: name };
     });
-    if (rows.length) await supabase.from('seat_grid').upsert(rows);
-    toast('座位已保存');
+    const wr = await runWrite({ name: 'seat_save', params: { class: cls, rows } });
+    if (!wr.ok) { toast('保存失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '座位已保存');
+    if (!wr.queued) await window.Offline.set('seat_' + cls, {
+      placed: Object.entries(seatState.placed).map(([k, name]) => { const [r, c] = k.split('_').map(Number); return { r, c, name }; }),
+      names: seatAllNames
+    });
   };
 });
