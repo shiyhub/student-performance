@@ -120,6 +120,22 @@ async function syncRunner(op) {
     if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error }; }
     if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error }; }
     if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error }; }
+    if (op.name === 'exam_save') {
+      const { fileName, imageBlob } = p;
+      const { error: upErr } = await supabase.storage
+        .from('exam-papers')
+        .upload(fileName, imageBlob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
+      if (upErr) return { ok: false };
+      const { data: pub } = supabase.storage.from('exam-papers').getPublicUrl(fileName);
+      if (!pub || !pub.publicUrl) return { ok: false };
+      const r = await supabase.from('exam_paper').insert(Object.assign({ image_url: pub.publicUrl }, p));
+      return { ok: !r.error };
+    }
+    if (op.name === 'exam_delete') {
+      if (p.path) { await supabase.storage.from('exam-papers').remove([p.path]); }
+      const r = await supabase.from('exam_paper').delete().eq('id', p.id);
+      return { ok: !r.error };
+    }
     if (op.name === 'seat_save') {
       const del = await supabase.from('seat_grid').delete().eq('class', p.class);
       if (del.error) return { ok: false };
@@ -165,7 +181,9 @@ if (window.Offline) {
     if (v) flushOfflineQueue();
   });
 }
+window.TeacherSync = async () => { await flushOfflineQueue(); };
 function saveLocalSession(user) {
+  if (window.Offline && document.body) window.Offline.mountBadge();
   try { localStorage.setItem('sp_teacher_session', JSON.stringify({ email: user.email, ts: Date.now() })); } catch (e) {}
 }
 

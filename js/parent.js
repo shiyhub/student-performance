@@ -72,6 +72,7 @@ const els = {
 
 // 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
 let lockedClass = '';
+if (window.Offline && document.body) window.Offline.mountBadge();
 
 // 查询与会话状态
 const state = {
@@ -82,6 +83,39 @@ const state = {
   picked: null,         // 自选日期 Set（null=未启用自选）
   viewMode: 'detail'    // detail | summary
 };
+
+/* ---------- v107：统一离线层辅助（家长端） ---------- */
+const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+async function syncRunner(op) {
+  const p = op.params || {};
+  try {
+    if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data }; }
+  } catch (e) { throw e; }
+  return { ok: false };
+}
+async function runWrite(op) {
+  if (!window.Offline || !window.Offline.online) {
+    await window.Offline.enqueue(op);
+    return { ok: true, queued: true };
+  }
+  try {
+    const r = await syncRunner(op);
+    if (r.ok) return { ok: true, queued: false, res: r.data };
+    return { ok: false, queued: false };
+  } catch (e) {
+    if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
+    return { ok: false, queued: false };
+  }
+}
+async function flushOfflineQueue() {
+  if (!window.Offline || !window.Offline.online) return;
+  const n = await window.Offline.drain(syncRunner);
+  if (n > 0) toast('📡 已同步 ' + n + ' 条离线操作');
+}
+window.ParentSync = async () => { await flushOfflineQueue(); };
+if (window.Offline) {
+  window.Offline.subscribe(v => { if (v) flushOfflineQueue(); });
+}
 
 init();
 
@@ -155,6 +189,21 @@ async function onQuery() {
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
   try {
+    // 离线：跳过在线校验，直接读上次验证通过的缓存
+    if (!window.Offline || !window.Offline.online) {
+      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + parent);
+      if (v) {
+        state.ctx = { cls, student, parent };
+        renderResults(student, v.records || []);
+        renderPapers(v.papers || []);
+        renderTasks(v.tasks || []);
+        toast('离线模式：显示上次查询的缓存数据');
+      } else {
+        els.mismatchBanner.textContent = '当前离线，且这台设备还没有查询过这组信息：请先联网查询一次，之后断网也能看。';
+        els.mismatchBanner.hidden = false;
+      }
+      return;
+    }
     // 先校验三要素，给出具体原因
     const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_parent: parent });
     const v = vRes.data;
@@ -188,6 +237,7 @@ async function onQuery() {
       return;
     }
     state.ctx = { cls, student, parent };
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + parent, { records, papers, tasks });
     renderResults(student, records);
     renderPapers(papers);
     renderTasks(tasks);
@@ -208,20 +258,19 @@ async function onSubmitHome() {
   els.btnHomeSubmit.disabled = true;
   els.btnHomeSubmit.textContent = '提交中…';
   try {
-    const { data, error } = await supabase.rpc('add_home_note', {
+    const wr = await runWrite({ name: 'add_home_note', params: {
       p_class: state.ctx.cls,
       p_student: state.ctx.student,
       p_parent: state.ctx.parent,
       p_content: content.slice(0, 500),
       p_date: date
-    });
-    if (error) throw error;
-    if (data !== true) {
+    } });
+    if (!wr.ok) {
       toast('身份信息未通过校验，请返回重新查询后再提交');
       return;
     }
     els.homeContent.value = '';
-    toast('已提交，只有老师能看到哦 🏠');
+    toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : '已提交，只有老师能看到哦 🏠');
   } catch (e) {
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
   } finally {

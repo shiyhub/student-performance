@@ -65,12 +65,22 @@
   }
 
   async function loadRoster() {
-    const { data, error } = await supabase
-      .from('student_info')
-      .select('id, class, student_name')
-      .order('class')
-      .order('student_name');
-    if (error) { toast('学生名单加载失败：' + error.message); state.ready = false; return; }
+    let data = null, error = null, offline = false;
+    try {
+      const r = await supabase
+        .from('student_info')
+        .select('id, class, student_name')
+        .order('class')
+        .order('student_name');
+      data = r.data; error = r.error;
+    } catch (e) { offline = true; }
+    if (offline || error) {
+      const v = await window.Offline.get('exam_roster');
+      data = (v && v.rows) || null;
+      if (!data) { toast('离线且暂无名单缓存：请先联网打开过一次考试页'); state.ready = false; return; }
+    } else {
+      await window.Offline.set('exam_roster', { rows: data || [] });
+    }
     state.students = data || [];
     const classes = Array.from(new Set(state.students.map(s => s.class))).sort();
     els.examClass.innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -203,16 +213,9 @@
     els.btnExamSave.textContent = '正在上传…';
     try {
       const fileName = uuidName() + '.jpg';
-      const { error: upErr } = await supabase.storage
-        .from('exam-papers')
-        .upload(fileName, state.imageBlob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
-      if (upErr) throw upErr;
-
-      const { data: pub } = supabase.storage.from('exam-papers').getPublicUrl(fileName);
-      const imageUrl = pub && pub.publicUrl;
-      if (!imageUrl) throw new Error('获取图片地址失败');
-
-      const { error: insErr } = await supabase.from('exam_paper').insert({
+      const wr = await runWrite({ name: 'exam_save', params: {
+        fileName,
+        imageBlob: state.imageBlob,
         student_id: studentId,
         class: cls,
         student_name: studentName,
@@ -220,12 +223,11 @@
         subject: subject || null,
         score,
         score_text: scoreText || null,
-        image_url: imageUrl,
         note: note || null
-      });
-      if (insErr) throw insErr;
+      } });
+      if (!wr.ok) throw new Error('保存失败');
 
-      toast('已保存，家长可以在查询页看到这份试卷啦');
+      toast(wr.queued ? '已离线保存，联网后自动上传 ✅' : '已保存，家长可以在查询页看到这份试卷啦');
       resetForm();
       await loadPapers();
     } catch (err) {
@@ -254,14 +256,24 @@
   /* ------------ 已上传试卷列表 ------------ */
   async function loadPapers() {
     els.examBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载试卷…</div>';
-    const { data, error } = await supabase
-      .from('exam_paper')
-      .select('*')
-      .order('record_date', { ascending: false })
-      .order('create_at', { ascending: false })
-      .limit(200);
-    if (error) { els.examBox.innerHTML = '<div class="t-empty">试卷加载失败，请刷新重试。</div>'; return; }
-    const rows = data || [];
+    let rows = null, offline = false;
+    try {
+      const r = await supabase
+        .from('exam_paper')
+        .select('*')
+        .order('record_date', { ascending: false })
+        .order('create_at', { ascending: false })
+        .limit(200);
+      if (r.error) { offline = true; }
+      else { rows = r.data || []; await window.Offline.set('exam_papers', { rows }); }
+    } catch (e) { offline = true; }
+    if (offline) {
+      const v = await window.Offline.get('exam_papers');
+      rows = (v && v.rows) || null;
+      if (!rows) { els.examBox.innerHTML = '<div class="t-empty">离线且暂无缓存：请先联网打开过试卷列表。</div>'; return; }
+      toast('离线模式：显示上次缓存的试卷');
+    }
+    const data = rows;
     if (!rows.length) {
       els.examBox.innerHTML = '<div class="t-empty">还没有上传过试卷。</div>';
       return;
@@ -290,18 +302,15 @@
 
   async function onDelete(id, url) {
     if (!window.confirm('确定删除这份试卷吗？删除后家长端也看不到了。')) return;
+    let path = null;
+    if (url) {
+      const m = String(url).match(/exam-papers\/([^?#]+)/);
+      if (m) { try { path = decodeURIComponent(m[1]); } catch (e) {} }
+    }
     try {
-      // 尽量同时删掉存储里的图片（失败不阻塞记录删除）
-      if (url) {
-        const m = String(url).match(/exam-papers\/([^?#]+)/);
-        if (m) {
-          const path = decodeURIComponent(m[1]);
-          await supabase.storage.from('exam-papers').remove([path]);
-        }
-      }
-      const { error } = await supabase.from('exam_paper').delete().eq('id', id);
-      if (error) throw error;
-      toast('试卷已删除');
+      const wr = await runWrite({ name: 'exam_delete', params: { id, path } });
+      if (!wr.ok) throw new Error('删除失败');
+      toast(wr.queued ? '已离线删除，联网后同步 ✅' : '试卷已删除');
       await loadPapers();
     } catch (err) {
       toast('删除失败：' + ((err && err.message) || '请稍后再试'));

@@ -168,12 +168,14 @@ function ensureOfflineBanner() {
   offlineBanner.hidden = true;
   document.body.appendChild(offlineBanner);
 }
+window.StudentSync = async () => { await flushOfflineQueue(); };
 if (window.Offline) {
   window.Offline.subscribe(v => {
     ensureOfflineBanner();
     if (offlineBanner) offlineBanner.hidden = v;
     if (v) flushOfflineQueue();
   });
+  window.Offline.mountBadge();
 }
 
 /* ---------- 页面元素 ---------- */
