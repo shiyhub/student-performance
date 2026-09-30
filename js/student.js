@@ -302,6 +302,7 @@ async function loadClasses() {
     .select('class');
   if (error) {
     try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
+    if (!state.classes.length) { try { const v = await window.Offline.get('classes'); state.classes = (v && v.data) || []; } catch(e2) {} }
     if (!state.classes.length) {
       els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败，请稍后刷新重试。</span>';
       return;
@@ -309,6 +310,7 @@ async function loadClasses() {
   } else {
     state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
     try { localStorage.setItem('sp_classes', JSON.stringify(state.classes)); } catch(e) {}
+    try { await window.Offline.set('classes', { data: state.classes }); } catch(e) {}
   }
   if (!state.classes.length) {
     els.wallLoading.hidden = true;
@@ -359,7 +361,18 @@ function showDeviceGate() {
   let roster = [];
   const loadRoster = async () => {
     const cls = clsSel.value;
-    const { data } = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    let data = null;
+    try {
+      const res = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+      data = res.data;
+    } catch (e) { data = null; }
+    if (!data) {
+      // 离线：用班级墙缓存里的名单做校验
+      try {
+        const wall = await window.Offline.get('wall_' + cls);
+        data = ((wall && wall.roster) || []).map(s => ({ student_name: s.student_name }));
+      } catch (e2) { data = null; }
+    }
     roster = (data||[]).map(s => (s.student_name||'').trim());
   };
   clsSel.addEventListener('change', loadRoster);
@@ -368,7 +381,11 @@ function showDeviceGate() {
     const cls = clsSel.value;
     const name = (nameInput.value || '').trim();
     if (!name) { err.textContent = '请输入姓名'; return; }
-    if (roster.length && !roster.includes(name)) { err.textContent = '名单里没有这个名字，请核对班级和姓名'; return; }
+    if (!roster.length) {
+      err.textContent = '离线且暂无名单缓存：暂时无法校验姓名，请确认与老师登记的完全一致。';
+    } else if (!roster.includes(name)) {
+      err.textContent = '名单里没有这个名字，请核对班级和姓名'; return;
+    }
     localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
     state.currentClass = cls;
     gate.hidden = true; wallView.hidden = false;
@@ -422,7 +439,11 @@ async function loadWall() {
         .select('id,title,task_type')
         .eq('class', cls).eq('task_date', todayStr())
     ]);
-  } catch (e) { /* 断网：走下面的缓存回退 */ }
+  } catch (e) {
+    // 断网/网络错误：标记失败，走下面的缓存回退（显示最近一次在线的最新名单）
+    rosterRes.error = { message: 'offline' };
+    recordRes.error = { message: 'offline' };
+  }
 
   els.wallLoading.hidden = true;
   if (rosterRes.error || recordRes.error) {

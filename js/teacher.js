@@ -341,11 +341,18 @@ function switchTab(name) {
 /* ---------------- 表现记录 ---------------- */
 
 async function loadClassesAndRecords() {
-  // 班级下拉来自学生名单
-  const { data: students } = await supabase
-    .from('student_info')
-    .select('class')
-    .order('class');
+  // 班级下拉来自学生名单（离线用缓存）
+  let students = null;
+  try {
+    const r = await supabase.from('student_info').select('class').order('class');
+    students = r.data;
+    if (!r.error && students) {
+      try { await window.Offline.set('classes_all', { data: students }); } catch (e2) {}
+    }
+  } catch (e) { students = null; }
+  if (!students) {
+    try { const v = await window.Offline.get('classes_all'); students = (v && v.data) || []; } catch (e2) { students = []; }
+  }
   const classes = Array.from(new Set((students || []).map(s => s.class))).sort();
   els.filterClass.innerHTML = '<option value="">全部班级</option>' +
     classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -574,20 +581,44 @@ function closeRecordModal() {
 }
 
 async function ensureStudents() {
-  const { data, error } = await supabase
-    .from('student_info').select('id, class, student_name').order('class').order('student_name');
-  if (!error) cache.students = data || [];
+  let data = null, error = null;
+  try {
+    const r = await supabase
+      .from('student_info').select('id, class, student_name').order('class').order('student_name');
+    data = r.data; error = r.error;
+  } catch (e) { error = { message: 'offline' }; }
+  if (!error && data) {
+    cache.students = data;
+    try { await window.Offline.set('students_roster', { data }); } catch (e2) {}
+  } else {
+    // 离线/失败：用最近一次缓存的名单
+    try {
+      const v = await window.Offline.get('students_roster');
+      cache.students = (v && v.data) || [];
+    } catch (e2) { cache.students = cache.students || []; }
+  }
 }
 async function ensureTags() {
-  const { data, error } = await supabase
-    .from('behavior_tags').select('*').eq('is_active', true)
-    .order('sort_order').order('created_at');
-  if (!error) {
-    cache.tags = (data || []).map(t => {
-      if (!Array.isArray(t.options)) t.options = [];
-      if (t.category !== 'negative') t.category = 'positive';
-      return t;
-    });
+  let data = null, error = null;
+  try {
+    const r = await supabase
+      .from('behavior_tags').select('*').eq('is_active', true)
+      .order('sort_order').order('created_at');
+    data = r.data; error = r.error;
+  } catch (e) { error = { message: 'offline' }; }
+  const norm = (data || []).map(t => {
+    if (!Array.isArray(t.options)) t.options = [];
+    if (t.category !== 'negative') t.category = 'positive';
+    return t;
+  });
+  if (!error && data) {
+    cache.tags = norm;
+    try { await window.Offline.set('tags', { data: norm }); } catch (e2) {}
+  } else {
+    try {
+      const v = await window.Offline.get('tags');
+      cache.tags = (v && v.data) || [];
+    } catch (e2) { cache.tags = cache.tags || []; }
   }
 }
 
