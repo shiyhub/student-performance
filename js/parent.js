@@ -89,7 +89,7 @@ const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|Networ
 async function syncRunner(op) {
   const p = op.params || {};
   try {
-    if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data }; }
+    if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
   return { ok: false };
 }
@@ -101,6 +101,8 @@ async function runWrite(op) {
   try {
     const r = await syncRunner(op);
     if (r.ok) return { ok: true, queued: false, res: r.data };
+    // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
+    if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
     return { ok: false, queued: false };
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
@@ -242,6 +244,18 @@ async function onQuery() {
     renderPapers(papers);
     renderTasks(tasks);
   } catch (e) {
+    // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用
+    try {
+      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + parent);
+      if (v) {
+        state.ctx = { cls, student, parent };
+        renderResults(student, v.records || []);
+        renderPapers(v.papers || []);
+        renderTasks(v.tasks || []);
+        toast('当前离线，显示上次查询的缓存数据');
+        return;
+      }
+    } catch (e2) {}
     toast('查询失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
     els.btnQuery.disabled = false;

@@ -126,10 +126,10 @@ async function cacheRead(key, fetcher) {
 async function syncRunner(op) {
   const p = op.params || {};
   try {
-    if (op.name === 'submit_today') { const r = await supabase.rpc('submit_today', p); return { ok: !r.error, data: r.data }; }
-    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data }; }
-    if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data }; }
-    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data }; }
+    if (op.name === 'submit_today') { const r = await supabase.rpc('submit_today', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
+    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
   return { ok: false };
 }
@@ -142,6 +142,8 @@ async function runWrite(op) {
   try {
     const r = await syncRunner(op);
     if (r.ok) return { ok: true, queued: false, res: r.data };
+    // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
+    if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
     return { ok: false, queued: false };
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
@@ -390,6 +392,14 @@ function showDeviceGate() {
     state.currentClass = cls;
     gate.hidden = true; wallView.hidden = false;
     loadWall();
+    // v111：联网时后台预缓存本班全量（名单/每人任务状态/成就头像），断网体验与在线一致
+    if (window.Precache && window.Offline && window.Offline.online) {
+      setTimeout(() => {
+        window.Precache.runStudent(cls, p => {
+          if (p && p.done === p.total) toast('📥 本班数据已缓存到本机，断网也能完整使用 ✅');
+        });
+      }, 600);
+    }
   };
   document.getElementById('gateGo').addEventListener('click', go);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
@@ -1407,19 +1417,30 @@ async function loadPastTasks() {
   const p = n => String(n).padStart(2, '0');
   const sinceStr = `${since.getFullYear()}-${p(since.getMonth()+1)}-${p(since.getDate())}`;
   try {
-    let tasks = (await supabase.from('daily_task')
-      .select('id,title,detail,task_date,task_type,due_time')
-      .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
-      .order('task_date', { ascending: false })).data;
-    if (tasks) { try { localStorage.setItem('sp_past_' + cls, JSON.stringify(tasks)); } catch(e) {} }
-    else { try { tasks = JSON.parse(localStorage.getItem('sp_past_' + cls) || '[]'); } catch(e) { tasks = []; } }
-    const taskIds = tasks.map(t => t.id);
-    let subs = [];
+    // 往日任务列表：离线/失败时用最近缓存（sp_past_<cls>）
+    let tasks = null;
     try {
-      subs = taskIds.length
-        ? (await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)).data || []
-        : [];
-      try { localStorage.setItem('sp_past_subs_' + cls + '_' + name, JSON.stringify(subs)); } catch(e) {}
+      const r = await supabase.from('daily_task')
+        .select('id,title,detail,task_date,task_type,due_time')
+        .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
+        .order('task_date', { ascending: false });
+      tasks = r.data;
+      if (!r.error && tasks) { try { localStorage.setItem('sp_past_' + cls, JSON.stringify(tasks)); } catch(e) {} }
+    } catch (e) { tasks = null; }
+    if (!tasks) { try { tasks = JSON.parse(localStorage.getItem('sp_past_' + cls) || '[]'); } catch(e2) { tasks = []; } }
+    const taskIds = tasks.map(t => t.id);
+    // 提交记录：SDK 网络失败返回 {data:null,error} 而不抛异常，必须显式检查 error，否则会把缓存覆盖成空
+    let subs = null;
+    try {
+      const r = taskIds.length
+        ? await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)
+        : null;
+      subs = r && r.data;
+      if (!r || r.error || !subs) {
+        try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
+      } else {
+        try { localStorage.setItem('sp_past_subs_' + cls + '_' + name, JSON.stringify(subs)); } catch(e) {}
+      }
     } catch(e) {
       try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
     }
@@ -1427,14 +1448,20 @@ async function loadPastTasks() {
     const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
     const now = new Date(); now.setHours(0,0,0,0);
+    // 截止日期按本地时区解析（'YYYY-MM-DD' 字符串若用 new Date 会被当 UTC，导致当天任务上午就"已截止"）
+    const parseLocalDate = dStr => {
+      const m = String(dStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(dStr);
+    };
+    const fmtLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     els.pastTaskBody.innerHTML = (tasks||[]).map(t => {
       const cur = gradeMap[t.id];
       // 截止判断：有 due_time 用它；没有则默认任务发布后一周
-      let dueDate = t.due_time ? new Date(t.due_time) : null;
-      if (!dueDate && t.task_date) { dueDate = new Date(t.task_date); dueDate.setDate(dueDate.getDate() + 7); }
+      let dueDate = t.due_time ? parseLocalDate(t.due_time) : null;
+      if (!dueDate && t.task_date) { dueDate = parseLocalDate(t.task_date); dueDate.setDate(dueDate.getDate() + 7); }
       const active = dueDate ? dueDate >= now : false;
       const dueStr = t.due_time ? ` 截止${String(t.due_time).slice(0,10)}`
-                  : (t.task_date ? ` 截止${(()=>{const d=new Date(t.task_date);d.setDate(d.getDate()+7);return d.toISOString().slice(0,10);})()}` : '');
+                  : (t.task_date ? ` 截止${(()=>{const d=parseLocalDate(t.task_date);d.setDate(d.getDate()+7);return fmtLocal(d);})()}` : '');
       const head = `<div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
       if (!active) {
         return `<div class="past-row">${head}<div class="past-grade">${gLabel[cur] || '已截止'}</div></div>`;
@@ -1448,16 +1475,26 @@ async function loadPastTasks() {
       btn.addEventListener('click', async () => {
         if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
         const grade = btn.dataset.grade, taskId = btn.dataset.task;
-        const res = await supabase.rpc('submit_task', {
-          p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade
-        });
-        if (res.error) { sfx.oops(); toast('保存失败：' + res.error.message); return; }
-        const d = res.data || {};
+        const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
+        if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
+        const d = wr.res || {};
         sfx.pick();
         const xpGain = (d.xp_delta || 0) > 0 ? ` 经验+${d.xp_delta}` : '';
-        toast(grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存');
+        toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : (grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存'));
+        const pastResult = document.querySelector(`[data-result="past-${taskId}"]`);
+        if (pastResult) pastResult.textContent = wr.queued ? '已离线保存，联网后自动同步 ✅' : '';
+        // 离线：同步更新本地往日任务缓存，重渲染时按钮/状态即时反映
+        if (wr.queued) {
+          try {
+            const key = 'sp_past_subs_' + cls + '_' + name;
+            const subs = JSON.parse(localStorage.getItem(key) || '[]');
+            const i = subs.findIndex(x => x.task_id === taskId);
+            if (i >= 0) subs[i].grade = grade; else subs.push({ task_id: taskId, grade });
+            localStorage.setItem(key, JSON.stringify(subs));
+          } catch (e) {}
+        }
         const row = state.roster.find(s => s.class === cls && s.student_name === name);
-        if (row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+        if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
         renderIdentityLevel();
         loadPastTasks();
         loadWall();
@@ -1753,13 +1790,19 @@ async function loadStudentTask() {
   els.taskBody.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载今日任务…</div>';
   let data;
   try {
+    // SDK 网络失败返回 {data:null,error} 而不抛异常：必须显式检查 error，否则离线不回退缓存
     const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
-    data = r.data;
-    if (data) { await window.Offline.set('task_' + cls, { data }); try { localStorage.setItem('sp_task_' + cls, JSON.stringify(data)); } catch(e) {} }
-  } catch (e) {
-    const v = await window.Offline.get('task_' + cls);
+    if (r && !r.error && r.data) {
+      data = r.data;
+      await window.Offline.set('task_' + cls + '_' + name, { data });
+      try { localStorage.setItem('sp_task_' + cls + '_' + name, JSON.stringify(data)); } catch(e) {}
+    } else { data = null; }
+  } catch (e) { data = null; }
+  if (!data) {
+    // v111：任务缓存按 班级+姓名 隔离，避免离线时 A 的完成状态显示给 B
+    const v = await window.Offline.get('task_' + cls + '_' + name);
     data = (v && v.data) || null;
-    if (!data) { try { data = JSON.parse(localStorage.getItem('sp_task_' + cls) || 'null'); } catch(e2) { data = null; } }
+    if (!data) { try { data = JSON.parse(localStorage.getItem('sp_task_' + cls + '_' + name) || 'null'); } catch(e2) { data = null; } }
   }
   const tasks = (data && data.tasks) || [];
   const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
@@ -1809,6 +1852,16 @@ async function onPickTaskGrade(grade, taskId, btn) {
       resultEl.textContent = '好的，继续加油把任务完成吧！';
     } else if (wr.queued) {
       resultEl.textContent = '已离线保存，联网后自动同步 ✅';
+      // 离线：本地即时反映状态（按钮高亮 + 缓存），联网后以服务端为准
+      document.querySelectorAll(`.stu-task-grade[data-task="${taskId}"]`).forEach(b => b.classList.toggle('on', b.dataset.grade === grade));
+      try {
+        const v = await window.Offline.get('task_' + cls + '_' + name);
+        if (v && v.data && Array.isArray(v.data.tasks)) {
+          v.data.tasks.forEach(t => { if (t.id === taskId) t.my_grade = grade; });
+          await window.Offline.set('task_' + cls + '_' + name, v);
+          try { localStorage.setItem('sp_task_' + cls + '_' + name, JSON.stringify(v.data)); } catch (e2) {}
+        }
+      } catch (e3) {}
     } else {
       const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
       resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`

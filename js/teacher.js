@@ -116,10 +116,10 @@ async function cacheRead(key, fetcher) {
 async function syncRunner(op) {
   const p = op.params || {};
   try {
-    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data }; }
-    if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error }; }
-    if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error }; }
-    if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error }; }
+    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
       const { error: upErr } = await supabase.storage
@@ -129,12 +129,12 @@ async function syncRunner(op) {
       const { data: pub } = supabase.storage.from('exam-papers').getPublicUrl(fileName);
       if (!pub || !pub.publicUrl) return { ok: false };
       const r = await supabase.from('exam_paper').insert(Object.assign({ image_url: pub.publicUrl }, p));
-      return { ok: !r.error };
+      return { ok: !r.error, error: r.error };
     }
     if (op.name === 'exam_delete') {
       if (p.path) { await supabase.storage.from('exam-papers').remove([p.path]); }
       const r = await supabase.from('exam_paper').delete().eq('id', p.id);
-      return { ok: !r.error };
+      return { ok: !r.error, error: r.error };
     }
     if (op.name === 'seat_save') {
       const del = await supabase.from('seat_grid').delete().eq('class', p.class);
@@ -153,6 +153,8 @@ async function runWrite(op) {
   try {
     const r = await syncRunner(op);
     if (r.ok) return { ok: true, queued: false, res: r.data };
+    // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
+    if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
     return { ok: false, queued: false };
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
@@ -204,6 +206,8 @@ function init() {
 
   els.loginForm.addEventListener('submit', onLogin);
   els.btnLogout.addEventListener('click', onLogout);
+  const precacheBtn = document.getElementById('btnPrecache');
+  if (precacheBtn) precacheBtn.addEventListener('click', () => runPrecache('手动'));
 
   $$('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -307,6 +311,29 @@ function enterApp(user) {
   els.appView.hidden = false;
   els.userEmail.textContent = user.email || '';
   loadClassesAndRecords();
+  // v111：联网时自动全量预缓存（学校经常断网，保证离线体验与在线一致）
+  setTimeout(() => { if (window.Precache && window.Offline && window.Offline.online) runPrecache('自动'); }, 1200);
+}
+
+/* ---------- v111：全量预缓存（联网时下载全校数据到本机） ---------- */
+let precacheToastTimer = null;
+async function runPrecache(from) {
+  if (!window.Precache) return;
+  if (window.Precache.running) { toast('预缓存正在后台进行中…'); return; }
+  toast(from === '自动' ? '正在后台预缓存全校数据，断网也能完整使用…' : '开始预缓存全校数据…');
+  const ok = await window.Precache.runTeacher(p => {
+    if (!p.done || p.done === p.total) return;
+    if (!precacheToastTimer && (p.done === 1 || p.done % Math.max(1, Math.round(p.total / 5)) === 0)) {
+      precacheToastTimer = setTimeout(() => { precacheToastTimer = null; }, 2500);
+      toast('📥 预缓存中 ' + p.done + '/' + p.total + '（' + (p.label || '') + '）');
+    }
+  });
+  if (ok) {
+    const okN = (window.Precache.lastResult && window.Precache.lastResult.ok) || 0;
+    if (okN === 0) toast('📥 预缓存失败：所有数据都没能下载（可能当前离线），联网后会自动重试');
+    else toast('📥 预缓存完成：' + okN + ' 项数据已存到本机，断网可完整使用 ✅');
+  }
+  else toast('预缓存未执行（可能正在运行或当前离线）');
 }
 function leaveApp() {
   try { localStorage.removeItem('sp_teacher_session'); } catch (e) {}
@@ -391,19 +418,48 @@ async function loadRecords() {
   }
 
   const [recRes, homeRes] = await Promise.all([q, hq]);
-  if (recRes.error) {
-    els.recordBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(recRes.error.message)}</div>`;
-    return;
+  let data, notes;
+  if (recRes.error || homeRes.error) {
+    // v111：离线/失败 → 用全量预缓存（records_all_<cls> / notes_all_<cls>），前端过滤班级/日期/关键词
+    let recRows = [], noteRows = [];
+    const clsList = cls ? [cls] : [];
+    if (!cls) {
+      try { const v = await window.Offline.get('classes_all'); clsList.push(...Array.from(new Set(((v && v.data) || []).map(s => s.class)))); } catch (e2) {}
+    }
+    for (const c of clsList) {
+      try {
+        const v1 = await window.Offline.get('records_all_' + c);
+        if (v1 && Array.isArray(v1.data)) recRows = recRows.concat(v1.data);
+        const v2 = await window.Offline.get('notes_all_' + c);
+        if (v2 && Array.isArray(v2.data)) noteRows = noteRows.concat(v2.data);
+      } catch (e2) {}
+    }
+    if (!recRows.length && !noteRows.length) {
+      const msg = (recRes && recRes.error && recRes.error.message) || '离线且暂无缓存';
+      els.recordBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(msg)}（离线且本机无预缓存，请联网后重试）</div>`;
+      return;
+    }
+    data = recRows.filter(r =>
+      (!cls || r.class === cls) &&
+      (!date || r.record_date === date) &&
+      (!kw || (r.student_name || '').includes(kw))
+    );
+    notes = noteRows.filter(n => {
+      const info = n.student_info || {};
+      if (cls && info.class !== cls) return false;
+      if (kw && !(info.student_name || '').includes(kw)) return false;
+      return true;
+    });
+  } else {
+    data = recRes.data || [];
+    // 在家表现按班级 / 学生关键字二次过滤（embed 字段）
+    notes = (homeRes.data || []).filter(n => {
+      const info = n.student_info || {};
+      if (cls && info.class !== cls) return false;
+      if (kw && !(info.student_name || '').includes(kw)) return false;
+      return true;
+    });
   }
-  const data = recRes.data || [];
-
-  // 在家表现按班级 / 学生关键字二次过滤（embed 字段）
-  let notes = (homeRes.data || []).filter(n => {
-    const info = n.student_info || {};
-    if (cls && info.class !== cls) return false;
-    if (kw && !(info.student_name || '').includes(kw)) return false;
-    return true;
-  });
 
   let html = '';
   if (notes.length) html += renderHomeNotes(notes);
@@ -1661,7 +1717,16 @@ async function activateTaskTab() {
   const taskClass = document.getElementById('taskClass');
   const reportClass = document.getElementById('reportClass');
   if (!loadedTask.list) {
-    const { data: students } = await supabase.from('student_info').select('class').order('class');
+    // 班级下拉：离线/失败时回退最近缓存（与记录页同口径 classes_all）
+    let students = null;
+    try {
+      const r = await supabase.from('student_info').select('class').order('class');
+      students = r.data;
+      if (!r.error && students) { try { await window.Offline.set('classes_all', { data: students }); } catch (e2) {} }
+    } catch (e) { students = null; }
+    if (!students) {
+      try { const v = await window.Offline.get('classes_all'); students = (v && v.data) || []; } catch (e2) { students = []; }
+    }
     const classes = Array.from(new Set((students || []).map(s => s.class))).sort();
     [taskClass, reportClass].forEach(sel => {
       sel.innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -1683,11 +1748,12 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   const title = document.getElementById('taskTitle').value.trim();
   const detail = document.getElementById('taskDetail').value.trim();
   let due = document.getElementById('taskDue').value || null;
-  // 未填截止日期：课堂作业当天，家庭作业次日
+  // 未填截止日期：课堂作业当天，家庭作业次日（按本地时区，避免 UTC 偏移把日期变成前一天）
   if (!due) {
-    const d = new Date(date);
+    const m = String(date).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(date);
     if (type === 'homework') d.setDate(d.getDate() + 1);
-    due = d.toISOString().slice(0, 10);
+    due = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
@@ -1764,14 +1830,44 @@ async function loadTaskReport() {
   if (offlineFailed || error) {
     const v = await window.Offline.get('taskreport_' + cls + '_' + date);
     if (v) {
-      stuRes = { data: (v.allStudents || []).map(n => ({ student_name: n })) };
-      seatRes = { data: Object.entries(v.seatMap || {}).map(([n, st]) => ({ student_name: n, seat_row: st.r, seat_col: st.c })) };
-      data = v.tasks || [];
+      // 兼容两种缓存结构：在线缓存 = 裸 {allStudents,tasks,seatMap}；v111 预缓存 = {data:{...}}
+      const rep = (v && v.data && (v.data.tasks || v.data.allStudents)) ? v.data : v;
+      stuRes = { data: (rep.allStudents || []).map(n => ({ student_name: n })) };
+      seatRes = { data: Object.entries(rep.seatMap || {}).map(([n, st]) => ({ student_name: n, seat_row: st.r, seat_col: st.c })) };
+      data = rep.tasks || [];
     } else {
-      box.innerHTML = offlineFailed
-        ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
-        : '<p class="text-muted">加载失败：' + esc(error.message) + '</p>';
-      return;
+      // v111：当日报告无缓存 → 用全量预缓存组装（tasks_all_<cls> + subs_all_<cls> + seat_<cls> + 名单）
+      try {
+        const tAll = await window.Offline.get('tasks_all_' + cls);
+        const sAll = await window.Offline.get('subs_all_' + cls);
+        const seatV = await window.Offline.get('seat_' + cls);
+        const dayTasks = ((tAll && tAll.data) || []).filter(t => String(t.task_date || '').slice(0, 10) === date);
+        if (dayTasks.length) {
+          const subsAll = (sAll && sAll.data) || [];
+          data = dayTasks.map(t => {
+            const submissions = {};
+            subsAll.forEach(sb => {
+              if (sb.task_id === t.id) submissions[sb.student_name] = { grade: sb.grade };
+            });
+            const o = Object.assign({}, t, { submissions });
+            return o;
+          });
+          const seatMap = {};
+          ((seatV && seatV.data) || []).forEach(x => { seatMap[x.student_name] = { r: x.seat_row, c: x.seat_col }; });
+          const rosterV = await window.Offline.get('students_roster');
+          const allNames = ((rosterV && rosterV.data) || []).filter(s => s.class === cls).map(s => s.student_name);
+          if (allNames.length) {
+            stuRes = { data: allNames.map(n => ({ student_name: n })) };
+            seatRes = { data: Object.entries(seatMap).map(([n, st]) => ({ student_name: n, seat_row: st.r, seat_col: st.c })) };
+          }
+        }
+      } catch (e3) {}
+      if (!data) {
+        box.innerHTML = offlineFailed
+          ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
+          : '<p class="text-muted">加载失败：' + esc(error.message) + '</p>';
+        return;
+      }
     }
   }
   // v106：按座位表排序——已排座位的按 排→列 在前，未排座位的按姓名跟在后面
@@ -1783,7 +1879,7 @@ async function loadTaskReport() {
     if (sa) return -1; if (sb) return 1;
     return a.localeCompare(b, 'zh');
   });
-  const tasks = (data && data.tasks) || [];
+  const tasks = Array.isArray(data) ? data : ((data && data.tasks) || []);
   if (!tasks.length) {
     box.innerHTML = '<p class="text-muted">这一天还没有发布任务。在上方发布后学生就能看到。</p>';
     return;
