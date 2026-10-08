@@ -54,6 +54,9 @@ update public.student_info set birth_date = '20150303' where btrim(class) = '六
 -- ---------------------------------------------------------------------------
 -- 家长端三要素校验：班级 + 学生姓名 + 出生年月日8位
 -- ---------------------------------------------------------------------------
+-- 参数名已变更，先删旧函数再重建（PG 不允许 create or replace 改参数名）
+drop function if exists public.verify_parent(text, text, text) cascade;
+
 create or replace function public.verify_parent(
   p_class text, p_student text, p_birth text
 ) returns jsonb language sql security definer set search_path = public as $$
@@ -78,6 +81,9 @@ grant  execute on function public.verify_parent(text, text, text) to anon, authe
 -- ---------------------------------------------------------------------------
 -- 家长查表现记录：校验改为出生日期
 -- ---------------------------------------------------------------------------
+-- 参数名已变更，先删旧函数再重建（PG 不允许 create or replace 改参数名）
+drop function if exists public.get_student_records(text, text, text) cascade;
+
 create or replace function public.get_student_records(
   p_class   text,
   p_student text,
@@ -117,6 +123,9 @@ grant  execute on function public.get_student_records(text, text, text) to anon,
 -- ---------------------------------------------------------------------------
 -- 家长查考试试卷：校验改为出生日期
 -- ---------------------------------------------------------------------------
+-- 参数名已变更，先删旧函数再重建（PG 不允许 create or replace 改参数名）
+drop function if exists public.get_student_papers(text, text, text) cascade;
+
 create or replace function public.get_student_papers(
   p_class   text,
   p_student text,
@@ -155,6 +164,9 @@ grant  execute on function public.get_student_papers(text, text, text) to anon, 
 -- ---------------------------------------------------------------------------
 -- 家长查近7天任务：校验改为出生日期
 -- ---------------------------------------------------------------------------
+-- 参数名已变更，先删旧函数再重建（PG 不允许 create or replace 改参数名）
+drop function if exists public.get_student_tasks(text, text, text, int) cascade;
+
 create or replace function public.get_student_tasks(
   p_class   text,
   p_student text,
@@ -203,6 +215,9 @@ grant  execute on function public.get_student_tasks(text,text,text,int) to anon,
 -- ---------------------------------------------------------------------------
 -- 家长在家留言：校验改为出生日期（留言归属记出生日期）
 -- ---------------------------------------------------------------------------
+-- 参数名已变更，先删旧函数再重建（PG 不允许 create or replace 改参数名）
+drop function if exists public.add_home_note(text, text, text, text, date) cascade;
+
 create or replace function public.add_home_note(
   p_class   text,
   p_student text,

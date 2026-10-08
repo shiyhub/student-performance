@@ -601,6 +601,12 @@ function todayStrLocal() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+// 学期口径（与 25/34 号 SQL 一致）：2-6月 → 2026春，其余 → 2026秋
+function semOf(dateStr) {
+  const m = Number(String(dateStr || '').slice(5, 7));
+  return (m >= 2 && m <= 6) ? '2026春' : '2026秋';
+}
+
 async function openRecordModal(mode, record) {
   els.recError.hidden = true;
   els.recError.textContent = '';
@@ -870,6 +876,7 @@ async function saveRecordModal() {
 
   const payload = {
     record_date: els.recDate.value,
+    semester: semOf(els.recDate.value),
     self_evaluation: recState.stars || null,
     behavior,
     teacher_comment: els.recComment.value.trim() || null
@@ -2300,7 +2307,7 @@ async function loadOverview() {
   try {
     const { data: roster } = await supabase.from('student_directory').select('class,student_name');
     const total = (roster || []).length;
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayStrLocal();   // 本地日期，避免凌晨 0-8 点取到 UTC 昨天
     let q = supabase.from('daily_record').select('student_name,class,record_date').eq('record_date', today);
     if (sem !== '全部') q = q.eq('semester', sem);
     const { data: recs } = await q;
@@ -2328,8 +2335,11 @@ loadOverview();
 
 /* ================= 数据统计 ================= */
 const statsState = { loaded: false };
-function monthAgo() { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); }
-function todayStrLocal() { const d = new Date(); return d.toISOString().slice(0,10); }
+function monthAgo() {
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 async function activateStatsTab() {
   if (statsState.loaded) return;
@@ -2435,7 +2445,7 @@ async function runStats() {
     const didSet = new Set();
     (recs||[]).forEach(r => {
       ((r.behavior&&r.behavior.items)||[]).forEach(it => {
-        if (mode==='OPT' && it.label===val) didSet.add(r.student_name);
+        if (mode==='OPT' && it.value===val) didSet.add(r.student_name);
         if (mode==='TAG' && it.label===val) didSet.add(r.student_name);
       });
     });
@@ -2448,7 +2458,7 @@ async function runStats() {
 
   out.innerHTML = `
     <div class="grid" style="gap:10px;margin-bottom:14px;">
-      <div class="stat-box"><div class="stat-num">${(recs||[]).length}</div><div class="text-muted">总记录天数</div></div>
+      <div class="stat-box"><div class="stat-num">${new Set((recs||[]).map(r=>r.record_date)).size}</div><div class="text-muted">总记录天数</div></div>
       <div class="stat-box"><div class="stat-num" style="color:#27ae60;">${posTotal}</div><div class="text-muted">积极表现</div></div>
       <div class="stat-box"><div class="stat-num" style="color:#c0392b;">${negTotal}</div><div class="text-muted">需要加油</div></div>
       <div class="stat-box"><div class="stat-num">${totalItems}</div><div class="text-muted">标签总次数</div></div>

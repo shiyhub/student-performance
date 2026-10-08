@@ -147,7 +147,7 @@ function init() {
       state.scanCode = sCode;
       setTimeout(() => { els.btnQuery.click(); }, 300);
     } else {
-      els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和家长姓名';
+      els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和出生年月日';
     }
   }
 
@@ -375,7 +375,7 @@ function renderResults(studentName, rows) {
   els.resultTitle.textContent = `${esc(studentName)} 的在校表现`;
 
   state.allRows = rows;
-  state.quick = 'week';
+  state.quick = 'all';   // 默认全部，避免本周无记录误导家长
   state.picked = null;
   state.viewMode = 'summary';
 
