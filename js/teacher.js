@@ -664,7 +664,16 @@ async function openRecordModal(mode, record) {
         recState.text[it.id] = it.value || '';
       } else {
         recState.chosen[it.id] = true;
-        if (it.value) recState.option[it.id] = it.value;
+        if (it.value) {
+          // v124(Bug-8)：同标签多值（历史/合并数据）收集为数组，编辑保存不丢其余项
+          if (recState.option[it.id] === undefined) {
+            recState.option[it.id] = it.value;
+          } else if (Array.isArray(recState.option[it.id])) {
+            if (!recState.option[it.id].includes(it.value)) recState.option[it.id].push(it.value);
+          } else if (recState.option[it.id] !== it.value) {
+            recState.option[it.id] = [recState.option[it.id], it.value];
+          }
+        }
       }
     });
   }
@@ -790,9 +799,12 @@ function renderRecTags() {
               </div>`;
       } else if (t.options && t.options.length) {
         h += `<div class="rec-subblock" data-subfor="${t.id}">
-                <div class="rec-subrow">${t.options.map(o =>
-                  `<button type="button" class="rec-subchip${recState.option[t.id] === o ? ' active' : ''}"
-                    data-rec-opt="${t.id}" data-opt-val="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+                <div class="rec-subrow">${t.options.map(o => {
+                  const optV = recState.option[t.id];
+                  const optSel = Array.isArray(optV) ? optV.includes(o) : optV === o;
+                  return `<button type="button" class="rec-subchip${optSel ? ' active' : ''}"
+                    data-rec-opt="${t.id}" data-opt-val="${esc(o)}">${esc(o)}</button>`;
+                }).join('')}</div>
               </div>`;
       }
     });
@@ -828,7 +840,15 @@ function renderRecTags() {
   $$('[data-rec-opt]', els.recTags).forEach(b => {
     b.addEventListener('click', () => {
       const id = b.dataset.recOpt;
-      recState.option[id] = b.dataset.optVal;
+      const cur = recState.option[id];
+      if (Array.isArray(cur)) {
+        // 历史多值：点击切换进/出集合
+        const v = b.dataset.optVal;
+        if (cur.includes(v)) { cur.splice(cur.indexOf(v), 1); if (!cur.length) delete recState.option[id]; }
+        else cur.push(v);
+      } else {
+        recState.option[id] = b.dataset.optVal;   // 单选覆盖（保持原有交互）
+      }
       renderRecTags();
     });
   });
@@ -848,9 +868,16 @@ function buildBehavior() {
       const v = (recState.text[t.id] || '').trim();
       if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 100), category: t.category || 'positive' });
     } else {
-      const v = (recState.option[t.id] || '').trim();
-      if (t.options && t.options.length && !v) return; // 二级选项必填（保存前另有拦截）
-      items.push({ id: t.id, label: t.label, type: 'check', value: v || null, category: t.category || 'positive' });
+      const opt = recState.option[t.id];
+      if (Array.isArray(opt)) {
+        if (t.options && t.options.length && !opt.length) return; // 二级选项必填
+        opt.forEach(v => { if (v) items.push({ id: t.id, label: t.label, type: 'check', value: v, category: t.category || 'positive' }); });
+        if (!opt.length) return;
+      } else {
+        const v = (opt || '').trim();
+        if (t.options && t.options.length && !v) return; // 二级选项必填（保存前另有拦截）
+        items.push({ id: t.id, label: t.label, type: 'check', value: v || null, category: t.category || 'positive' });
+      }
     }
   });
   recState.preserved.forEach(it => items.push(it));
@@ -872,7 +899,8 @@ async function saveRecordModal() {
   // 二级选项缺漏检查
   const missing = recState.tags.find(t =>
     recState.chosen[t.id] && t.tag_type === 'check' &&
-    Array.isArray(t.options) && t.options.length && !(recState.option[t.id] || '').trim());
+    Array.isArray(t.options) && t.options.length &&
+    (Array.isArray(recState.option[t.id]) ? !recState.option[t.id].length : !(recState.option[t.id] || '').trim()));
   if (missing) return showRecError(`请为「${missing.label}」选择一个具体项目`);
 
   const behavior = buildBehavior();
@@ -1917,12 +1945,12 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   if (!cls || !title) { toast('请填班级和任务标题'); return; }
 
   if (editingTaskId) {
-    const wr = await runWrite({ name: 'task_update', params: { id: editingTaskId, data: { class: cls, task_date: date, task_type: type, title, detail, due_time: due } } });
+    const wr = await runWrite({ name: 'task_update', params: { id: editingTaskId, data: { class: cls, task_date: date, semester: semOf(date), task_type: type, title, detail, due_time: due } } });
     if (!wr.ok) { toast('保存失败，请重试'); return; }
     toast(wr.queued ? '已离线保存，联网后同步 ✅' : '任务已更新');
     cancelTaskEdit();
   } else {
-    const wr = await runWrite({ name: 'task_insert', params: { class: cls, task_date: date, task_type: type, title, detail, due_time: due } });
+    const wr = await runWrite({ name: 'task_insert', params: { class: cls, task_date: date, semester: semOf(date), task_type: type, title, detail, due_time: due } });
     if (!wr.ok) { toast('发布失败，请重试'); return; }
     toast(wr.queued ? '已离线保存，联网后发布 ✅' : '任务已发布，学生端今天就能看到啦');
   }

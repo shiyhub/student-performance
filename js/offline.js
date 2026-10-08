@@ -89,20 +89,28 @@
       catch (e) { return 0; }
     },
     // runner(op) 应返回 { ok: true/false }；ok=true 出队，否则保留下轮重试
+    // v124(Bug-7)：加防重入锁——恢复联网时 online 事件 + subscribe 回调 + onSubmit
+    // 可能并发触发 drain，无锁时同一 op 会被双跑（XP 双倍累计）
     async drain(runner, limit) {
-      let ops = [];
-      try { ops = await tx('queue', 'readonly', s => s.getAll()); } catch (e) { return 0; }
-      if (!ops.length) return 0;
-      if (limit && ops.length > limit) ops = ops.slice(0, limit);
-      let done = 0;
-      for (const op of ops) {
-        try {
-          const r = await runner(op);
-          if (r && r.ok) { await tx('queue', 'readwrite', s => s.delete(op.id)); done++; }
-        } catch (e) { /* 保留，下轮重试 */ }
+      if (this._draining) return 0;
+      this._draining = true;
+      try {
+        let ops = [];
+        try { ops = await tx('queue', 'readonly', s => s.getAll()); } catch (e) { return 0; }
+        if (!ops.length) return 0;
+        if (limit && ops.length > limit) ops = ops.slice(0, limit);
+        let done = 0;
+        for (const op of ops) {
+          try {
+            const r = await runner(op);
+            if (r && r.ok) { await tx('queue', 'readwrite', s => s.delete(op.id)); done++; }
+          } catch (e) { /* 保留，下轮重试 */ }
+        }
+        if (done) refreshPending();
+        return done;
+      } finally {
+        this._draining = false;
       }
-      if (done) refreshPending();
-      return done;
     },
     // —— 待同步角标（右下角） ——
     mountBadge() {

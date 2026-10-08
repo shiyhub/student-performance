@@ -952,6 +952,22 @@ function mergeLocalRecord(cls, name, items, mood) {
   }
 }
 
+// v123：离线/兜底入队后统一做本地反馈——记录合并、标签即时置灰、墙缓存持久化（刷新后保持）
+function applyLocalSubmitFeedback(cls, name, items) {
+  mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key);
+  items.forEach(it => {
+    const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
+    if (tg && tg.history_unique !== false && it.value) {
+      if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
+      state.doneItems[tg.id].add(it.value);
+    }
+  });
+  renderTagGrid();
+  const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs };
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap)); } catch (e) {}
+  window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+}
+
 // 加载已提交过的二级项，历史唯一的标签置灰不可重复得分
 async function loadDoneItems() {
   state.doneItems = {};
@@ -960,12 +976,14 @@ async function loadDoneItems() {
   if (!cls || !name) return;
   let rows = null;
   if (!window.Offline || !window.Offline.online) {
-    // 离线：用预缓存的班级表现记录计算已打过的二级项（防离线重复得分）
-    let v = await window.Offline.get('records_all_' + cls);
-    rows = (v && v.data) || [];
+    // v124(Bug-10/11)：离线优先学生端最近的墙缓存（在线加载时实时刷新，最接近数据库），
+    // 教师端预缓存快照仅作兜底，且超过 7 天视为过期（防止清理后残留测试项导致离线多置灰）
+    const w = await window.Offline.get('wall_' + cls);
+    rows = (w && w.records) || [];
     if (!rows.length) {
-      const w = await window.Offline.get('wall_' + cls);   // 学生端主缓存里的全班记录
-      rows = (w && w.records) || [];
+      let v = await window.Offline.get('records_all_' + cls);
+      if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+      rows = (v && v.data) || [];
     }
   } else {
     try {
@@ -976,14 +994,22 @@ async function loadDoneItems() {
         .limit(500);
       rows = data || [];
       if (!rows.length) {
-        let v = await window.Offline.get('records_all_' + cls);
-        rows = (v && v.data) || [];
-        if (!rows.length) { const w = await window.Offline.get('wall_' + cls); rows = (w && w.records) || []; }
+        const w = await window.Offline.get('wall_' + cls);
+        rows = (w && w.records) || [];
+        if (!rows.length) {
+          let v = await window.Offline.get('records_all_' + cls);
+          if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+          rows = (v && v.data) || [];
+        }
       }
     } catch (e) {
-      let v = await window.Offline.get('records_all_' + cls);
-      rows = (v && v.data) || [];
-      if (!rows.length) { const w = await window.Offline.get('wall_' + cls); rows = (w && w.records) || []; }
+      const w = await window.Offline.get('wall_' + cls);
+      rows = (w && w.records) || [];
+      if (!rows.length) {
+        let v = await window.Offline.get('records_all_' + cls);
+        if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+        rows = (v && v.data) || [];
+      }
     }
   }
   (rows || []).forEach(r => {
@@ -1667,9 +1693,10 @@ async function onSubmit() {
       if (q) {
         sfx.success();
         toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢');
+        applyLocalSubmitFeedback(cls, name, items);   // v123：记录合并+即时置灰+缓存持久化
         resetSelections();
         renderMoodPreview();
-        updateSubmitStatus();   // v114：本地立即标记"今天已提交"
+        updateSubmitStatus();   // v114：本地立即标记"今天已提交"（合并后记录已包含本次）
         celebrate(0, false);    // v114：离线提交也显示成功浮层，学生明确知道已填报
       } else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
       return;
@@ -1694,7 +1721,7 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -1756,7 +1783,7 @@ async function onSubmit() {
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
