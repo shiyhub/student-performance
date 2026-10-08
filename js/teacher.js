@@ -601,10 +601,13 @@ function todayStrLocal() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// 学期口径（与 25/34 号 SQL 一致）：2-6月 → 2026春，其余 → 2026秋
+// 学期口径（与 35 号 SQL 一致）：9月1日~次年1月7日为秋（2026秋），1月8日~8月31日为春（2027春）
 function semOf(dateStr) {
-  const m = Number(String(dateStr || '').slice(5, 7));
-  return (m >= 2 && m <= 6) ? '2026春' : '2026秋';
+  const s = String(dateStr || '');
+  const md = s.slice(5, 10);   // MM-DD
+  if (md >= '09-01') return s.slice(0, 4) + '秋';
+  if (md >= '01-08') return s.slice(0, 4) + '春';
+  return String(Number(s.slice(0, 4)) - 1) + '秋';   // 1月1-7日 → 上学年秋
 }
 
 async function openRecordModal(mode, record) {
