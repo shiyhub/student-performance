@@ -903,12 +903,18 @@ async function loadTags() {
   });
   state.tags = data;
   await loadDoneItems();
+  renderTagGrid();
+  updateMood();
+}
+
+// 方案A：只重渲染标签区（数据已在 state，不重查网络）
+function renderTagGrid() {
+  if (!state.tags) return;
   els.posGrid.innerHTML = '';
   els.negGrid.innerHTML = '';
   els.textTagsBox.innerHTML = '';
-
   let hasNeg = false;
-  data.forEach(t => {
+  state.tags.forEach(t => {
     if (t.tag_type === 'check') {
       const node = buildCheckTag(t);
       if (t.category === 'negative') { els.negGrid.appendChild(node); hasNeg = true; }
@@ -918,12 +924,32 @@ async function loadTags() {
     }
   });
   els.negGroup.hidden = !hasNeg;
-
-  if (!data.length) {
+  if (!state.tags.length) {
     els.posGrid.innerHTML = '<span class="text-muted">老师还没有设置表现标签。</span>';
   }
   els.tagsBox.hidden = false;
-  updateMood();
+}
+
+// 方案A：本地合并当天记录（与服务端"按人按天合并"同口径，不新增重复行）
+function mergeLocalRecord(cls, name, items, mood) {
+  const today = todayStr();
+  const existing = state.records.find(r =>
+    r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
+  if (existing) {
+    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items : [];
+    const seen = new Set(oldItems.map(it => it.id + '|' + (it.value || '')));
+    const fresh = items.filter(it => !seen.has(it.id + '|' + (it.value || '')));
+    existing.behavior = { mood: mood || (existing.behavior && existing.behavior.mood) || 'normal', items: oldItems.concat(fresh) };
+    existing.create_at = new Date().toISOString();
+  } else {
+    state.records.unshift({
+      id: 'local_' + Date.now(),
+      student_name: name, class: cls, record_date: today,
+      self_evaluation: 0,
+      behavior: { mood: mood || 'normal', items },
+      teacher_comment: null, create_at: new Date().toISOString()
+    });
+  }
 }
 
 // 加载已提交过的二级项，历史唯一的标签置灰不可重复得分
@@ -1708,9 +1734,23 @@ async function onSubmit() {
     celebrate(gainedXp, leveledUp);
     resetSelections();
     renderMoodPreview();
-    loadTags();   // 刷新当天已打项，立即置灰
-    loadWall();   // 提交后立刻刷新班级墙：今日条数、经验、老师评语同步
-    loadProfile();// v105：检查是否解锁新成就
+    // 方案A：本地增量更新，不再全量重拉（提交秒级完成）
+    mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key);
+    // 置灰：本次提交的历史唯一项直接加入 doneItems（本地），标签区就地重渲染
+    items.forEach(it => {
+      const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
+      if (tg && tg.history_unique !== false && it.value) {
+        if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
+        state.doneItems[tg.id].add(it.value);
+      }
+    });
+    renderTagGrid();
+    renderWall();  // 本地重绘头像墙（经验/条数/评语即时更新）
+    loadProfile();// 成就/头像框（单请求，轻量）
+    // 后台静默全量同步一次（多设备/教师评语一致性，不阻塞界面）
+    if (window.Offline && window.Offline.online) {
+      setTimeout(() => { try { loadWall(); } catch (e3) {} }, 2500);
+    }
   } catch (e) {
     // 断网/网络错误：先入队，联网自动补传（按人按天合并，不会重复加经验）
     const offline = isNetErr(e);

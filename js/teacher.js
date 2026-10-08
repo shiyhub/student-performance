@@ -890,8 +890,7 @@ async function saveRecordModal() {
       toast('修改已保存');
     }
     closeRecordModal();
-    loadRecords();
-    loadClassesAndRecords();
+    loadRecords();   // 方案A：班级列表未变，不再全量重查
   } catch (e) {
     showRecError('保存失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
@@ -1760,6 +1759,7 @@ async function onAddTag(e) {
       category,
       score,
       xp_value: xpVal,
+      history_unique: !els.addTagUnique || els.addTagUnique.checked,
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
     .select('id');
