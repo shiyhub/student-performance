@@ -123,7 +123,8 @@ create index if not exists idx_exam_paper_lookup
 comment on table public.exam_paper is '教师上传的学生试卷照片与分数：仅老师可直连；家长经三要素RPC查看；学生端不开放';
 
 -- 1.7 班级通讯录视图（学生端"班级头像墙"使用；不含家长信息）-------------------
-create or replace view public.student_directory as
+drop view if exists public.student_directory;
+create view public.student_directory as
   select id, class, student_name, avatar, xp, level
   from public.student_info;
 

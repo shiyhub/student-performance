@@ -12,7 +12,8 @@ alter table public.student_info
   add column if not exists avatar text;
 
 -- 2) 重建班级通讯录视图（多带一列 avatar）
-create or replace view public.student_directory as
+drop view if exists public.student_directory;
+create view public.student_directory as
   select id, class, student_name, avatar
   from public.student_info;
 
