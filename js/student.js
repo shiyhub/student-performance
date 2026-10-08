@@ -300,14 +300,26 @@ function init() {
  * ===================================================================== */
 
 async function loadClasses() {
-  const { data, error } = await supabase
-    .from('student_directory')
-    .select('class');
+  let data = null, error = null;
+  try {
+    const res = await supabase.from('student_directory').select('class');
+    data = res.data; error = res.error || null;
+  } catch (e) { error = e; }
+  // 视图查询失败（旧设备/权限被改动）→ 尝试直接读 student_info 兜底
+  if (error || !data || !data.length) {
+    try {
+      const r2 = await supabase.from('student_info').select('class');
+      if (!r2.error && r2.data && r2.data.length) { data = r2.data; error = null; }
+      else if (!error) error = r2.error;
+    } catch (e2) { if (!error) error = e2; }
+  }
   if (error) {
     try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
     if (!state.classes.length) { try { const v = await window.Offline.get('classes'); state.classes = (v && v.data) || []; } catch(e2) {} }
     if (!state.classes.length) {
-      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败，请稍后刷新重试。</span>';
+      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败：'
+        + esc((error && error.message) || '网络异常')
+        + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">🔄 重新加载</button></span>';
       return;
     }
   } else {
