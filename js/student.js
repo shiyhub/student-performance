@@ -234,6 +234,7 @@ const els = {
   negGroup: $('#negGroup'),
   textTagsBox: $('#textTagsBox'),
   btnSubmit: $('#btnSubmit'),
+  submitStatus: $('#submitStatus'),
   successOverlay: $('#successOverlay'),
   successMsg: $('#successMsg'),
   btnAgain: $('#btnAgain'),
@@ -475,12 +476,19 @@ async function loadWall() {
     state.roster = rosterRes.data || [];
     state.records = recordRes.data || [];
   }
-  state.seatMap = {};
+  // 座位表：只有在线真正拿到数据才重建；离线/失败保留缓存值（否则座位布局丢失且会被空表覆盖）
   try {
     const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
-    (seatRes.data||[]).forEach(s => { state.seatMap[s.student_name] = (s.seat_row*6 + s.seat_col); });
+    if (seatRes && !seatRes.error && seatRes.data && seatRes.data.length) {
+      const m = {};
+      seatRes.data.forEach(s => { m[s.student_name] = (s.seat_row*6 + s.seat_col); });
+      state.seatMap = m;
+    }
   } catch(e) {}
-  state.todayTaskDefs = taskDefRes.data || [];
+  // 今日任务：在线拿到数据才覆盖；离线保留缓存值（离线也显示已发布任务）
+  if (taskDefRes && !taskDefRes.error && taskDefRes.data) {
+    state.todayTaskDefs = taskDefRes.data || [];
+  }
   // task_submission 没有 task_date/class 列，按当天任务 id 查提交
   let todayTaskSubs = [];
   if (state.todayTaskDefs.length) {
@@ -912,23 +920,45 @@ async function loadDoneItems() {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
   if (!cls || !name) return;
-  try {
-    const { data } = await supabase.from('daily_record')
-      .select('behavior')
-      .eq('class', cls).eq('student_name', name)
-      .order('create_at', { ascending: false })
-      .limit(500);
-    (data || []).forEach(r => {
-      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
-      items.forEach(it => {
-        const tid = it.id;
-        if (it.value) {
-          if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
-          state.doneItems[tid].add(it.value);
-        }
-      });
+  let rows = null;
+  if (!window.Offline || !window.Offline.online) {
+    // 离线：用预缓存的班级表现记录计算已打过的二级项（防离线重复得分）
+    let v = await window.Offline.get('records_all_' + cls);
+    rows = (v && v.data) || [];
+    if (!rows.length) {
+      const w = await window.Offline.get('wall_' + cls);   // 学生端主缓存里的全班记录
+      rows = (w && w.records) || [];
+    }
+  } else {
+    try {
+      const { data } = await supabase.from('daily_record')
+        .select('behavior')
+        .eq('class', cls).eq('student_name', name)
+        .order('create_at', { ascending: false })
+        .limit(500);
+      rows = data || [];
+      if (!rows.length) {
+        let v = await window.Offline.get('records_all_' + cls);
+        rows = (v && v.data) || [];
+        if (!rows.length) { const w = await window.Offline.get('wall_' + cls); rows = (w && w.records) || []; }
+      }
+    } catch (e) {
+      let v = await window.Offline.get('records_all_' + cls);
+      rows = (v && v.data) || [];
+      if (!rows.length) { const w = await window.Offline.get('wall_' + cls); rows = (w && w.records) || []; }
+    }
+  }
+  (rows || []).forEach(r => {
+    if (r.student_name !== name) return;
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    items.forEach(it => {
+      const tid = it.id;
+      if (it.value) {
+        if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
+        state.doneItems[tid].add(it.value);
+      }
     });
-  } catch (e) { /* 忽略 */ }
+  });
 }
 
 function buildCheckTag(t) {
@@ -1405,6 +1435,36 @@ function showForm(presetName) {
   loadTags();
   loadStudentTask();
   loadPastTasks();
+  updateSubmitStatus();
+}
+
+// v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
+async function updateSubmitStatus() {
+  const el = els.submitStatus;
+  if (!el) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { el.hidden = true; return; }
+  const today = todayStr();
+  let myToday = [];
+  if (!window.Offline || !window.Offline.online) {
+    const v = await window.Offline.get('wall_' + cls);
+    myToday = ((v && v.records) || []).filter(r => r.student_name === name && r.record_date === today);
+    if (!myToday.length) {
+      const v2 = await window.Offline.get('records_all_' + cls);
+      myToday = ((v2 && v2.data) || []).filter(r => r.student_name === name && r.record_date === today);
+    }
+  } else {
+    myToday = (state.records || []).filter(r => r.student_name === name && r.record_date === today);
+  }
+  if (myToday.length) {
+    el.hidden = false;
+    el.textContent = `✅ 今天已提交 ${myToday.length} 次，可继续补充表现（不会重复加分）`;
+    el.className = 'submit-status submit-status-ok';
+  } else {
+    el.hidden = true;
+    el.className = 'submit-status';
+  }
 }
 
 async function loadPastTasks() {
@@ -1571,6 +1631,8 @@ async function onSubmit() {
         toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢');
         resetSelections();
         renderMoodPreview();
+        updateSubmitStatus();   // v114：本地立即标记"今天已提交"
+        celebrate(0, false);    // v114：离线提交也显示成功浮层，学生明确知道已填报
       } else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
       return;
     }
@@ -1594,7 +1656,7 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); return; }
+        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -1642,7 +1704,7 @@ async function onSubmit() {
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); }
+      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
@@ -1803,6 +1865,14 @@ async function loadStudentTask() {
     const v = await window.Offline.get('task_' + cls + '_' + name);
     data = (v && v.data) || null;
     if (!data) { try { data = JSON.parse(localStorage.getItem('sp_task_' + cls + '_' + name) || 'null'); } catch(e2) { data = null; } }
+  }
+  if (!data) {
+    // v114 兜底：个人任务缓存缺失时（如预缓存未完成），用班级墙里的今日任务定义，状态显示"还没做"
+    const w = await window.Offline.get('wall_' + cls);
+    const wt = (w && w.tasks) || [];
+    if (wt.length) {
+      data = { tasks: wt.map(t => ({ id: t.id, title: t.title, detail: t.detail, task_type: t.task_type, my_grade: 'none' })) };
+    }
   }
   const tasks = (data && data.tasks) || [];
   const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
