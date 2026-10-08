@@ -77,6 +77,7 @@ if (window.Offline && document.body) window.Offline.mountBadge();
 // 查询与会话状态
 const state = {
   ctx: { cls: '', student: '', birth: '' },
+  scanCode: '',   // 学生个人二维码带来的密码（优先作凭据）
   allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
   papers: [],           // 该生试卷（独立 RPC，学生端不开放）
   quick: 'all',         // all | week | lastweek | 4w | custom
@@ -131,14 +132,27 @@ function init() {
   // 链接里带 class 即视为"班级二维码"扫码进入：锁定班级
   const params = new URLSearchParams(location.search);
   const c = (params.get('class') || '').trim();
+  const sName = (params.get('student') || '').trim();
+  const sCode = (params.get('code') || '').trim();
   if (c) {
     lockedClass = c;
     els.inpClass.value = c;
     els.classField.hidden = true;
     els.classLockName.textContent = c;
     els.classLockBar.hidden = false;
-    els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和家长姓名';
+    if (sName && sCode) {
+      // 学生个人二维码：自动填入并直接查询，老人零输入
+      els.headerHint.textContent = '扫码已识别学生，正在自动查询…';
+      els.inpStudent.value = sName;
+      state.scanCode = sCode;
+      setTimeout(() => { els.btnQuery.click(); }, 300);
+    } else {
+      els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和家长姓名';
+    }
   }
+
+  // 手动修改出生年月日输入框时，退出"扫码凭据"模式
+  els.inpBirth.addEventListener('input', () => { state.scanCode = ''; });
 
   els.btnQuery.addEventListener('click', onQuery);
   els.btnBack.addEventListener('click', () => {
@@ -181,12 +195,18 @@ async function onQuery() {
   const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
   const cls = norm(lockedClass || els.inpClass.value || '');
   const student = norm(els.inpStudent.value);
-  const birth = norm(els.inpBirth.value);
+  const birth = state.scanCode || norm(els.inpBirth.value);
   if (!cls || !student || !birth) {
     toast(lockedClass ? '学生姓名和出生年月日都要填写哦' : '班级、学生姓名、出生年月日都要填写哦');
     return;
   }
-  if (!/^\d{8}$/.test(birth)) {
+  if (state.scanCode) {
+    if (!/^\d{6}$/.test(birth)) {
+      els.mismatchBanner.hidden = true;
+      toast('二维码链接无效，请联系老师重新获取');
+      return;
+    }
+  } else if (!/^\d{8}$/.test(birth)) {
     els.mismatchBanner.hidden = true;
     toast('出生年月日请输入 8 位数字，例如 20150901');
     return;
@@ -215,9 +235,10 @@ async function onQuery() {
     const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth });
     const v = vRes.data;
     if (v && v.ok === false) {
+      if (state.scanCode) { state.scanCode = ''; }
       els.mismatchBanner.textContent = v.reason === 'no_student'
         ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
-        : '学生找到了，但出生年月日对不上，请核对 8 位出生年月日（如 20150901）。';
+        : '学生找到了，但出生年月日或学生密码对不上，请核对后再试（密码可请老师重新生成）。';
       els.mismatchBanner.hidden = false;
       return;
     }

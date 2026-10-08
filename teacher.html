@@ -544,6 +544,27 @@
   </div>
 </div>
 
+<!-- 学生个人密码 + 专属二维码 -->
+<div class="modal-mask" id="studentQrModal">
+  <div class="modal t-qr-modal">
+    <h3 id="stuQrTitle">学生专属二维码</h3>
+    <p class="text-muted t-qr-sub">老人/家长扫这个码，<b>不用输入任何信息</b>，直接看到该学生的在校表现。<br>
+      需要先给该学生设置一个 6 位密码（密码会带在二维码里，也能手动输入查看）。</p>
+    <div class="stu-code-row">
+      <span class="stu-code-label">当前密码</span>
+      <b class="stu-code-value" id="stuCodeValue">未设置</b>
+      <button class="btn btn-ghost btn-sm" id="btnStuGenCode" type="button">🎲 生成新密码</button>
+    </div>
+    <div id="stuQrImage" class="t-qr-box"></div>
+    <div class="t-qr-link" id="stuQrLink"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnStuQrDownload" type="button">⬇️ 下载二维码</button>
+      <button class="btn btn-ghost" id="btnStuQrCopy" type="button">复制链接</button>
+      <button class="btn btn-primary" id="btnStuQrClose" type="button">完成</button>
+    </div>
+  </div>
+</div>
+
 <section id="tabSeat" hidden>
   <h2>🪑 座位编排（6列×7排）</h2>
   <p class="text-muted">从下方名单把学生拖到座位上；点座位上的学生可清空。保存后学生端按座位显示。</p>

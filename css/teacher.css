@@ -350,3 +350,12 @@ body { background: #f3f6f5; }
 #seatPool{max-width:900px;margin:0 auto;}
 
 .task-stu-seat{font-size:11px;color:#9a8f7a;font-weight:400;margin-left:6px;}
+
+/* 学生个人密码 + 二维码 */
+.stu-code-row {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin: 10px 0 14px; padding: 8px 12px; background: #f4f7f5; border-radius: 8px;
+}
+.stu-code-label { color: #667; font-size: 13px; }
+.stu-code-value { font-size: 20px; letter-spacing: 3px; color: #1f6f4a; font-family: ui-monospace, monospace; }
+.stu-code-hint { font-size: 12px; color: #98a; margin: -4px 0 8px; }

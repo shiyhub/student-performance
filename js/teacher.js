@@ -58,6 +58,16 @@ const els = {
   btnClassQrClose: $('#btnClassQrClose'),
   btnClassQrCopy: $('#btnClassQrCopy'),
   btnClassQrDownload: $('#btnClassQrDownload'),
+  // 学生个人密码 + 专属二维码
+  studentQrModal: $('#studentQrModal'),
+  stuQrTitle: $('#stuQrTitle'),
+  stuCodeValue: $('#stuCodeValue'),
+  btnStuGenCode: $('#btnStuGenCode'),
+  stuQrImage: $('#stuQrImage'),
+  stuQrLink: $('#stuQrLink'),
+  btnStuQrClose: $('#btnStuQrClose'),
+  btnStuQrCopy: $('#btnStuQrCopy'),
+  btnStuQrDownload: $('#btnStuQrDownload'),
   // 批量录入
   batchClass: $('#batchClass'),
   batchText: $('#batchText'),
@@ -254,6 +264,31 @@ function init() {
   els.classQrModal.addEventListener('click', e => { if (e.target === els.classQrModal) closeClassQr(); });
   els.btnClassQrCopy.addEventListener('click', copyClassQrLink);
   els.btnClassQrDownload.addEventListener('click', downloadClassQr);
+  // 学生个人密码/二维码弹窗
+  els.btnStuGenCode.addEventListener('click', async () => {
+    if (!stuQrCtx) return;
+    if (!window.Offline || !window.Offline.online) { toast('当前离线，请联网后生成密码'); return; }
+    const code = genAccessCode();
+    try {
+      const { data, error } = await supabase.rpc('set_student_code', {
+        p_class: stuQrCtx.cls, p_student: stuQrCtx.name, p_code: code
+      });
+      if (error || data !== true) {
+        toast('设置失败：' + ((error && error.message) || '仅登录教师可操作'));
+        return;
+      }
+    } catch (e) {
+      toast('设置失败：' + ((e && e.message) || '网络异常'));
+      return;
+    }
+    els.stuCodeValue.textContent = code;
+    renderStuQr(code);
+    toast(`已生成新密码 ${code}，二维码已更新`);
+  });
+  els.btnStuQrClose.addEventListener('click', closeStudentQr);
+  els.studentQrModal.addEventListener('click', e => { if (e.target === els.studentQrModal) closeStudentQr(); });
+  els.btnStuQrCopy.addEventListener('click', copyStuQrLink);
+  els.btnStuQrDownload.addEventListener('click', downloadStuQr);
   // 修改统一班级或文本后，旧预览作废，需重新检查
   [els.batchClass, els.batchText].forEach(el => {
     el.addEventListener('input', () => {
@@ -1027,6 +1062,9 @@ async function loadStudents() {
                      <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
                              data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
                              data-xp-cur="${xp}" title="手动调整该学生经验">✏️ 调经验</button>
+                     <button type="button" class="btn btn-ghost btn-sm stu-qr-btn"
+                             data-stu-cls="${esc(s.class)}" data-stu-name="${esc(s.student_name)}"
+                             title="设置密码并生成学生个人二维码">🔑 个人码</button>
                    </div>
                    <div class="pchips" data-chips-for="${s.id}">
                      ${chips}
@@ -1044,6 +1082,11 @@ async function loadStudents() {
   $$('[data-qr-class]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', () => openClassQr(btn.dataset.qrClass));
   });
+  // 学生个人密码/二维码（离线时用缓存读取已设置密码）
+  $$('[data-stu-cls]', els.studentBox).forEach(btn => {
+    btn.addEventListener('click', () => openStudentQr(btn.dataset.stuCls, btn.dataset.stuName));
+  });
+  try { window.Offline.set('students_roster_full', { data: data || [] }); } catch (e2) {}
   // 删除学生（家长关联由数据库级联删除）
   $$('[data-del-id]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1243,6 +1286,112 @@ function openClassQr(cls) {
 
 function closeClassQr() {
   els.classQrModal.classList.remove('show');
+}
+
+/* ---------- 学生个人密码 + 专属二维码（老人扫码零输入） ---------- */
+
+let stuQrCtx = null;   // { cls, name }
+
+function genAccessCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function studentQrLink(cls, name, code) {
+  const url = new URL('parent.html', location.href);
+  url.searchParams.set('class', cls);
+  url.searchParams.set('student', name);
+  url.searchParams.set('code', code);
+  return url.toString();
+}
+
+function renderStuQr(code) {
+  els.stuQrLink.textContent = '';
+  els.stuQrImage.innerHTML = '';
+  if (!code || !stuQrCtx) {
+    els.stuQrImage.innerHTML = '<p class="text-muted">尚未设置密码：点「🎲 生成新密码」后自动出二维码。</p>';
+    return;
+  }
+  const link = studentQrLink(stuQrCtx.cls, stuQrCtx.name, code);
+  els.stuQrLink.textContent = link;
+  try {
+    new window.QRCode(els.stuQrImage, {
+      text: link,
+      width: 480, height: 480,
+      colorDark: '#26332e', colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.M
+    });
+  } catch (e) {
+    toast('二维码生成失败，可直接复制链接');
+  }
+}
+
+async function openStudentQr(cls, name) {
+  if (!cls || !name) { toast('学生信息为空'); return; }
+  stuQrCtx = { cls, name };
+  els.stuQrTitle.textContent = `${name} · 专属二维码`;
+  els.stuCodeValue.textContent = '读取中…';
+  els.stuQrImage.innerHTML = '<p class="text-muted">读取密码中…</p>';
+  els.stuQrLink.textContent = '';
+  els.studentQrModal.classList.add('show');
+  let code = '';
+  if (window.Offline && window.Offline.online) {
+    try {
+      const { data, error } = await supabase
+        .from('student_info')
+        .select('access_code')
+        .eq('class', cls)
+        .eq('student_name', name)
+        .maybeSingle();
+      if (!error && data) code = data.access_code || '';
+    } catch (e) {}
+  }
+  if (!code) {
+    // 离线或在线没读到：用名单缓存（含 access_code）
+    try {
+      const v = await window.Offline.get('students_roster_full');
+      const row = ((v && v.data) || []).find(s => s.class === cls && s.student_name === name);
+      if (row) code = row.access_code || '';
+    } catch (e) {}
+  }
+  els.stuCodeValue.textContent = code || '未设置';
+  renderStuQr(code);
+}
+
+function closeStudentQr() {
+  els.studentQrModal.classList.remove('show');
+  stuQrCtx = null;
+}
+
+async function copyStuQrLink() {
+  const text = els.stuQrLink.textContent;
+  if (!text) { toast('还没有可复制的链接，请先生成密码'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('链接已复制');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('链接已复制'); }
+    catch (err) { window.prompt('请手动复制链接：', text); }
+    document.body.removeChild(ta);
+  }
+}
+
+function downloadStuQr() {
+  const name = stuQrCtx ? stuQrCtx.name : '学生';
+  const canvas = els.stuQrImage.querySelector('canvas');
+  if (!canvas) { toast('二维码还没生成好，请稍候再试'); return; }
+  try {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `${name}-专属二维码.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    window.open(canvas.toDataURL('image/png'), '_blank');
+  }
 }
 
 async function copyClassQrLink() {
