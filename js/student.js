@@ -944,7 +944,7 @@ async function loadDoneItems() {
   } else {
     try {
       const { data } = await supabase.from('daily_record')
-        .select('behavior')
+        .select('behavior, student_name')
         .eq('class', cls).eq('student_name', name)
         .order('create_at', { ascending: false })
         .limit(500);
@@ -1009,8 +1009,8 @@ function buildCheckTag(t) {
         if (!Array.isArray(state.checkOption[t.id])) state.checkOption[t.id] = [];
         const arr = state.checkOption[t.id];
         const ix = arr.indexOf(opt);
-        if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); }
-        else { arr.push(opt); b.classList.add('active'); }
+        if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); b.textContent = opt; }
+        else { arr.push(opt); b.classList.add('active'); b.textContent = '✓ ' + opt; }
         // 一级标签显示已选数量
         chip.textContent = arr.length ? `${t.label}（已选${arr.length}）` : t.label;
       });
@@ -1898,7 +1898,8 @@ async function loadStudentTask() {
       const grades = short
         ? [['none','⏳ 未完成'],['done','✅ 完成']]
         : [['none','⏳ 还没做'],['done','✅ 完成了'],['good','👍 优秀 A'],['perfect','🏆 完美 A+']];
-      return `<div class="stu-task">
+      const done = my && my !== 'none';
+      return `<div class="stu-task${done ? ' done' : ''}">
         <div class="stu-task-title">${escapeHtml(t.title)}</div>
         ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
         <div class="stu-task-grades">` +
@@ -1928,6 +1929,9 @@ async function onPickTaskGrade(grade, taskId, btn) {
   if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
   const d = wr.res || {};
   sfx.pick();
+  // 已评(非"还没做")任务卡片置灰；撤销评分则恢复
+  const cardEl = btn.closest('.stu-task');
+  if (cardEl) cardEl.classList.toggle('done', grade !== 'none');
   const resultEl = document.querySelector(`[data-result="${taskId}"]`);
   if (resultEl) {
     if (grade === 'none') {
