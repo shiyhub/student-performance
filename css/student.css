@@ -105,6 +105,9 @@ body {
 
 .submit-wrap { margin-top: 16px; }
 .submit-wrap .btn { font-size: 17px; min-height: 52px; border-radius: 14px; }
+.submit-status { text-align: center; font-size: 15px; padding: 8px 12px; border-radius: 12px; margin-bottom: 10px; background: #f3f8f4; color: #2c7a4e; border: 1px solid #cfe6d8; }
+.submit-status-ok { background: #e8f6ec; color: #1f6b3d; border-color: #b7dfc5; font-weight: 600; }
+
 
 /* 成功鼓励动画 */
 .success-overlay {

@@ -29,7 +29,7 @@ const els = {
   classField: $('#classField'),
   inpClass: $('#inpClass'),
   inpStudent: $('#inpStudent'),
-  inpParent: $('#inpParent'),
+  inpBirth: $('#inpBirth'),
   btnQuery: $('#btnQuery'),
   btnBack: $('#btnBack'),
   mismatchBanner: $('#mismatchBanner'),
@@ -76,7 +76,7 @@ if (window.Offline && document.body) window.Offline.mountBadge();
 
 // 查询与会话状态
 const state = {
-  ctx: { cls: '', student: '', parent: '' },
+  ctx: { cls: '', student: '', birth: '' },
   allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
   papers: [],           // 该生试卷（独立 RPC，学生端不开放）
   quick: 'all',         // all | week | lastweek | 4w | custom
@@ -181,9 +181,14 @@ async function onQuery() {
   const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
   const cls = norm(lockedClass || els.inpClass.value || '');
   const student = norm(els.inpStudent.value);
-  const parent = norm(els.inpParent.value);
-  if (!cls || !student || !parent) {
-    toast(lockedClass ? '学生姓名和家长姓名都要填写哦' : '班级、学生姓名、家长姓名都要填写哦');
+  const birth = norm(els.inpBirth.value);
+  if (!cls || !student || !birth) {
+    toast(lockedClass ? '学生姓名和出生年月日都要填写哦' : '班级、学生姓名、出生年月日都要填写哦');
+    return;
+  }
+  if (!/^\d{8}$/.test(birth)) {
+    els.mismatchBanner.hidden = true;
+    toast('出生年月日请输入 8 位数字，例如 20150901');
     return;
   }
 
@@ -193,9 +198,9 @@ async function onQuery() {
   try {
     // 离线：跳过在线校验，直接读上次验证通过的缓存
     if (!window.Offline || !window.Offline.online) {
-      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + parent);
+      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + birth);
       if (v) {
-        state.ctx = { cls, student, parent };
+        state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
@@ -207,19 +212,19 @@ async function onQuery() {
       return;
     }
     // 先校验三要素，给出具体原因
-    const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_parent: parent });
+    const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth });
     const v = vRes.data;
     if (v && v.ok === false) {
       els.mismatchBanner.textContent = v.reason === 'no_student'
         ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
-        : '学生找到了，但家长姓名对不上，请核对家长姓名（可请老师在名单里确认登记的家长名）。';
+        : '学生找到了，但出生年月日对不上，请核对 8 位出生年月日（如 20150901）。';
       els.mismatchBanner.hidden = false;
       return;
     }
     const [recRes, paperRes, taskRes] = await Promise.all([
-      supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_parent: parent }),
-      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_parent: parent }),
-      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_parent: parent })
+      supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }),
+      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }),
+      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth })
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
@@ -238,17 +243,17 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
-    state.ctx = { cls, student, parent };
-    await window.Offline.set('parent_' + cls + '_' + student + '_' + parent, { records, papers, tasks });
+    state.ctx = { cls, student, birth };
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks });
     renderResults(student, records);
     renderPapers(papers);
     renderTasks(tasks);
   } catch (e) {
     // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用
     try {
-      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + parent);
+      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + birth);
       if (v) {
-        state.ctx = { cls, student, parent };
+        state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
@@ -275,7 +280,7 @@ async function onSubmitHome() {
     const wr = await runWrite({ name: 'add_home_note', params: {
       p_class: state.ctx.cls,
       p_student: state.ctx.student,
-      p_parent: state.ctx.parent,
+      p_birth: state.ctx.birth,
       p_content: content.slice(0, 500),
       p_date: date
     } });

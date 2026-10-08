@@ -13,7 +13,7 @@
   <header class="p-header">
     <div class="p-emoji">🏡</div>
     <h1>孩子在校表现查询</h1>
-    <p id="headerHint">输入班级、学生姓名、家长姓名，三项一致即可查看全部历史记录</p>
+    <p id="headerHint">输入班级、学生姓名、出生年月日（8位数），核对一致即可查看全部历史记录</p>
   </header>
 
   <div id="configBanner" class="banner banner-error" hidden>
@@ -37,8 +37,8 @@
       <input class="input" id="inpStudent" type="text" placeholder="学生姓名" maxlength="20" autocomplete="off">
     </div>
     <div class="field">
-      <label for="inpParent">家长姓名</label>
-      <input class="input" id="inpParent" type="text" placeholder="与老师登记的家长姓名一致" maxlength="20" autocomplete="off">
+      <label for="inpBirth">出生年月日</label>
+      <input class="input" id="inpBirth" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="8位数，如 20150901" maxlength="8" autocomplete="off">
     </div>
     <button class="btn btn-primary" id="btnQuery">查询记录</button>
     <div class="qr-entry">
@@ -48,7 +48,7 @@
 
   <!-- 查询失败 -->
   <div id="mismatchBanner" class="banner banner-warn" hidden>
-    信息不匹配，查不到记录。请核对学生姓名和家长姓名（需与老师登记的完全一致）后再试。
+    信息不匹配，查不到记录。请核对学生姓名和出生年月日（8位数，与老师登记的学籍信息一致）后再试。
   </div>
 
   <!-- 查询结果 -->
@@ -126,7 +126,7 @@
     <div id="qrLoading" class="loading-row" hidden><span class="spinner"></span>正在生成二维码…</div>
     <div id="qrImage" class="qr-box" hidden></div>
     <div class="qr-link" id="qrLink"></div>
-    <p class="qr-tip">把这个二维码发到家长群或打印贴在教室：<br>家长扫码后只需填写「学生姓名 + 家长姓名」即可查看。</p>
+    <p class="qr-tip">把这个二维码发到家长群或打印贴在教室：<br>家长扫码后只需填写「学生姓名 + 出生年月日（8位）」即可查看。</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="btnDownloadQr">⬇️ 下载二维码</button>
       <button class="btn btn-ghost" id="btnCopyLink">复制链接</button>
