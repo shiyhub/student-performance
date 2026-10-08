@@ -149,7 +149,8 @@
           supabase.from('daily_record').select('*').eq('class', cls).limit(1)
         ]);
         const seatMap = {};
-        ((seat && seat.data) || []).forEach(x => { seatMap[x.student_name] = { r: x.seat_row, c: x.seat_col }; });
+        // 学生端 loadWall/renderWall 期望的 seatMap 是"位置索引"（行×6+列），与 loadWall 缓存格式一致
+        ((seat && seat.data) || []).forEach(x => { seatMap[x.student_name] = (x.seat_row * 6 + x.seat_col); });
         await window.Offline.set('wall_' + cls, {
           roster: (dir && dir.data) || [], records: (rec && rec.data) || [],
           seatMap, tasks: (task && task.data) || [], subs: [], ts: Date.now()
