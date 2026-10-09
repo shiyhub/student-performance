@@ -1779,9 +1779,8 @@ async function onAddTag(e) {
   e.preventDefault();
   const label = els.addTagLabel.value.trim();
   if (!label) return toast('请输入标签文字');
-  const btn = els.addTagForm.querySelector('button[type=submit]');
-  btn.disabled = true;
-  btn.textContent = '添加中…';
+  const btn = els.addTagForm.querySelector('button[type=submit]') || els.addTagForm.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '添加中…'; }
   const tagType = els.addTagType.value;
   const options = tagType === 'check' ? parseTagOptions(els.addTagOptions.value) : [];
   let category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
@@ -1801,8 +1800,7 @@ async function onAddTag(e) {
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
     .select('id');
-  btn.disabled = false;
-  btn.textContent = '添加标签';
+  if (btn) { btn.disabled = false; btn.textContent = '添加标签'; }
   if (error) { toast('添加失败：' + error.message); return; }
   toast('已添加标签：' + label);
   els.addTagLabel.value = '';
@@ -2620,3 +2618,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 });
+//（注：内容由AI生成）
