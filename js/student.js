@@ -12,6 +12,49 @@ const supabase = window.supabase
 const ready = !!supabase &&
   !String((window.SUPABASE_CONFIG || {}).url || '').includes('YOUR_PROJECT_REF');
 
+/* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
+ * 打开子视图（墙/表单/弹窗）时 push 一层 history；
+ * 用户按浏览器返回（PC 返回键 / 手机手势 / 安卓返回键）触发 popstate → NavBack()
+ * 按当前 UI 状态逐层回退：弹窗 → 表单 → 墙 → 班级选择页；根视图不拦截（正常退出）。
+ * file:// 直接打开时 pushState 失败不影响功能（仅无法拦截返回）。
+ */
+const Nav = (() => {
+  let depth = 0, ready = false;
+  const marks = [];
+  function enable() { ready = true; }
+  function push(mark) {
+    if (!ready) return;
+    if (marks.length && marks[marks.length - 1] === mark) return;   // 同层重复打开不叠加
+    marks.push(mark); depth++;
+    try { history.pushState({ d: depth }, ''); } catch (e) {}
+  }
+  function onPop(e) {
+    if (e.state && typeof e.state.d === 'number') depth = Math.max(0, e.state.d);
+    depth = Math.max(0, depth - 1);
+    if (marks.length) marks.pop();
+    NavBack();
+  }
+  return { enable, push, onPop };
+})();
+window.addEventListener('popstate', e => Nav.onPop(e));
+
+// 学生端回退：按当前 UI 状态回退最深一层（幂等，只操作 UI，不产生新 push）
+function NavBack() {
+  if (els.detailModal.classList.contains('show')) { els.detailModal.classList.remove('show'); return true; }
+  if (els.avatarModal.classList.contains('show')) { els.avatarModal.classList.remove('show'); return true; }
+  if (els.successOverlay.classList.contains('show')) { els.successOverlay.classList.remove('show'); return true; }
+  if (els.formView && !els.formView.hidden) {
+    els.formView.hidden = true; els.wallView.hidden = false;
+    window.scrollTo({ top: 0 }); loadWall();
+    return true;
+  }
+  if (els.wallView && !els.wallView.hidden) {
+    const gate = document.getElementById('deviceGate');
+    if (gate) { gate.hidden = false; els.wallView.hidden = true; return true; }
+  }
+  return false;   // 根视图（班级选择/表单初始页）：不拦截，正常退出
+}
+
 const $ = (sel, root) => (root || document).querySelector(sel);
 
 // 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
@@ -294,6 +337,7 @@ function init() {
   }
   loadTags();
   loadClasses();
+  Nav.enable();   // RSK-10：初始化完成，之后打开子视图才计入返回栈
 }
 
 /* =====================================================================
@@ -429,6 +473,7 @@ function showDeviceGate() {
     localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
     state.currentClass = cls;
     gate.hidden = true; wallView.hidden = false;
+    Nav.push('wall');   // RSK-10：进入班级墙 = 打开子视图
     loadWall();
     // v111：联网时后台预缓存本班全量（名单/每人任务状态/成就头像），断网体验与在线一致
     if (window.Precache && window.Offline && window.Offline.online) {
@@ -695,6 +740,7 @@ function openStudentDetail(name) {
   state.detailName = name;
   els.detailFoot.hidden = false;
   els.detailModal.classList.add('show');
+  Nav.push('detail');   // RSK-10：打开详情弹窗
 }
 
 function openClassDetail(avg, todayCount) {
@@ -706,6 +752,7 @@ function openClassDetail(avg, todayCount) {
   state.detailName = '';
   els.detailFoot.hidden = true;
   els.detailModal.classList.add('show');
+  Nav.push('detail');   // RSK-10：打开班级详情弹窗
 }
 
 function renderClassRanking() {
@@ -1156,8 +1203,8 @@ function toggleCheckTag(tag, chip, wrap) {
 
 function bindEvents() {
   // 墙 ↔ 表单
-  if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); showForm(); });
-  els.btnBackWall.addEventListener('click', () => { sfx.back(); showWall(); });
+  if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); Nav.push('form'); showForm(); });
+  els.btnBackWall.addEventListener('click', () => { sfx.back(); Nav.push('wall'); showWall(); });
   els.wallClass.addEventListener('change', () => {
     state.currentClass = els.wallClass.value;
     try {
@@ -1179,6 +1226,7 @@ function bindEvents() {
     const name = state.detailName;
     sfx.tap();
     closeDetail();
+    Nav.push('form');   // RSK-10：详情 → 表单
     showForm(name);
   });
   // 姓名变化时回到该姓名已保存的头像（手动改名场景）
@@ -1307,6 +1355,7 @@ function openAvatarPicker() {
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
+  Nav.push('avatar');   // RSK-10：打开换头像弹窗
 }
 
 function buildEmojiChoice(emoji, selectedKey) {
@@ -1895,6 +1944,7 @@ function celebrate(gainedXp, leveledUp) {
   }
   els.successMsg.textContent = msg;
   els.successOverlay.classList.add('show');
+  Nav.push('success');   // RSK-10：提交成功浮层
   // 点任意处跳过庆祝
   const dismiss = () => {
     els.successOverlay.classList.remove('show');

@@ -13,6 +13,37 @@ const supabase = window.supabase
 const ready = !!supabase &&
   !String(window.SUPABASE_CONFIG.url || '').includes('YOUR_PROJECT_REF');
 
+/* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
+ * 教师端：弹窗（表现记录/班级码/学生码）打开时 push 一层 history，
+ * 返回键/手势按 UI 状态关闭弹窗；主界面（无弹窗）不拦截，正常退出。
+ */
+const Nav = (() => {
+  let depth = 0, ready = false;
+  const marks = [];
+  function enable() { ready = true; }
+  function push(mark) {
+    if (!ready) return;
+    if (marks.length && marks[marks.length - 1] === mark) return;
+    marks.push(mark); depth++;
+    try { history.pushState({ d: depth }, ''); } catch (e) {}
+  }
+  function onPop(e) {
+    if (e.state && typeof e.state.d === 'number') depth = Math.max(0, e.state.d);
+    depth = Math.max(0, depth - 1);
+    if (marks.length) marks.pop();
+    NavBack();
+  }
+  return { enable, push, onPop };
+})();
+window.addEventListener('popstate', e => Nav.onPop(e));
+
+function NavBack() {
+  if (els.recordModal.classList.contains('show')) { closeRecordModal(); return true; }
+  if (els.classQrModal.classList.contains('show')) { closeClassQr(); return true; }
+  if (els.studentQrModal.classList.contains('show')) { closeStudentQr(); return true; }
+  return false;   // 主界面/登录页：不拦截
+}
+
 const $ = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
@@ -344,6 +375,7 @@ async function onLogout() {
 function enterApp(user) {
   els.loginView.hidden = true;
   els.appView.hidden = false;
+  Nav.enable();   // RSK-10：登录成功，弹窗返回栈启用
   els.userEmail.textContent = user.email || '';
   loadClassesAndRecords();
   // v111：联网时自动全量预缓存（学校经常断网，保证离线体验与在线一致）
@@ -682,6 +714,7 @@ async function openRecordModal(mode, record) {
   renderRecTags();
   updateRecMood();
   els.recordModal.classList.add('show');
+  Nav.push('record');   // RSK-10：打开表现记录弹窗
 }
 
 function closeRecordModal() {
@@ -1319,6 +1352,7 @@ function openClassQr(cls) {
     toast('二维码生成失败，可直接复制链接');
   }
   els.classQrModal.classList.add('show');
+  Nav.push('qr');   // RSK-10：打开班级二维码弹窗
 }
 
 function closeClassQr() {
@@ -1370,6 +1404,7 @@ async function openStudentQr(cls, name) {
   els.stuQrImage.innerHTML = '<p class="text-muted">读取密码中…</p>';
   els.stuQrLink.textContent = '';
   els.studentQrModal.classList.add('show');
+  Nav.push('qr2');   // RSK-10：打开学生二维码弹窗
   let code = '';
   if (window.Offline && window.Offline.online) {
     try {

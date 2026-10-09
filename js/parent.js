@@ -10,6 +10,44 @@ const supabase = window.supabase
 const ready = !!supabase &&
   !String(window.SUPABASE_CONFIG.url || '').includes('YOUR_PROJECT_REF');
 
+/* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
+ * 家长端：二维码弹窗/试卷弹窗打开时 push 一层 history；
+ * 返回键/手势按 UI 状态回退：弹窗 → 查询结果 → 查询表单；表单页不拦截。
+ */
+const Nav = (() => {
+  let depth = 0, ready = false;
+  const marks = [];
+  function enable() { ready = true; }
+  function push(mark) {
+    if (!ready) return;
+    if (marks.length && marks[marks.length - 1] === mark) return;
+    marks.push(mark); depth++;
+    try { history.pushState({ d: depth }, ''); } catch (e) {}
+  }
+  function onPop(e) {
+    if (e.state && typeof e.state.d === 'number') depth = Math.max(0, e.state.d);
+    depth = Math.max(0, depth - 1);
+    if (marks.length) marks.pop();
+    NavBack();
+  }
+  return { enable, push, onPop };
+})();
+window.addEventListener('popstate', e => Nav.onPop(e));
+
+function NavBack() {
+  if (els.qrModal.classList.contains('show')) { closeQrModal(); return true; }
+  if (els.paperViewModal.classList.contains('show')) { closePaper(); return true; }
+  if (els.resultCard && !els.resultCard.hidden) {
+    els.resultCard.hidden = true;
+    els.papersCard.hidden = true;
+    els.mismatchBanner.hidden = true;
+    els.queryCard.hidden = false;
+    window.scrollTo({ top: 0 });
+    return true;
+  }
+  return false;   // 查询表单（根）：不拦截
+}
+
 const $ = (sel, root) => (root || document).querySelector(sel);
 
 const MOOD_MAP = {
@@ -132,6 +170,7 @@ if (window.Offline) {
 }
 
 init();
+Nav.enable();   // RSK-10：页面初始化完成，返回栈启用
 
 function init() {
   if (!ready) {
@@ -392,6 +431,7 @@ function quickDateSet(quick, validDates) {
 function renderResults(studentName, rows) {
   els.queryCard.hidden = true;
   els.resultCard.hidden = false;
+  Nav.push('result');   // RSK-10：查询结果页 = 子视图
   els.resultTitle.textContent = `${esc(studentName)} 的在校表现`;
 
   state.allRows = rows;
@@ -660,6 +700,7 @@ let qrRefreshTimer;
 function openQrModal() {
   els.qrClass.value = (lockedClass || els.inpClass.value || '').trim();
   els.qrModal.classList.add('show');
+  Nav.push('qr');   // RSK-10：打开扫码弹窗
   refreshQr();
 }
 function closeQrModal() {
@@ -824,6 +865,7 @@ function openPaper(url) {
   els.paperViewImg.src = url;
   els.paperViewOpen.href = url;
   els.paperViewModal.classList.add('show');
+  Nav.push('paper');   // RSK-10：打开试卷预览弹窗
 }
 function closePaper() {
   els.paperViewModal.classList.remove('show');
