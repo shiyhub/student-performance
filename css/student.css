@@ -864,6 +864,45 @@ html,body{background:#e8e6e1 !important;}
 }
 .frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
 .frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
+/* ============================================================
+   v130（RSK-11）：12 款游戏风头像框（透明 PNG 素材叠加）
+   素材 assets/frames/frame-*.png：中心 70% 镂空放头像，粒子只在四周
+   ============================================================ */
+.frame-tac.framed::after, .frame-gun.framed::after, .frame-dragon.framed::after,
+.frame-mecha.framed::after, .frame-wolf.framed::after, .frame-sakura.framed::after,
+.frame-magic.framed::after, .frame-princess.framed::after, .frame-queen.framed::after,
+.frame-rose.framed::after, .frame-fairy.framed::after, .frame-pixie.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 50%;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-tac.framed::after     { background-image: url("../assets/frames/frame-tac.png"); }
+.frame-gun.framed::after     { background-image: url("../assets/frames/frame-gun.png"); }
+.frame-dragon.framed::after  { background-image: url("../assets/frames/frame-dragon.png"); }
+.frame-mecha.framed::after   { background-image: url("../assets/frames/frame-mecha.png"); }
+.frame-wolf.framed::after    { background-image: url("../assets/frames/frame-wolf.png"); }
+.frame-sakura.framed::after  { background-image: url("../assets/frames/frame-sakura.png"); }
+.frame-magic.framed::after   { background-image: url("../assets/frames/frame-magic.png"); }
+.frame-princess.framed::after{ background-image: url("../assets/frames/frame-princess.png"); }
+.frame-queen.framed::after   { background-image: url("../assets/frames/frame-queen.png"); }
+.frame-rose.framed::after    { background-image: url("../assets/frames/frame-rose.png"); }
+.frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.png"); }
+.frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.png"); }
+/* 头像框选择区预览（直接显示素材图） */
+.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / cover no-repeat; }
+.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / cover no-repeat; }
+.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / cover no-repeat; }
+.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.png") center / cover no-repeat; }
+.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.png") center / cover no-repeat; }
+.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.png") center / cover no-repeat; }
+.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.png") center / cover no-repeat; }
+.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.png") center / cover no-repeat; }
+.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.png") center / cover no-repeat; }
+.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / cover no-repeat; }
+.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / cover no-repeat; }
+.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / cover no-repeat; }
+
+
 
 /* ============================================================
    v105：成就徽章墙
