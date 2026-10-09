@@ -44,5 +44,11 @@ insert into supabase_migrations.schema_migrations (version, name) values
 ('20260101002600','move-recite'),
 ('20260101002700','seat'),
 ('20260101002800','task-type'),
-('20260101002900','avatar-frames-achievements')
+('20260101002900','avatar-frames-achievements'),
+('20260101003000','parent-birth-login'),
+('20260101003100','student-access-code'),
+('20260101003200','student-directory-fix'),
+('20260101003300','submit-dedupe'),
+('20260101003400','fix-semester-write'),
+('20260101003500','semester-boundary')
 on conflict (version) do nothing;

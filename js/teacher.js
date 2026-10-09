@@ -1816,19 +1816,26 @@ async function onAddTag(e) {
 async function onRecalcXp() {
   if (!confirm('将按历史记录重新累加全班的经验和等级。\n不会删除任何记录，只是重算经验。确定继续吗？')) return;
   const btn = els.btnRecalcXp;
+  if (btn.disabled) return;   // v128(RSK-06)：重入保护（含 RPC 异常路径）
   btn.disabled = true;
   btn.textContent = '重算中…';
-  const { data, error } = await supabase.rpc('recalc_all_xp');
-  btn.disabled = false;
-  btn.textContent = '一键重算全班经验';
-  if (error) {
-    els.recalcResult.textContent = '失败：' + error.message;
-    toast('重算失败：' + error.message);
-    return;
+  try {
+    const { data, error } = await supabase.rpc('recalc_all_xp');
+    if (error) {
+      els.recalcResult.textContent = '失败：' + error.message;
+      toast('重算失败：' + error.message);
+      return;
+    }
+    els.recalcResult.textContent = `✅ 完成，重放了 ${data && data.records_replayed} 条记录`;
+    toast('经验已重算');
+    loadStudents();
+  } catch (e) {
+    els.recalcResult.textContent = '失败：' + ((e && e.message) || '网络异常，请重试');
+    toast('重算失败：' + ((e && e.message) || '网络异常，请重试'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '一键重算全班经验';
   }
-  els.recalcResult.textContent = `✅ 完成，重放了 ${data && data.records_replayed} 条记录`;
-  toast('经验已重算');
-  loadStudents();
 }
 
 async function fillPreviewClasses() {

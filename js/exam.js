@@ -157,9 +157,15 @@
   async function runOcr(blob) {
     state.ocrBusy = true;
     setOcrStatus('正在识别卷面上的分数（首次识别需加载识别引擎，约需十几秒，请稍候）…');
+    // v128(RSK-04)：OCR 加 60 秒超时，超时提示手动填写，避免低配/弱网长时间无反馈
+    const OCR_TIMEOUT_MS = 60000;
+    const withTimeout = p => Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('OCR_TIMEOUT')), OCR_TIMEOUT_MS))
+    ]);
     try {
-      const worker = await getOcrWorker();
-      const { data } = await worker.recognize(blob);
+      const worker = await withTimeout(getOcrWorker());
+      const { data } = await withTimeout(worker.recognize(blob));
       const found = pickScore((data && data.text) || '');
       if (found) {
         els.examScore.value = String(found.score);
@@ -169,7 +175,9 @@
         setOcrStatus('没有自动识别到分数，请手动填写后保存。');
       }
     } catch (err) {
-      setOcrStatus('分数识别失败，可以手动填写分数后保存。');
+      setOcrStatus((err && err.message === 'OCR_TIMEOUT')
+        ? '识别超时（超过 60 秒），可再试一次，或直接手动填写分数后保存。'
+        : '分数识别失败，可以手动填写分数后保存。');
     } finally {
       state.ocrBusy = false;
     }

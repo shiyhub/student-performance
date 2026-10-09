@@ -256,6 +256,7 @@ const state = {
   roster: [],
   records: [],
   detailName: '',
+  serverToday: null,  // v128(RSK-08)：服务端"今日"日期（提交后校正，设备日期错误时不导致错日）
   // 表单
   stars: 0,
   moodLevel: 3,
@@ -554,7 +555,8 @@ async function loadWall() {
 
 function renderWall() {
   const recs = state.records;
-  const today = todayStr();
+  // v128(RSK-08)：今日判定以服务端日期为准（提交后校正），设备日期错误不导致错日
+  const today = state.serverToday || todayStr();
 
   // 全班汇总（未打星的记录不计入平均星级）
   const classRated = recs.filter(r => Number(r.self_evaluation) > 0);
@@ -583,12 +585,17 @@ function renderWall() {
   if (slot) slot.innerHTML = classCard;
 
   // 按座位编排：空位保留，按 seat_row*6+col 定位
+  // v128(RSK-07)：槽位数动态计算（默认 42 格；学生/座位超 42 时按 6 列向上扩展），超员不错位
+  // 注意：seatMap 为 { 学生名: 槽位索引 }，取槽位索引必须用 Object.values()（key 是姓名，Number(姓名)=NaN）
   const useSeat = state.seatMap && Object.keys(state.seatMap).length;
   const slotOf = {};
   if (useSeat) Object.entries(state.seatMap).forEach(([n,i]) => slotOf[i] = n);
+  const seatSlots = useSeat ? Object.values(state.seatMap).map(Number) : [];
+  const maxSeatSlot = seatSlots.length ? Math.max.apply(null, seatSlots) : -1;
+  const slotCount = Math.max(42, Math.ceil(Math.max(state.roster.length, maxSeatSlot + 1) / 6) * 6);
   const ordered = [];
   if (useSeat) {
-    for (let i=0;i<42;i++) {
+    for (let i=0;i<slotCount;i++) {
       const n = slotOf[i];
       if (n) ordered.push(state.roster.find(s=>s.student_name===n));
       else ordered.push(null); // 空位占位
@@ -963,8 +970,9 @@ function renderTagGrid() {
 }
 
 // 方案A：本地合并当天记录（与服务端"按人按天合并"同口径，不新增重复行）
-function mergeLocalRecord(cls, name, items, mood) {
-  const today = todayStr();
+function mergeLocalRecord(cls, name, items, mood, serverToday) {
+  // v128(RSK-08)：优先用服务端返回的 record_date（服务器日期为准），避免设备日期错误时错日
+  const today = serverToday || todayStr();
   const existing = state.records.find(r =>
     r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
   if (existing) {
@@ -1794,7 +1802,9 @@ async function onSubmit() {
     resetSelections();
     renderMoodPreview();
     // 方案A：本地增量更新，不再全量重拉（提交秒级完成）
-    mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key);
+    // v128(RSK-08)：以服务端 record_date 为"今日"基准，墙的今日判定与服务端一致
+    if (subRes.record_date) state.serverToday = String(subRes.record_date).slice(0, 10);
+    mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key, state.serverToday);
     // 置灰：本次提交的历史唯一项直接加入 doneItems（本地），标签区就地重渲染
     items.forEach(it => {
       const tg = (state.tags || []).find(x => String(x.id) === String(it.id));

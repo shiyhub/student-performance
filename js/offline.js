@@ -91,26 +91,50 @@
     // runner(op) 应返回 { ok: true/false }；ok=true 出队，否则保留下轮重试
     // v124(Bug-7)：加防重入锁——恢复联网时 online 事件 + subscribe 回调 + onSubmit
     // 可能并发触发 drain，无锁时同一 op 会被双跑（XP 双倍累计）
+    // v128(RSK-03)：防重入锁升级为"跨标签页锁"——原锁是页面内变量，双标签页各自持锁
+    // 仍会并发出队同一条记录。优先用 Web Locks API（navigator.locks），
+    // 不支持时降级为 localStorage 锁（带 2 分钟超时防死锁）。
     async drain(runner, limit) {
       if (this._draining) return 0;
-      this._draining = true;
-      try {
-        let ops = [];
-        try { ops = await tx('queue', 'readonly', s => s.getAll()); } catch (e) { return 0; }
-        if (!ops.length) return 0;
-        if (limit && ops.length > limit) ops = ops.slice(0, limit);
-        let done = 0;
-        for (const op of ops) {
-          try {
-            const r = await runner(op);
-            if (r && r.ok) { await tx('queue', 'readwrite', s => s.delete(op.id)); done++; }
-          } catch (e) { /* 保留，下轮重试 */ }
+      if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
+        // 拿不到锁说明别的标签页正在同步，本轮直接放弃（下轮由事件/角标再触发）
+        const result = await navigator.locks.request('sp-offline-drain', { ifAvailable: true }, async (lock) => {
+          if (!lock) return 'skipped';
+          const done = await this._doDrain(runner, limit);
+          return 'done:' + done;
+        });
+        if (typeof result === 'string' && result.indexOf('done:') === 0) {
+          return Number(result.slice(5)) || 0;
         }
-        if (done) refreshPending();
-        return done;
-      } finally {
-        this._draining = false;
+        return 0;   // 其他标签页持有锁，本轮跳过
       }
+      // 降级：localStorage 跨标签页锁（带 2 分钟超时，防止异常中断后死锁）
+      const LOCK_KEY = 'sp-drain-lock';
+      try {
+        const now = Date.now();
+        const holder = localStorage.getItem(LOCK_KEY);
+        if (holder && (now - Number(holder)) < 120000) return 0;   // 其他标签页持有中
+        localStorage.setItem(LOCK_KEY, String(now));
+        this._draining = true;
+        try { return await this._doDrain(runner, limit); }
+        finally { localStorage.removeItem(LOCK_KEY); this._draining = false; }
+      } catch (e) { this._draining = false; return 0; }
+    },
+    async _doDrain(runner, limit) {
+      let ops = [];
+      try { ops = await tx('queue', 'readonly', s => s.getAll()); } catch (e) { return 0; }
+      if (!ops.length) { this._lastDone = 0; return 0; }
+      if (limit && ops.length > limit) ops = ops.slice(0, limit);
+      let done = 0;
+      for (const op of ops) {
+        try {
+          const r = await runner(op);
+          if (r && r.ok) { await tx('queue', 'readwrite', s => s.delete(op.id)); done++; }
+        } catch (e) { /* 保留，下轮重试 */ }
+      }
+      if (done) refreshPending();
+      this._lastDone = done;
+      return done;
     },
     // —— 待同步角标（右下角） ——
     mountBadge() {

@@ -86,6 +86,17 @@ const state = {
 };
 
 /* ---------- v107：统一离线层辅助（家长端） ---------- */
+/* ---------- v128：家长缓存 24 小时过期（RSK-01） ---------- */
+const PARENT_CACHE_TTL = 24 * 3600 * 1000;   // 缓存 24 小时后需重新联网验证
+async function readParentCache(key) {
+  try {
+    const v = await window.Offline.get(key);
+    if (!v) return null;
+    // 无时间戳的旧缓存：视为可用但提示（升级过渡期）；有时间戳则按 TTL 判断
+    if (v.cachedAt && (Date.now() - v.cachedAt) > PARENT_CACHE_TTL) return { expired: true };
+    return v;
+  } catch (e) { return null; }
+}
 const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
 async function syncRunner(op) {
   const p = op.params || {};
@@ -216,15 +227,18 @@ async function onQuery() {
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
   try {
-    // 离线：跳过在线校验，直接读上次验证通过的缓存
+    // 离线：跳过在线校验，直接读上次验证通过的缓存（24 小时内）
     if (!window.Offline || !window.Offline.online) {
-      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + birth);
-      if (v) {
+      const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
+      if (v && !v.expired) {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
         toast('离线模式：显示上次查询的缓存数据');
+      } else if (v && v.expired) {
+        els.mismatchBanner.textContent = '上次查询的缓存已超过 24 小时，请联网重新验证后再离线查看。';
+        els.mismatchBanner.hidden = false;
       } else {
         els.mismatchBanner.textContent = '当前离线，且这台设备还没有查询过这组信息：请先联网查询一次，之后断网也能看。';
         els.mismatchBanner.hidden = false;
@@ -238,7 +252,9 @@ async function onQuery() {
       if (state.scanCode) { state.scanCode = ''; }
       els.mismatchBanner.textContent = v.reason === 'no_student'
         ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
-        : '学生找到了，但出生年月日或学生密码对不上，请核对后再试（密码可请老师重新生成）。';
+        : v.reason === 'locked'
+          ? '错误次数过多，该学生已临时锁定 15 分钟，请稍后再试（或请老师重置密码）。'
+          : '学生找到了，但出生年月日或学生密码对不上，请核对后再试（密码可请老师重新生成）。';
       els.mismatchBanner.hidden = false;
       return;
     }
@@ -265,20 +281,24 @@ async function onQuery() {
       return;
     }
     state.ctx = { cls, student, birth };
-    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks });
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, cachedAt: Date.now() });
     renderResults(student, records);
     renderPapers(papers);
     renderTasks(tasks);
   } catch (e) {
-    // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用
+    // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用（24 小时内有效）
     try {
-      const v = await window.Offline.get('parent_' + cls + '_' + student + '_' + birth);
-      if (v) {
+      const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
+      if (v && !v.expired) {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
         toast('当前离线，显示上次查询的缓存数据');
+        return;
+      } else if (v && v.expired) {
+        els.mismatchBanner.textContent = '上次查询的缓存已超过 24 小时，请联网重新验证后再离线查看。';
+        els.mismatchBanner.hidden = false;
         return;
       }
     } catch (e2) {}
