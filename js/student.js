@@ -1593,12 +1593,11 @@ async function loadPastTasks() {
     } catch (e) { tasks = null; }
     if (!tasks) { try { tasks = JSON.parse(localStorage.getItem('sp_past_' + cls) || '[]'); } catch(e2) { tasks = []; } }
     const taskIds = tasks.map(t => t.id);
-    // 提交记录：SDK 网络失败返回 {data:null,error} 而不抛异常，必须显式检查 error，否则会把缓存覆盖成空
+    // 提交记录：走专用 RPC get_my_task_subs（security definer，绕过 RLS，只返回该生自己的提交）
+    // v129：此前直查 task_submission 被 RLS 过滤为空 → 往日任务永远显示"已截止"（RSK-09）
     let subs = null;
     try {
-      const r = taskIds.length
-        ? await supabase.from('task_submission').select('task_id,grade').in('task_id', taskIds).eq('student_name', name)
-        : null;
+      const r = await supabase.rpc('get_my_task_subs', { p_student: name });
       subs = r && r.data;
       if (!r || r.error || !subs) {
         try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
