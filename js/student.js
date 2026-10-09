@@ -127,7 +127,20 @@ const FRAMES = [
   { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.7 满级' },
   { key: 'star',    name: '星光环', icon: '⭐', need: '累计 20 次积极表现' },
   { key: 'heart',   name: '爱心环', icon: '💗', need: '获得 5 次完美 A+' },
-  { key: 'crown',   name: '皇冠环', icon: '👑', need: '班级经验前三' }
+  { key: 'crown',   name: '皇冠环', icon: '👑', need: '班级经验前三' },
+  /* v130(RSK-11)：12 款游戏风头像框，按等级开放 */
+  { key: 'tac',     name: '军事战术', icon: '🎖️', need: '升到 Lv.2' },
+  { key: 'sakura',  name: '樱花甜心', icon: '🌸', need: '升到 Lv.2' },
+  { key: 'gun',     name: '射击战士', icon: '🎯', need: '升到 Lv.3' },
+  { key: 'pixie',   name: '花漾精灵', icon: '🧚', need: '升到 Lv.3' },
+  { key: 'mecha',   name: '雷霆机甲', icon: '🤖', need: '升到 Lv.4' },
+  { key: 'magic',   name: '魔法星梦', icon: '✨', need: '升到 Lv.4' },
+  { key: 'wolf',    name: '战狼之王', icon: '🐺', need: '升到 Lv.5' },
+  { key: 'rose',    name: '玫瑰公主', icon: '🌹', need: '升到 Lv.5' },
+  { key: 'fairy',   name: '花灵仙子', icon: '🌿', need: '升到 Lv.5' },
+  { key: 'dragon',  name: '龙魂战甲', icon: '🐉', need: '升到 Lv.6' },
+  { key: 'queen',   name: '星光女王', icon: '🌙', need: '升到 Lv.6' },
+  { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
 const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
@@ -1447,7 +1460,10 @@ function applyFrameTo(el, frameKey) {
 
 const FRAME_CLASS = {
   none:'', bronze:'frame-bronze', silver:'frame-silver', gold:'frame-gold',
-  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown'
+  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown',
+  tac:'frame-tac', gun:'frame-gun', dragon:'frame-dragon', mecha:'frame-mecha', wolf:'frame-wolf',
+  sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
+  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie'
 };
 
 function buildFrameSection() {
