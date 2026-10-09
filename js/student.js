@@ -300,6 +300,16 @@ function init() {
  * ===================================================================== */
 
 async function loadClasses() {
+  // v127：① 本地班级缓存秒取 → 立即进墙（网络随后静默刷新，首屏不再等网络）
+  let cached = [];
+  try { cached = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch (e) {}
+  if (!cached.length) { try { const v = await window.Offline.get('classes'); cached = (v && v.data) || []; } catch (e2) {} }
+  if (cached.length) {
+    state.classes = cached;
+    enterWallFlow();
+  }
+
+  // ② 后台网络刷新班级列表（成功则更新下拉；失败且有缓存则保持缓存界面）
   let data = null, error = null;
   try {
     const res = await supabase.from('student_directory').select('class');
@@ -313,27 +323,39 @@ async function loadClasses() {
       else if (!error) error = r2.error;
     } catch (e2) { if (!error) error = e2; }
   }
-  if (error) {
-    try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
-    if (!state.classes.length) { try { const v = await window.Offline.get('classes'); state.classes = (v && v.data) || []; } catch(e2) {} }
+  if (error || !data || !data.length) {
     if (!state.classes.length) {
-      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败：'
-        + esc((error && error.message) || '网络异常')
-        + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">🔄 重新加载</button></span>';
+      try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
+      if (!state.classes.length) { try { const v = await window.Offline.get('classes'); state.classes = (v && v.data) || []; } catch(e2) {} }
+      if (!state.classes.length) {
+        els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败：'
+          + esc((error && error.message) || '网络异常')
+          + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">🔄 重新加载</button></span>';
+        return;
+      }
+      enterWallFlow();
       return;
     }
-  } else {
-    state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
-    try { localStorage.setItem('sp_classes', JSON.stringify(state.classes)); } catch(e) {}
-    try { await window.Offline.set('classes', { data: state.classes }); } catch(e) {}
+    return;   // 有缓存：保持已进入的界面
   }
+  state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
+  try { localStorage.setItem('sp_classes', JSON.stringify(state.classes)); } catch(e) {}
+  try { await window.Offline.set('classes', { data: state.classes }); } catch(e) {}
   if (!state.classes.length) {
     els.wallLoading.hidden = true;
     els.wallEmpty.hidden = false;
     if(els.btnGoWrite) els.btnGoWrite.disabled = true;
     return;
   }
+  // 网络成功：更新班级下拉（若缓存先行时尚未进墙，则进墙）
+  els.wallClass.innerHTML = state.classes
+    .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
+    .join('');
+  if (!state._wallEntered) enterWallFlow();
+}
 
+// v127：班级列表就绪后进入班级墙（缓存先行与网络成功两条路径共用）
+function enterWallFlow() {
   let saved = '', savedMe = '';
   try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; savedMe = o.studentName || ''; } catch (e) {}
   const params = new URLSearchParams(location.search);
@@ -353,9 +375,11 @@ async function loadClasses() {
   // 设备信任门：没记住身份且非老师预览 → 先选名字
   if (!savedMe && !state.readonly) {
     showDeviceGate();
+    state._wallEntered = true;
     return;
   }
 
+  state._wallEntered = true;
   loadWall().then(() => {
     if (state.readonly && state.previewName) {
       showForm(state.previewName);
@@ -437,12 +461,29 @@ function applyReadonlyMode() {
 
 async function loadWall() {
   els.wallEmpty.hidden = true;
-  els.matesGrid.hidden = true;
-  els.wallLoading.hidden = false;
-  els.wallLoading.innerHTML = '<span class="spinner"></span>正在加载同学们…';
-
   const cls = state.currentClass;
+  if (!cls) { els.wallEmpty.hidden = false; return; }
   const sem = els.wallSemester ? els.wallSemester.value : '';
+
+  // v127：① 先渲染本地缓存 → 首屏秒开（网络数据随后静默刷新）
+  let cache = null;
+  try { cache = await window.Offline.get('wall_' + cls); } catch (e) {}
+  if (!cache) { try { cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null'); } catch (e2) { cache = null; } }
+  const hasCache = !!(cache && Array.isArray(cache.roster) && cache.roster.length);
+  if (hasCache) {
+    state.roster = cache.roster || [];
+    state.records = cache.records || [];
+    state.seatMap = cache.seatMap || {};
+    state.todayTaskDefs = cache.tasks || [];
+    state.todayTaskSubs = cache.subs || [];
+    renderWall();   // 本地数据立即渲染
+  } else {
+    els.matesGrid.hidden = true;
+    els.wallLoading.hidden = false;
+    els.wallLoading.innerHTML = '<span class="spinner"></span>正在加载同学们…';
+  }
+
+  // ② 后台静默拉取最新数据；失败则保持缓存显示
   const recQ = supabase.from('daily_record')
       .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
       .eq('class', cls);
@@ -463,31 +504,21 @@ async function loadWall() {
         .eq('class', cls).eq('task_date', todayStr())
     ]);
   } catch (e) {
-    // 断网/网络错误：标记失败，走下面的缓存回退（显示最近一次在线的最新名单）
+    // 断网/网络错误：标记失败，走缓存（已在上面渲染过缓存则不打扰）
     rosterRes.error = { message: 'offline' };
     recordRes.error = { message: 'offline' };
   }
 
-  els.wallLoading.hidden = true;
   if (rosterRes.error || recordRes.error) {
-    // 离线/失败：用上次缓存的名单继续渲染
-    let cache = await window.Offline.get('wall_' + cls);
-    if (!cache) { try { cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null'); } catch (e2) { cache = null; } }
-    if (cache) {
-      state.roster = cache.roster || [];
-      state.records = cache.records || [];
-      state.seatMap = cache.seatMap || {};
-      state.todayTaskDefs = cache.tasks || [];
-      state.todayTaskSubs = [];
-      els.wallLoading.innerHTML = '<div class="banner banner-info" style="margin:0;">当前离线，显示上次缓存数据，提交会自动保存。</div>';
-    } else {
+    els.wallLoading.hidden = true;
+    if (!hasCache) {
+      els.wallLoading.hidden = false;
       els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">数据加载失败，请稍后刷新重试。</span>';
-      return;
     }
-  } else {
-    state.roster = rosterRes.data || [];
-    state.records = recordRes.data || [];
+    return;   // 有缓存：静默保持已渲染的缓存界面
   }
+  state.roster = rosterRes.data || [];
+  state.records = recordRes.data || [];
   // 座位表：只有在线真正拿到数据才重建；离线/失败保留缓存值（否则座位布局丢失且会被空表覆盖）
   try {
     const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
@@ -517,7 +548,8 @@ async function loadWall() {
     els.wallEmpty.hidden = false;
     return;
   }
-  renderWall();
+  els.wallLoading.hidden = true;
+  renderWall();   // 静默重绘为最新数据
 }
 
 function renderWall() {
