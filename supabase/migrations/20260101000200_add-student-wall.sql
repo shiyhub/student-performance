@@ -6,7 +6,8 @@
 -- ============================================================================
 
 -- 1) 班级通讯录视图：只含班级和学生姓名，不含家长姓名
-create or replace view public.student_directory as
+drop view if exists public.student_directory;
+create view public.student_directory as
   select id, class, student_name
   from public.student_info;
 

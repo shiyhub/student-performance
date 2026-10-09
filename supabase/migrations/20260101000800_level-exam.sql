@@ -34,7 +34,8 @@ alter table public.daily_record add  constraint chk_self_eval
 -- ---------------------------------------------------------------------------
 -- 3) 通讯录视图补 xp / level（学生墙据此显示等级与经验进度）
 -- ---------------------------------------------------------------------------
-create or replace view public.student_directory as
+drop view if exists public.student_directory;
+create view public.student_directory as
   select id, class, student_name, avatar, xp, level
   from public.student_info;
 

@@ -15,7 +15,8 @@
 alter table public.student_info add column if not exists frame text;
 
 -- 2) 重建班级通讯录视图（多带一列 frame）------------------------------------
-create or replace view public.student_directory as
+drop view if exists public.student_directory;
+create view public.student_directory as
   select id, class, student_name, avatar, frame, xp, level
   from public.student_info;
 
