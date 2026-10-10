@@ -121,8 +121,8 @@ const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600];
 // 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
 const FRAMES = [
   { key: 'none',    name: '无框',   icon: '⚪', need: '默认佩戴' },
-  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '连续打卡 3 天' },
-  { key: 'silver',  name: '银环',   icon: '🥈', need: '连续打卡 7 天' },
+  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '累计记录 10 天' },
+  { key: 'silver',  name: '银环',   icon: '🥈', need: '累计记录 30 天' },
   { key: 'gold',    name: '金环',   icon: '🥇', need: '升到 Lv.5' },
   { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.7 满级' },
   { key: 'star',    name: '星光环', icon: '⭐', need: '累计 20 次积极表现' },
@@ -1544,12 +1544,12 @@ async function loadProfile() {
   state.profile = data;
   state.myFrame = data.frame || 'none';
 
-  // 已解锁头像框集合（与服务端 set_student_frame 同口径）
+  // 已解锁头像框集合（与服务端 set_student_frame 同口径，v135(RSK-12)：bronze/silver 改为累计天数）
   const achs = data.achievements || [];
   const un = new Set(['none']);
   const has = k => achs.some(a => a.key === k && a.unlocked);
-  if (has('streak3')) un.add('bronze');
-  if (has('streak7')) un.add('silver');
+  if (has('days10')) un.add('bronze');
+  if (has('days30')) un.add('silver');
   if (Number(data.level) >= 5) un.add('gold');
   if (Number(data.level) >= 7) un.add('rainbow');
   if (has('active20')) un.add('star');
