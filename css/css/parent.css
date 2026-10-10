@@ -1,0 +1,198 @@
+/* ========== 家长查询页：安心、清爽的青绿色 ========== */
+.p-header { text-align: center; padding: 8px 0 16px; }
+.p-header .p-emoji { font-size: 42px; }
+.p-header h1 { font-size: 22px; color: var(--primary-d); margin-top: 2px; }
+.p-header p { font-size: 13px; color: var(--ink-2); }
+
+.qr-entry { text-align: center; margin-top: 10px; }
+.qr-entry button {
+  font-size: 13.5px; color: var(--ink-2); text-decoration: underline;
+  text-underline-offset: 3px; padding: 4px;
+  width: 100%; white-space: normal; line-height: 1.5;
+}
+
+/* 查询结果 */
+.result-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 4px; gap: 10px; flex-wrap: wrap;
+}
+.result-head h2 { font-size: 19px; color: var(--primary-d); }
+.result-head .count { font-size: 13px; color: var(--ink-2); }
+
+.day-head {
+  font-weight: 700; font-size: 15px; margin: 18px 2px 8px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.day-head .day-count { font-size: 12.5px; color: var(--ink-2); font-weight: 400; }
+
+.rec-card {
+  background: #fff; border-radius: 14px; box-shadow: var(--shadow);
+  padding: 14px; margin-bottom: 10px;
+}
+.rec-topline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.rec-topline .rec-time { margin-left: auto; }
+.rec-main { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.stars-mini { color: #f5b945; letter-spacing: 2px; font-size: 17px; }
+.mood-mini { font-size: 22px; }
+
+.item-list { list-style: none; margin-top: 8px; }
+.item-list li {
+  background: #f5faf8; border-radius: 10px;
+  padding: 7px 11px; font-size: 13.5px; margin-bottom: 6px;
+  word-break: break-word;
+}
+.item-list .tick { color: var(--primary); font-weight: 800; margin-right: 6px; }
+.item-list .item-sub { color: var(--primary-d, #1f7a66); font-weight: 700; }
+.item-list .item-neg { background: #fdf1f1; }
+.item-list .neg-tick { color: #d05252; font-weight: 800; margin-right: 6px; }
+.item-list b { color: var(--ink); font-weight: 600; }
+
+.comment-box {
+  margin-top: 10px; background: #fff8ea;
+  border: 1px dashed #f0cd8d; border-radius: 10px;
+  padding: 9px 12px; font-size: 13.5px; word-break: break-word;
+}
+.comment-label { color: #b5791b; font-weight: 700; margin-right: 4px; }
+
+/* 二维码弹窗 */
+.qr-box {
+  width: 100%; max-width: 300px; margin: 6px auto 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-box canvas, .qr-box img {
+  width: 100% !important; max-width: 300px; height: auto !important;
+}
+.qr-link {
+  font-size: 12px; color: var(--ink-2); word-break: break-all;
+  background: #f4f7f6; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;
+}
+.qr-tip { font-size: 12.5px; color: var(--ink-2); text-align: center; }
+.modal-actions { flex-wrap: wrap; }
+.modal-actions .btn { flex: 1 1 auto; }
+
+/* 扫码进入：班级锁定条 */
+.class-lock {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(135deg, #e7f6ef, #eef5ff);
+  border: 2px solid #bfe3d2; border-radius: 14px;
+  padding: 12px 16px; margin: 0 0 14px;
+  font-size: 16px; color: #245440;
+}
+.class-lock-icon { font-size: 20px; }
+.class-lock b { color: #14805b; font-size: 18px; }
+
+/* 时间筛选卡片 */
+.filter-card {
+  background: #f7faf8; border: 1px solid #e2ede7; border-radius: 14px;
+  padding: 10px 12px; margin: 12px 0;
+}
+.filter-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; }
+.filter-row + .filter-row { border-top: 1px dashed #e2ede7; }
+.filter-label { flex: 0 0 56px; font-size: 13.5px; font-weight: 700; color: #556b61; padding-top: 7px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.seg-btn {
+  border: 1.5px solid #cfe0d7; background: #fff; color: #456053;
+  border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600;
+}
+.seg-btn.active { background: #2f9e72; border-color: #2f9e72; color: #fff; }
+.date-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.date-chip {
+  border: 1.5px solid #d7e6de; background: #fff; border-radius: 10px;
+  padding: 5px 9px; font-size: 12.5px; color: #456053;
+}
+.date-chip.active { background: #fff1df; border-color: #f0a94e; color: #b56a12; font-weight: 700; }
+
+/* 分类汇总卡 */
+.sum-card {
+  background: linear-gradient(180deg, #fffdf6, #f6fbf8);
+  border: 2px solid #e7e1d2; border-radius: 16px; padding: 14px; margin: 12px 0;
+}
+.sum-overview {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding-bottom: 10px; border-bottom: 1px dashed #e4ddc9;
+}
+.sum-big { font-size: 26px; font-weight: 800; color: #e07a3f; margin-right: 4px; }
+.sum-sub { color: #7a8a81; font-size: 13px; }
+.sum-range { margin-left: auto; color: #556b61; font-size: 13px; font-weight: 600; }
+.sum-moods { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0; }
+.sm-item {
+  background: #fff; border: 1px solid #e2ede7; border-radius: 999px;
+  padding: 4px 12px; font-size: 14px; font-weight: 700;
+}
+.sum-group { border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.sum-group.pos { background: #eef8f2; border: 1px solid #cfeadd; }
+.sum-group.neg { background: #fdf0f0; border: 1px solid #f4d4d4; }
+.sum-group-title { font-weight: 800; margin-bottom: 6px; color: #33483e; }
+.sum-group.neg .sum-group-title { color: #b04545; }
+.sum-line {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 4px 0; font-size: 14px; color: #3a4f45;
+}
+.sum-n { font-weight: 800; color: #2f9e72; white-space: nowrap; }
+.sum-group.neg .sum-n { color: #c25656; }
+.sum-texts { margin: 8px 0; }
+.sum-text {
+  background: #fff; border: 1px solid #e2ede7; border-radius: 10px;
+  padding: 7px 10px; margin: 6px 0; font-size: 13.5px; line-height: 1.5;
+}
+.sum-text.neg { background: #fdf5f5; border-color: #f0d6d6; }
+.sum-comment-n { margin-top: 10px; font-size: 13px; color: #7a8a81; text-align: right; }
+
+/* 在家表现填写 */
+.home-card {
+  background: #fff; border: 2px dashed #f0b071; border-radius: 16px;
+  padding: 14px; margin: 16px 0 4px;
+}
+.home-head { font-size: 16px; font-weight: 800; color: #d9772f; }
+.home-note-tip { font-size: 12.5px; color: #9a8a76; margin: 4px 0 10px; }
+.home-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.home-row label { font-size: 13.5px; font-weight: 700; color: #556b61; }
+.home-row .input { width: 170px; }
+.home-text { width: 100%; box-sizing: border-box; resize: vertical; margin-bottom: 10px; }
+
+/* ========== 试卷与成绩（v9） ========== */
+.papers-card {
+  margin-top: 14px;
+  border: 2px solid #e7e0d3; border-radius: 18px;
+  background: #fffdf8; padding: 14px;
+}
+.papers-head { font-size: 16px; font-weight: 800; color: #8a5a20; margin-bottom: 10px; }
+.papers-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.paper-card {
+  display: flex; flex-direction: column; text-align: left;
+  border: 1px solid #ece6d8; border-radius: 14px; overflow: hidden;
+  background: #fff; padding: 0; transition: transform .12s, box-shadow .12s;
+}
+.paper-card:active { transform: scale(.98); }
+.paper-thumb { display: block; width: 100%; aspect-ratio: 3/4; background: #f4f1ea; overflow: hidden; }
+.paper-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.paper-meta { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 3px; }
+.paper-line1 { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13.5px; }
+.paper-date { color: #97a09a; font-size: 12px; }
+.paper-score { color: #d2691e; font-size: 14px; }
+.paper-score b { font-size: 18px; }
+.paper-note { color: #7d8a83; font-size: 12.5px; line-height: 1.4; }
+
+.paper-view-modal { max-width: 92vw; max-height: 90vh; padding: 12px; }
+.paper-view-modal img { max-width: 100%; max-height: 74vh; border-radius: 10px; display: block; margin: 0 auto; }
+
+@media (min-width: 760px) {
+  .papers-list { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+/* 每日任务（家长端） */
+.tasks-card { margin:14px 0; border:1.5px solid #cfe8d8; border-radius:14px; background:#f4fbf7; padding:14px; }
+.tasks-head { font-weight:800; color:#2f7d55; margin-bottom:10px; }
+.task-row { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid #e2efe7; border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+.task-row-main { flex:1; min-width:0; }
+.task-row-date { font-size:12px; color:#8aa; }
+.task-row-title { font-weight:700; margin:2px 0; }
+.task-row-detail { font-size:13px; color:#6b7a72; }
+.task-row-grade { white-space:nowrap; font-weight:800; padding:6px 10px; border-radius:999px; font-size:13px; }
+.g-none    { background:#eef0f2; color:#8a93a0; }
+.g-done    { background:#e3f2e9; color:#2f7d55; }
+.g-good    { background:#fff3d6; color:#b07a1a; }
+.g-perfect { background:#ffe0e6; color:#c0395a; }
+.p-task-type { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+.p-task-type.cw { background:#dcecfb; color:#2a6fb0; }
+.p-task-type.hw { background:#ffe6d6; color:#c06a2a; }
