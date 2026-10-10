@@ -57,6 +57,36 @@ function NavBack() {
 
 const $ = (sel, root) => (root || document).querySelector(sel);
 
+/* ---------------- v137(RSK-13)：头像框粒子主题（顶部声明，避免 init 同步路径 TDZ）-----
+   每款框专属粒子：颜色/形状/动画，只出现在框外围环带，不遮挡中心头像
+   形状：dot 光点 / spark 细光 / petal 花瓣 / star 星点 / ember 焰粒 / bolt 电光
+   动画：float 上浮 / rise 上升 / ember 火焰 / twinkle 闪烁 / petal 飘落 / bolt 电流 */
+const FRAME_PARTICLES = {
+  /* 旧 7 款 CSS 环 */
+  bronze:{ n:5, colors:['#cd7f32','#e8b46b'], shapes:['dot'], anim:'twinkle' },
+  silver:{ n:5, colors:['#cfe0f0','#9fb6cc'], shapes:['dot'], anim:'twinkle' },
+  gold:  { n:6, colors:['#f5b945','#ffd700','#fff3c4'], shapes:['dot','spark'], anim:'rise' },
+  rainbow:{n:6, colors:['#ff5f6d','#ffc371','#7be495','#4facfe','#c471ed'], shapes:['dot'], anim:'twinkle' },
+  star:  { n:6, colors:['#ffd54a','#fff8dc'], shapes:['star','dot'], anim:'twinkle' },
+  heart: { n:6, colors:['#ff8fb1','#ffc1d8','#ff5f8f'], shapes:['dot','petal'], anim:'float' },
+  crown: { n:7, colors:['#f5b945','#ffe08a','#fff'], shapes:['dot','star'], anim:'rise' },
+  /* 新 12 款游戏框 */
+  tac:    { n:7, colors:['#7ea04a','#ff9a3c','#d9e6a8'], shapes:['dot','spark'], anim:'ember' },
+  gun:    { n:7, colors:['#ff6a3c','#ffd166','#ff9e5e'], shapes:['spark','dot'], anim:'ember' },
+  dragon: { n:8, colors:['#ff4d2e','#ffb347','#ffd700'], shapes:['ember','dot','spark'], anim:'ember' },
+  mecha:  { n:8, colors:['#4fc3f7','#a8e6ff','#3a7bd5'], shapes:['bolt','dot'], anim:'bolt' },
+  wolf:   { n:7, colors:['#c0c8d8','#7eb8ff','#e8eef7'], shapes:['dot','spark'], anim:'rise' },
+  sakura: { n:8, colors:['#ffb7d5','#ff8fb3','#ffe3ef'], shapes:['petal','dot'], anim:'petal' },
+  magic:  { n:8, colors:['#b388ff','#7c4dff','#64d8ff'], shapes:['star','dot'], anim:'twinkle' },
+  princess:{n:9, colors:['#ffc7e0','#ffd700','#fff'], shapes:['star','dot'], anim:'twinkle' },
+  queen:  { n:8, colors:['#e0d9ff','#c9a7ff','#fff'], shapes:['star','dot'], anim:'twinkle' },
+  rose:   { n:8, colors:['#ff5f8f','#ff9ebc','#ffd0dd'], shapes:['petal','dot'], anim:'petal' },
+  fairy:  { n:8, colors:['#7ee787','#a5f3b5','#d4ff9e'], shapes:['dot','spark'], anim:'float' },
+  pixie:  { n:8, colors:['#ff9ef0','#c792ff','#ffd166'], shapes:['dot','star'], anim:'float' }
+};
+const FP_SHAPE_CLS = { dot:'', spark:'fp-spark', petal:'fp-petal', star:'fp-star', ember:'fp-ember', bolt:'fp-bolt' };
+const FP_ANIM_CLS  = { float:'fp-a-float', rise:'fp-a-rise', ember:'fp-a-ember', twinkle:'fp-a-twinkle', petal:'fp-a-petal', bolt:'fp-a-bolt' };
+
 // 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
 const MOOD_LEVELS = {
   1: { key: 'sad',    emoji: '😢', label: '需要加油' },
@@ -695,7 +725,7 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
-        <span class="mate-avatar${ringCls}${frameCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
+        <span class="mate-avatar${ringCls}${frameCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
         <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}</span>
@@ -1457,6 +1487,8 @@ function applyFrameTo(el, frameKey) {
   el.classList.remove('framed');
   const k = (frameKey && FRAME_CLASS[frameKey]) ? frameKey : 'none';
   if (k !== 'none') el.classList.add('framed', 'frame-' + k);
+  /* v137(RSK-13)：头像框粒子动效——换框时同步换粒子 */
+  attachParticles(el, k);
 }
 
 const FRAME_CLASS = {
@@ -1466,6 +1498,46 @@ const FRAME_CLASS = {
   sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
   rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie'
 };
+
+/* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
+   配置见文件顶部 FRAME_PARTICLES/FP_SHAPE_CLS/FP_ANIM_CLS */
+
+/* 生成一个粒子的内联样式（相对 .fp-layer，宽=元素直径×1.76） */
+function fpOne(cfg, i, W) {
+  const ang = Math.random() * Math.PI * 2;
+  const rad = 26 + Math.random() * 8;            // 相对 fp-layer 宽度的百分比环带
+  const cx = 50 + Math.cos(ang) * rad;
+  const cy = 50 + Math.sin(ang) * rad;
+  const s  = 1.2 + Math.random() * 1.9;          // 相对 fp-layer 宽度的百分比大小
+  const c  = cfg.colors[i % cfg.colors.length];
+  const shape = cfg.shapes[i % cfg.shapes.length];
+  const dur = 2.8 + Math.random() * 2.8;
+  const delay = -Math.random() * 5.5;
+  const cls = 'fp-p ' + (FP_SHAPE_CLS[shape] || '') + ' ' + (FP_ANIM_CLS[cfg.anim] || 'fp-a-float');
+  const glow = shape === 'star' || shape === 'ember' ? `box-shadow:0 0 ${s * 1.8}px ${c};` : `box-shadow:0 0 ${s * 1.1}px ${c};`;
+  return `<i class="${cls}" style="left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;width:${s.toFixed(2)}%;height:${s.toFixed(2)}%;background:${c};${glow}animation-duration:${dur.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s;"></i>`;
+}
+
+/* 字符串版：班级墙卡片头像（renderWall 拼接用） */
+function frameParticlesHTML(key) {
+  const cfg = FRAME_PARTICLES[key];
+  if (!cfg) return '';
+  let h = `<span class="fp-layer fp-${key}">`;
+  for (let i = 0; i < cfg.n; i++) h += fpOne(cfg, i, 0);
+  return h + '</span>';
+}
+
+/* DOM 版：applyFrameTo 后为元素挂粒子层（身份头像/详情头像） */
+function attachParticles(el, key) {
+  if (!el) return;
+  el.querySelectorAll(':scope > .fp-layer').forEach(x => x.remove());
+  const cfg = FRAME_PARTICLES[key];
+  if (!cfg) return;
+  const layer = document.createElement('span');
+  layer.className = 'fp-layer fp-' + key;
+  layer.innerHTML = frameParticlesHTML(key);
+  el.appendChild(layer);
+}
 
 function buildFrameSection() {
   const sec = document.createElement('div');
