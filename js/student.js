@@ -690,14 +690,15 @@ function renderWall() {
     const frameCls = s.frame ? ` framed frame-${s.frame}` : '';
     const lvBadge = (Number(s.level) || 1) > 1
       ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
+    // v134(RSK-11)：表情移到姓名前、等级移到姓名后，头像框不再被遮挡
+    const moodInline = todayMood
+      ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
         <span class="mate-avatar${ringCls}${frameCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}</span>
-        ${lvBadge}
-        ${todayMood ? `<span class="mate-today lvl-${todayLevel}" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : ''}
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
-        <span class="mate-name">${esc(s.student_name)}</span>
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}</span>
       </button>`;
   });
 
