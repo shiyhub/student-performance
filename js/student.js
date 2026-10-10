@@ -1470,8 +1470,12 @@ async function onChooseAvatar(key, btn) {
       toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
     } else if (reason === 'locked_legend') {
       toast(`典藏头像要升到 Lv.${LEGEND_UNLOCK_LEVEL} 才能解锁哦`);
+    } else if (reason === 'locked_master') {
+      toast(`大师典藏要升到 Lv.${MASTER_UNLOCK_LEVEL} 才能解锁哦`);
     } else if (reason === 'limit') {
-      toast(`表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
+      toast(isAnimalKey(key)
+        ? `小动物头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`
+        : `表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
     } else if (reason === 'no_student') {
       toast('请先在下面填好班级和姓名，再换头像');
     } else {
