@@ -87,6 +87,19 @@ const FRAME_PARTICLES = {
 const FP_SHAPE_CLS = { dot:'', spark:'fp-spark', petal:'fp-petal', star:'fp-star', ember:'fp-ember', bolt:'fp-bolt' };
 const FP_ANIM_CLS  = { float:'fp-a-float', rise:'fp-a-rise', ember:'fp-a-ember', twinkle:'fp-a-twinkle', petal:'fp-a-petal', bolt:'fp-a-bolt' };
 
+/* v139：写实帅气少年头像专属粒子 + 呼吸光效（mg=机甲系列 arm=铠甲系列 wp=武器系列） */
+const AVATAR_PARTICLES = {
+  mg1: { n: 10, colors: ['#46f0ff', '#ff5fd8', '#8fd8ff'], shapes: ['dot', 'dot', 'spark'], anim: 'float', glow: '70,224,255' },
+  mg2: { n: 12, colors: ['#ff8a3d', '#ffd166', '#f0f0f0'], shapes: ['ember', 'ember', 'dot'], anim: 'ember', glow: '255,138,61' },
+  mg3: { n: 10, colors: ['#9fe8ff', '#ffffff', '#6fc3ff'], shapes: ['dot', 'dot', 'star'], anim: 'twinkle', glow: '159,232,255' },
+  arm1: { n: 12, colors: ['#ff4b4b', '#ffb3b3', '#ffffff'], shapes: ['spark', 'dot', 'bolt'], anim: 'bolt', glow: '255,75,75' },
+  arm2: { n: 12, colors: ['#ffd76b', '#fff6d8', '#ffb347'], shapes: ['star', 'dot', 'spark'], anim: 'twinkle', glow: '255,215,107' },
+  arm3: { n: 14, colors: ['#ff7a1a', '#ffd166', '#ff4d00'], shapes: ['ember', 'ember', 'spark'], anim: 'rise', glow: '255,122,26' },
+  wp1: { n: 10, colors: ['#b8d43a', '#ffc94d', '#e8e8e8'], shapes: ['dot', 'ember', 'dot'], anim: 'float', glow: '184,212,58' },
+  wp2: { n: 10, colors: ['#5ab0ff', '#dff1ff', '#ffffff'], shapes: ['dot', 'spark', 'dot'], anim: 'twinkle', glow: '90,176,255' },
+  wp3: { n: 10, colors: ['#cfe4ff', '#8fb8ff', '#ffffff'], shapes: ['spark', 'dot', 'star'], anim: 'float', glow: '143,184,255' }
+};
+
 // 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
 const MOOD_LEVELS = {
   1: { key: 'sad',    emoji: '😢', label: '需要加油' },
@@ -121,12 +134,11 @@ const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
 const CAMPUS_UNLOCK_LEVEL = 3;
 const LEGEND_UNLOCK_LEVEL = 6;
 const LEGEND_GROUPS = [
-  { name: '赛博少年',   prefix: 'cyber',  count: 8 },
-  { name: '机甲少年',   prefix: 'mecha',  count: 8 },
-  { name: '假面骑士',   prefix: 'rider',  count: 8 },
-  { name: '光之英雄',   prefix: 'ultra',  count: 8 },
-  { name: '魔法少女',   prefix: 'magic',  count: 8 },
-  { name: '科幻角色',   prefix: 'star',   count: 8 }
+  { name: '机甲系列',   prefix: 'mg',   count: 3 },
+  { name: '铠甲系列',   prefix: 'arm',  count: 3 },
+  { name: '武器系列',   prefix: 'wp',   count: 3 },
+  { name: '魔法少女',   prefix: 'magic', count: 8 },
+  { name: '科幻角色',   prefix: 'star',  count: 8 }
 ];
 // 7 级典藏头像
 const MASTER_UNLOCK_LEVEL = 7;
@@ -173,10 +185,10 @@ const FRAMES = [
   { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|mg[1-3]|arm[1-3]|wp[1-3]|guofeng[1-9]|dou[1-9]|cat[1-9]|animal([1-9]|1[0-9]|2[0-4]))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isLegendKey(k) { return /^(cyber|mecha|rider|ultra|magic|star)[1-8]$/.test(String(k || '')); }
+function isLegendKey(k) { return /^(cyber|mecha|rider|ultra|magic|star)[1-8]$/.test(String(k || '')) || /^(mg|arm|wp)[1-3]$/.test(String(k || '')); }
 function levelFromXp(xp) {
   let lv = 1;
   for (let i = 0; i < XP_LEVELS.length; i++) if ((xp || 0) >= XP_LEVELS[i]) lv = i + 1;
@@ -725,7 +737,7 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
     html += `<button class="mate" data-detail="${esc(s.student_name)}">
-        <span class="mate-avatar${ringCls}${frameCls} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg}">${avatarInner(av)}${frameParticlesHTML(s.frame)}</span>
+        <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
         <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}</span>
@@ -920,6 +932,7 @@ function paintAvatar(el, av) {
   if (!el) return;
   el.innerHTML = avatarInner(av);
   el.style.background = av.bg;
+  attachAvatarFx(el, av.key);
 }
 
 // 当前表单里"这个学生"的头像：优先本次选择，其次名单里已保存的，最后按姓名分配
@@ -964,6 +977,7 @@ function renderMoodPreview() {
   const av = currentAvatar();
   els.mpAvatar.innerHTML = `${avatarInner(av)}<span class="mp-badge">${m.emoji}</span>`;
   els.mpAvatar.style.background = av.bg;
+  attachAvatarFx(els.mpAvatar, av.key);
   paintAvatar(els.identityAvatarEmoji, av);
   paintAvatar(els.avatarModalEmoji, av);
   els.mpLevel.textContent = `${m.emoji} ${m.label}`;
@@ -1501,6 +1515,49 @@ const FRAME_CLASS = {
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
    配置见文件顶部 FRAME_PARTICLES/FP_SHAPE_CLS/FP_ANIM_CLS */
+
+/* ---------------- v139：写实少年头像粒子 + 呼吸光效 ----------------
+   配置见文件顶部 AVATAR_PARTICLES；ap-layer 相对头像容器 130%，粒子环带贴合头像圆形外缘 */
+
+/* 生成一个头像粒子（相对 .ap-layer，宽=头像容器×1.3） */
+function apOne(cfg, i) {
+  const ang = Math.random() * Math.PI * 2;
+  const rad = 34 + Math.random() * 10;            // 相对 ap-layer 宽度的环带：落在头像圆边缘内外
+  const cx = 50 + Math.cos(ang) * rad;
+  const cy = 50 + Math.sin(ang) * rad;
+  const s  = 1.0 + Math.random() * 1.7;           // 粒子大小
+  const c  = cfg.colors[i % cfg.colors.length];
+  const shape = cfg.shapes[i % cfg.shapes.length];
+  const dur = 2.6 + Math.random() * 2.6;
+  const delay = -Math.random() * 5.5;
+  const cls = 'fp-p ' + (FP_SHAPE_CLS[shape] || '') + ' ' + (FP_ANIM_CLS[cfg.anim] || 'fp-a-float');
+  const glow = shape === 'star' || shape === 'ember' ? `box-shadow:0 0 ${s * 1.8}px ${c};` : `box-shadow:0 0 ${s * 1.1}px ${c};`;
+  return `<i class="${cls}" style="left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;width:${s.toFixed(2)}%;height:${s.toFixed(2)}%;background:${c};${glow}animation-duration:${dur.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s;"></i>`;
+}
+
+/* 字符串版：班级墙卡片头像（renderWall 拼接用） */
+function avatarParticlesHTML(key) {
+  const cfg = AVATAR_PARTICLES[key];
+  if (!cfg) return '';
+  let h = `<span class="ap-layer">`;
+  for (let i = 0; i < cfg.n; i++) h += apOne(cfg, i);
+  return h + '</span>';
+}
+
+/* DOM 版：为头像容器挂粒子层 + 呼吸光效（身份头像/详情头像/选择器预览） */
+function attachAvatarFx(el, key) {
+  if (!el) return;
+  el.classList.remove('ap-breathe');
+  el.style.setProperty('--glow', '0,0,0');
+  el.querySelectorAll(':scope > .ap-layer').forEach(x => x.remove());
+  const cfg = AVATAR_PARTICLES[key];
+  if (!cfg) return;
+  el.classList.add('ap-breathe');
+  el.style.setProperty('--glow', cfg.glow);
+  let h = '<span class="ap-layer">';
+  for (let i = 0; i < cfg.n; i++) h += apOne(cfg, i);
+  el.insertAdjacentHTML('beforeend', h + '</span>');
+}
 
 /* 生成一个粒子的内联样式（相对 .fp-layer，宽=元素直径×1.76） */
 function fpOne(cfg, i, W) {
