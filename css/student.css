@@ -1003,3 +1003,29 @@ html,body{background:#e8e6e1 !important;}
   .fp-p{ animation:none; opacity:.6; }
   .frame-choice .fc-ring{ animation:none; }
 }
+
+/* ============ v139：写实少年头像专属粒子 + 呼吸光效 ============ */
+.ap-layer{
+  position:absolute; left:50%; top:50%;
+  width:130%; height:130%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:2;
+  overflow:visible;
+}
+.ap-breathe{ position:relative; --glow:0,0,0; }
+.ap-breathe::after{
+  content:''; position:absolute; left:50%; top:50%;
+  width:102%; height:102%;
+  transform:translate(-50%,-50%);
+  border-radius:50%; pointer-events:none; z-index:1;
+  animation:apBreath 2.8s ease-in-out infinite;
+}
+@keyframes apBreath{
+  0%,100%{ box-shadow:0 0 3px 1px rgba(var(--glow),.12), inset 0 0 4px 0 rgba(var(--glow),.06); }
+  50%    { box-shadow:0 0 16px 4px rgba(var(--glow),.55), inset 0 0 10px 1px rgba(var(--glow),.25); }
+}
+/* 圆形容器若未定位则补上（mate-avatar/mp-avatar 已定位） */
+.detail-avatar.ap-breathe,
+.identity-avatar-emoji.ap-breathe { position:relative; }
