@@ -91,13 +91,13 @@ const FP_ANIM_CLS  = { float:'fp-a-float', rise:'fp-a-rise', ember:'fp-a-ember',
 const AVATAR_PARTICLES = {
   mg1: { n: 10, colors: ['#46f0ff', '#ff5fd8', '#8fd8ff'], shapes: ['dot', 'dot', 'spark'], anim: 'float', glow: '70,224,255' },
   mg2: { n: 12, colors: ['#ff8a3d', '#ffd166', '#f0f0f0'], shapes: ['ember', 'ember', 'dot'], anim: 'ember', glow: '255,138,61' },
-  mg3: { n: 10, colors: ['#9fe8ff', '#ffffff', '#6fc3ff'], shapes: ['dot', 'dot', 'star'], anim: 'twinkle', glow: '159,232,255' },
+  mg3: { n: 10, colors: ['#ff4b2b', '#ffd166', '#ff8a3d'], shapes: ['ember', 'dot', 'spark'], anim: 'rise', glow: '255,75,43' },
   arm1: { n: 12, colors: ['#ff4b4b', '#ffb3b3', '#ffffff'], shapes: ['spark', 'dot', 'bolt'], anim: 'bolt', glow: '255,75,75' },
-  arm2: { n: 12, colors: ['#ffd76b', '#fff6d8', '#ffb347'], shapes: ['star', 'dot', 'spark'], anim: 'twinkle', glow: '255,215,107' },
-  arm3: { n: 14, colors: ['#ff7a1a', '#ffd166', '#ff4d00'], shapes: ['ember', 'ember', 'spark'], anim: 'rise', glow: '255,122,26' },
+  arm2: { n: 12, colors: ['#8fd8ff', '#eaf8ff', '#5fc8ff'], shapes: ['dot', 'dot', 'spark'], anim: 'float', glow: '143,216,255' },
+  arm3: { n: 14, colors: ['#ffd76b', '#fff6d8', '#ffb347'], shapes: ['star', 'dot', 'spark'], anim: 'twinkle', glow: '255,215,107' },
   wp1: { n: 10, colors: ['#b8d43a', '#ffc94d', '#e8e8e8'], shapes: ['dot', 'ember', 'dot'], anim: 'float', glow: '184,212,58' },
-  wp2: { n: 10, colors: ['#5ab0ff', '#dff1ff', '#ffffff'], shapes: ['dot', 'spark', 'dot'], anim: 'twinkle', glow: '90,176,255' },
-  wp3: { n: 10, colors: ['#cfe4ff', '#8fb8ff', '#ffffff'], shapes: ['spark', 'dot', 'star'], anim: 'float', glow: '143,184,255' }
+  wp2: { n: 12, colors: ['#ff5a1f', '#ffd166', '#ff8a3d'], shapes: ['ember', 'ember', 'spark'], anim: 'rise', glow: '255,90,31' },
+  wp3: { n: 10, colors: ['#5fc8ff', '#9fe8ff', '#ffffff'], shapes: ['spark', 'dot', 'star'], anim: 'float', glow: '95,200,255' }
 };
 
 // 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
@@ -185,10 +185,24 @@ const FRAMES = [
   { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|cyber[1-8]|mecha[1-8]|rider[1-8]|ultra[1-8]|magic[1-8]|star[1-8]|mg[1-3]|arm[1-3]|wp[1-3]|guofeng[1-9]|dou[1-9]|cat[1-9]|animal([1-9]|1[0-9]|2[0-4]))$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|magic[1-8]|star[1-8]|mg[1-3]|arm[1-3]|wp[1-3]|guofeng[1-9]|dou[1-9]|cat[1-9]|animal([1-9]|1[0-9]|2[0-4]))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isLegendKey(k) { return /^(cyber|mecha|rider|ultra|magic|star)[1-8]$/.test(String(k || '')) || /^(mg|arm|wp)[1-3]$/.test(String(k || '')); }
+function isLegendKey(k) { return /^(magic|star)[1-8]$/.test(String(k || '')) || /^(mg|arm|wp)[1-3]$/.test(String(k || '')); }
+
+/* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
+const LEGACY_AVATAR_MAP = {
+  cyber: ['mg1', 'mg2', 'mg3'],
+  mecha: ['mg1', 'mg2', 'mg3'],
+  rider: ['arm1', 'arm2', 'arm3'],
+  ultra: ['arm1', 'arm2', 'arm3']
+};
+function migrateLegacyAvatar(key) {
+  const m = /^(cyber|mecha|rider|ultra)([1-8])$/.exec(String(key || ''));
+  if (!m) return key;
+  const arr = LEGACY_AVATAR_MAP[m[1]];
+  return arr[(Number(m[2]) - 1) % arr.length];
+}
 function levelFromXp(xp) {
   let lv = 1;
   for (let i = 0; i < XP_LEVELS.length; i++) if ((xp || 0) >= XP_LEVELS[i]) lv = i + 1;
@@ -915,7 +929,8 @@ function renderStars() {
 function avatarForName(name, saved) {
   const h = hashCode(String(name || ''));
   const mod = n => ((h % n) + n) % n;
-  const key = saved && String(saved).trim() ? String(saved).trim() : '';
+  let key = saved && String(saved).trim() ? String(saved).trim() : '';
+  key = migrateLegacyAvatar(key);   // v140：旧 Q 版头像 key 自动迁移到新写实款
   if (isImgKey(key)) {
     return { kind: 'img', key, src: AVATAR_BASE + key + '.webp', bg: '#ffffff' };
   }
