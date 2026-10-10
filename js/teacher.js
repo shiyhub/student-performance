@@ -418,10 +418,25 @@ function switchTab(name) {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags',
     exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools', seat: 'tabSeat'
   };
+  // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
+  //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
   Object.entries(panes).forEach(([key, id]) => {
     const el = document.getElementById(id);
-    if (el) el.hidden = (key !== name);
+    if (!el) return;
+    if (key !== name) {
+      el.hidden = true;
+      el.style.display = 'none';   // 内联样式兜底：即使 [hidden] 规则未生效也不叠加显示
+      clearPaneDynamics(key);       // 清空该页动态渲染的内容容器（静态骨架表单保留）
+    } else {
+      el.style.display = '';
+      el.hidden = false;
+    }
   });
+  // ② 切走即重置"已加载"缓存，保证切回时重新渲染完整内容，无残留无空白
+  if (name !== 'students') loaded.students = false;
+  if (name !== 'tags') loaded.tags = false;
+  // ③ 渲染当前页
+  if (name === 'records') loadClassesAndRecords();
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
@@ -430,6 +445,27 @@ function switchTab(name) {
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
   if (name === 'seat') activateSeatTab();
+}
+
+/* 各页 JS 动态渲染的内容容器（切走时清空，防止旧 DOM 残留；静态骨架表单保留不动）。
+   exam 页由 TeacherExam.activate() 的闭包守卫控制渲染，清空会导致切回空白，故不参与清空；
+   tools 页无大容器，切回时 fillPreviewClasses() 会重建下拉。 */
+const PANE_DYNAMIC = {
+  records: ['recordBox'],
+  students: ['studentBox', 'batchResult'],
+  tags: ['tagBox'],
+  exam: [],
+  task: ['taskReportBox'],
+  batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
+  stats: ['statsOut'],
+  tools: [],
+  seat: ['seatBoard', 'seatPool']
+};
+function clearPaneDynamics(key) {
+  (PANE_DYNAMIC[key] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
 /* ---------------- 表现记录 ---------------- */
@@ -2023,7 +2059,7 @@ function beginTaskEdit(t) {
   document.getElementById('taskType').value = t.task_type || 'classwork';
   document.getElementById('taskTitle').value = t.title;
   document.getElementById('taskDetail').value = t.detail || '';
-  document.getElementById('taskDue').value = t.due_time || '';
+  document.getElementById('taskDue').value = (t.due_time || '').slice(0, 10);
   const btn = document.querySelector('#taskForm button[type="submit"]');
   if (btn) btn.textContent = '💾 保存修改';
   const cancelBtn = document.getElementById('btnCancelTaskEdit');
