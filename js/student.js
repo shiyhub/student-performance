@@ -1554,6 +1554,12 @@ async function loadProfile() {
   if (has('active20')) un.add('star');
   if (has('perfect5')) un.add('heart');
   if (has('top3')) un.add('crown');
+  /* v130(RSK-11)：12 款游戏风头像框，按等级解锁（与服务端 43 号 SQL 同口径） */
+  if (Number(data.level) >= 2) { un.add('tac'); un.add('sakura'); }
+  if (Number(data.level) >= 3) { un.add('gun'); un.add('pixie'); }
+  if (Number(data.level) >= 4) { un.add('mecha'); un.add('magic'); }
+  if (Number(data.level) >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
+  if (Number(data.level) >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
   data.unlocked_frames = Array.from(un);
 
   renderAchievements(achs);
