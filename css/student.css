@@ -844,7 +844,7 @@ html,body{background:#e8e6e1 !important;}
 }
 .frame-choice:hover { transform: translateY(-3px); }
 .frame-choice.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(31,157,107,.28); }
-.frame-choice .fc-ring { position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; }
+.frame-choice .fc-ring { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; }
 .frame-choice.fc-bronze  .fc-ring { border: 3px solid #cd7f32; }
 .frame-choice.fc-silver  .fc-ring { border: 3px solid #b9c4d4; }
 .frame-choice.fc-gold    .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 8px rgba(245,185,69,.6); }
@@ -858,8 +858,8 @@ html,body{background:#e8e6e1 !important;}
 }
 .frame-choice .fc-lock {
   position: absolute; inset: 0; border-radius: 50%;
-  background: rgba(255,255,255,.78); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; text-align:center; padding:0 4px;
+  background: rgba(255,255,255,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align:center; padding:0 4px;
   font-size: 12px; color: #8a9a92; gap: 1px;
 }
 .frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
@@ -889,18 +889,18 @@ html,body{background:#e8e6e1 !important;}
 .frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.png"); }
 .frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.png"); }
 /* 头像框选择区预览（直接显示素材图） */
-.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / cover no-repeat; }
-.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / cover no-repeat; }
-.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / cover no-repeat; }
-.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.png") center / cover no-repeat; }
-.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.png") center / cover no-repeat; }
-.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.png") center / cover no-repeat; }
-.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.png") center / cover no-repeat; }
-.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.png") center / cover no-repeat; }
-.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.png") center / cover no-repeat; }
-.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / cover no-repeat; }
-.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / cover no-repeat; }
-.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / cover no-repeat; }
+.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / contain no-repeat; }
+.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / contain no-repeat; }
+.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / contain no-repeat; }
+.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.png") center / contain no-repeat; }
+.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.png") center / contain no-repeat; }
+.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.png") center / contain no-repeat; }
+.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.png") center / contain no-repeat; }
+.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.png") center / contain no-repeat; }
+.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.png") center / contain no-repeat; }
+.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / contain no-repeat; }
+.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / contain no-repeat; }
+.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / contain no-repeat; }
 
 
 

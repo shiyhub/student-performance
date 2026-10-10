@@ -1480,7 +1480,7 @@ function buildFrameSection() {
     b.type = 'button';
     b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
     const unlocked = f.key === 'none' || unlockedSet.has(f.key);
-    b.innerHTML = `<span class="fc-ring"></span><span>${f.icon}</span>` +
+    b.innerHTML = `<span class="fc-ring"></span>` +
       (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
     b.addEventListener('click', () => {
       if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
