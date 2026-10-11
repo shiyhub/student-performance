@@ -806,6 +806,14 @@ html,body{background:#e8e6e1 !important;}
 .wall-class-left .mate .mate-avatar{margin-bottom:6px;}
 .wall-class-left .mate .mate-name{margin-top:auto;}
 .wall-top .wall-class-card{margin-left:8px;}
+/* 顶部内容统一回卡片内边距内缩进：文字与两条进度条对齐（v151d） */
+/* ===== 班级墙顶部与网格列线对齐（v151） ===== */
+@media (min-width: 860px) {
+  .wall-top{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:stretch;}
+  .wall-class-left{grid-column:1;flex:none;}
+  .wall-top .wall-class-card{grid-column:2/-1;flex:none;margin:0;}
+  .wall-class-left .mate .mate-name{white-space:normal;line-height:1.35;}
+}
 .diary-col.c2{display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard{flex:1;min-height:300px;display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard #pastTaskBody{flex:1;overflow-y:auto;}
