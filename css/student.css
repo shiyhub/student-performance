@@ -143,14 +143,17 @@ body {
 }
 .wall-back:hover { transform: translateY(-1px); }
 @media (min-width: 1400px) { .wall-back { font-size: 22px; padding: 16px 36px; } }
-.wall-class-row { display: flex; align-items: center; gap: 10px; }
+.wall-class-row { display: flex; align-items: stretch; gap: 12px; }
+.wall-class-row .wc-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
 .wall-class-row label { font-size: 14px; font-weight: 700; white-space: nowrap; }
-.wall-class-row select { flex: 1; min-width: 0; }
+.wall-class-row select { width: 100%; min-width: 0; }
+.wall-class-card { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+.wall-class-card .class-progress { flex: 1; }
 
 .mates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 14px 8px; margin: 4px 0 18px;
+  gap: 14px 8px; margin: 0 0 18px;
 }
 .mate {
   background: #fff; border-radius: 16px; padding: 12px 4px 10px;
@@ -786,9 +789,9 @@ html,body{background:#e8e6e1 !important;}
 .s-header .s-title{margin:0;font-size:1.3em;}
 .s-header .s-date{margin-left:auto;}
 .mate-class-all{grid-column:1/-1;max-width:220px;}
-.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:0;}
 .mate-class-all{grid-column:auto;max-width:none;}
-.wall-class-card{display:flex;align-items:center;gap:12px;}
+.wall-class-card{display:flex;flex-direction:column;justify-content:space-between;gap:10px;}
 .wall-class-card .class-progress{flex:1;}
 .wall-top{display:flex;gap:14px;align-items:stretch;}
 .wall-class-left{flex:0 0 180px;}
@@ -799,7 +802,7 @@ html,body{background:#e8e6e1 !important;}
 #wallView .s-title{font-size:2em !important;}
 #wallView .s-date{margin-left:0;}
 .wall-class-left{flex:0 0 16.66% !important;}
-.wall-class-left .mate{min-height:150px;}
+.wall-class-left .mate{min-height:150px;height:100%;}
 .wall-top .wall-class-card{margin-left:8px;}
 .diary-col.c2{display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard{flex:1;min-height:300px;display:flex;flex-direction:column;}
