@@ -105,6 +105,9 @@ body {
 
 .submit-wrap { margin-top: 16px; }
 .submit-wrap .btn { font-size: 17px; min-height: 52px; border-radius: 14px; }
+.submit-status { text-align: center; font-size: 15px; padding: 8px 12px; border-radius: 12px; margin-bottom: 10px; background: #f3f8f4; color: #2c7a4e; border: 1px solid #cfe6d8; }
+.submit-status-ok { background: #e8f6ec; color: #1f6b3d; border-color: #b7dfc5; font-weight: 600; }
+
 
 /* 成功鼓励动画 */
 .success-overlay {
@@ -140,14 +143,17 @@ body {
 }
 .wall-back:hover { transform: translateY(-1px); }
 @media (min-width: 1400px) { .wall-back { font-size: 22px; padding: 16px 36px; } }
-.wall-class-row { display: flex; align-items: center; gap: 10px; }
+.wall-class-row { display: flex; align-items: stretch; gap: 12px; }
+.wall-class-row .wc-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
 .wall-class-row label { font-size: 14px; font-weight: 700; white-space: nowrap; }
-.wall-class-row select { flex: 1; min-width: 0; }
+.wall-class-row select { width: 100%; min-width: 0; }
+.wall-class-card { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+.wall-class-card .class-progress { flex: 1; }
 
 .mates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 14px 8px; margin: 4px 0 18px;
+  gap: 14px 8px; margin: 12px 0 18px;
 }
 .mate {
   background: #fff; border-radius: 16px; padding: 12px 4px 10px;
@@ -161,8 +167,9 @@ body {
   font-size: 32px; margin: 0 auto; position: relative;
 }
 .mate-name {
-  display: block; font-size: 12.5px; font-weight: 700; color: var(--ink);
-  text-align: center; margin-top: 22px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+  margin-top: 22px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px;
 }
 .mate-badge {
@@ -173,10 +180,8 @@ body {
 }
 .mate-badge.count-badge { background: #eef3f1; color: #5f746c; }
 .mate-today {
-  position: absolute; top: -4px; right: calc(50% - 32px);
-  background: #fff; border-radius: 50%; width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; line-height: 1; flex: 0 0 auto; position: static;
 }
 .mate-class-all .mate-avatar {
   background: linear-gradient(135deg, #ffe6c9, #d8f0e2) !important;
@@ -233,7 +238,7 @@ body {
   .mates { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 16px 10px; }
   .mate-avatar { width: 68px; height: 68px; font-size: 36px; }
   .mate-badge { top: 60px; }
-  .mate-today { right: calc(50% - 36px); }
+
   #formView { max-width: 720px; }
 }
 
@@ -248,7 +253,7 @@ body {
   .mate-avatar { width: 92px; height: 92px; font-size: 50px; }
   .mate-name { font-size: 16px; margin-top: 28px; }
   .mate-badge { top: 80px; font-size: 13px; padding: 2px 10px; }
-  .mate-today { width: 30px; height: 30px; font-size: 19px; right: calc(50% - 48px); top: -5px; }
+  .mate-today { font-size: 15px; }
   #formView { max-width: 820px; }
   .card-title, .card .card-title { font-size: 20px; }
   .tag-grid { gap: 10px; }
@@ -271,7 +276,7 @@ body {
   .mate-avatar { width: 142px; height: 142px; font-size: 78px; }
   .mate-name { font-size: 25px; margin-top: 40px; }
   .mate-badge { top: 124px; font-size: 19px; padding: 3px 14px; }
-  .mate-today { width: 46px; height: 46px; font-size: 30px; right: calc(50% - 74px); top: -8px; }
+  .mate-today { font-size: 24px; }
   #formView { max-width: 1240px; }
   .card { border-radius: 24px; padding: 26px 28px; }
   .card-title, .card .card-title { font-size: 32px; }
@@ -398,11 +403,11 @@ body {
 
 /* 头像墙上的小等级徽章 */
 .mate-lv {
-  position: absolute; left: calc(50% + 18px); top: -4px; z-index: 3;
   background: linear-gradient(135deg,#f7b955,#ef8e3a); color: #fff;
-  font-size: 10.5px; font-weight: 800; line-height: 1;
-  padding: 3px 6px 3px 5px; border-radius: 9px;
-  box-shadow: 0 2px 6px rgba(222,122,30,.4); pointer-events: none;
+  font-size: 10px; font-weight: 800; line-height: 1;
+  padding: 3px 5px; border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(222,122,30,.35); pointer-events: none;
+  flex: 0 0 auto; position: static;
 }
 
 /* 身份卡：等级徽章 + 经验条 */
@@ -468,7 +473,7 @@ body {
 .mp-avatar { overflow: hidden; }
 
 @media (min-width: 1400px) {
-  .mate-lv { font-size: 14px; padding: 4px 8px; border-radius: 11px; left: calc(50% + 26px); }
+  .mate-lv { font-size: 13px; padding: 4px 7px; border-radius: 10px; }
   .identity-lv-badge { font-size: 15px; padding: 5px 10px; border-radius: 12px; transform: translateX(76px); }
   .identity-xp { width: min(380px, 80%); }
   .identity-xp-bar { height: 16px; }
@@ -482,7 +487,7 @@ body {
   .avatar-lock { font-size: 24px; } .avatar-lock em { font-size: 14px; }
 }
 @media (min-width: 2400px) {
-  .mate-lv { font-size: 22px; padding: 6px 12px; left: calc(50% + 42px); }
+  .mate-lv { font-size: 20px; padding: 6px 10px; border-radius: 14px; }
   .identity-lv-badge { font-size: 24px; padding: 8px 15px; transform: translateX(118px); }
   .identity-xp { width: min(560px, 76%); }
   .identity-xp-bar { height: 24px; }
@@ -784,10 +789,10 @@ html,body{background:#e8e6e1 !important;}
 .s-header .s-title{margin:0;font-size:1.3em;}
 .s-header .s-date{margin-left:auto;}
 .mate-class-all{grid-column:1/-1;max-width:220px;}
-.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px;}
+.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:12px;}
 .mate-class-all{grid-column:auto;max-width:none;}
-.wall-class-card{display:flex;align-items:center;gap:12px;}
-.wall-class-card .class-progress{flex:1;}
+.wall-class-card{display:flex;flex-direction:column;justify-content:space-between;gap:10px;}
+.wall-class-card .class-progress{flex:1;display:flex;flex-direction:column;justify-content:flex-end;}
 .wall-top{display:flex;gap:14px;align-items:stretch;}
 .wall-class-left{flex:0 0 180px;}
 .wall-top .wall-class-card{flex:1;margin:0;}
@@ -797,9 +802,235 @@ html,body{background:#e8e6e1 !important;}
 #wallView .s-title{font-size:2em !important;}
 #wallView .s-date{margin-left:0;}
 .wall-class-left{flex:0 0 16.66% !important;}
-.wall-class-left .mate{min-height:150px;}
+.wall-class-left .mate{min-height:150px;height:100%;display:flex;flex-direction:column;padding-bottom:20px;}
+.wall-class-left .mate .mate-avatar{margin-bottom:6px;}
+.wall-class-left .mate .mate-name{margin-top:auto;}
 .wall-top .wall-class-card{margin-left:8px;}
 .diary-col.c2{display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard{flex:1;min-height:300px;display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard #pastTaskBody{flex:1;overflow-y:auto;}
 .diary-col.c2 > .duo-row{flex:0 0 auto;margin-top:14px;}
+.diary-col.c2 > #pastTaskCard{flex:0 1 auto;max-height:60vh;display:flex;flex-direction:column;}
+.diary3{align-items:stretch;}
+.diary-col.c2{height:100%;}
+.diary-col.c2 > #pastTaskCard{flex:1 1 auto;max-height:none;}
+
+/* ============================================================
+   v105：头像框（CSS 光环，无需图片素材）
+   ============================================================ */
+.mate-avatar, .identity-avatar-emoji, .detail-avatar, .mp-avatar { position: relative; }
+/* 身份头像原来 overflow:hidden 会裁掉外圈光环，佩戴框时放开 */
+.identity-avatar-emoji.framed { overflow: visible; }
+.framed::before {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  pointer-events: none; z-index: 2;
+}
+.frame-bronze.framed::before  { border: 3px solid #cd7f32; }
+.frame-silver.framed::before  { border: 3px solid #b9c4d4; }
+.frame-gold.framed::before    { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.65); }
+.frame-star.framed::before    { border: 3px dashed #ffd54a; }
+.frame-heart.framed::before   { border: 3px solid #ff8fb1; }
+.frame-crown.framed::before   { border: 3px solid #f5b945; box-shadow: 0 0 12px rgba(245,185,69,.8); }
+.frame-rainbow.framed::before {
+  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+@media (min-width: 1400px) { .framed::before { inset: -5px; border-width: 4px; } }
+
+/* ---- 头像框选择区 ---- */
+.frame-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; padding: 2px; }
+.frame-choice {
+  position: relative; aspect-ratio: 1/1; border-radius: 50%;
+  background: #fff; border: 3px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; transition: transform .12s;
+}
+.frame-choice:hover { transform: translateY(-3px); }
+.frame-choice.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(31,157,107,.28); }
+.frame-choice .fc-ring { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; }
+.frame-choice.fc-bronze  .fc-ring { border: 3px solid #cd7f32; }
+.frame-choice.fc-silver  .fc-ring { border: 3px solid #b9c4d4; }
+.frame-choice.fc-gold    .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 8px rgba(245,185,69,.6); }
+.frame-choice.fc-star    .fc-ring { border: 3px dashed #ffd54a; }
+.frame-choice.fc-heart   .fc-ring { border: 3px solid #ff8fb1; }
+.frame-choice.fc-crown   .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.75); }
+.frame-choice.fc-rainbow .fc-ring {
+  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+.frame-choice .fc-lock {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(255,255,255,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align:center; padding:0 4px;
+  font-size: 12px; color: #8a9a92; gap: 1px;
+}
+.frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
+.frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
+/* ============================================================
+   v130（RSK-11）：12 款游戏风头像框（透明 PNG 素材叠加）
+   素材 assets/frames/frame-*.png：中心 70% 镂空放头像，粒子只在四周
+   ============================================================ */
+.frame-tac.framed::after, .frame-gun.framed::after, .frame-dragon.framed::after,
+.frame-mecha.framed::after, .frame-wolf.framed::after, .frame-sakura.framed::after,
+.frame-magic.framed::after, .frame-princess.framed::after, .frame-queen.framed::after,
+.frame-rose.framed::after, .frame-fairy.framed::after, .frame-pixie.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 50%;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-tac.framed::after     { background-image: url("../assets/frames/frame-tac.png"); }
+.frame-gun.framed::after     { background-image: url("../assets/frames/frame-gun.png"); }
+.frame-dragon.framed::after  { background-image: url("../assets/frames/frame-dragon.png"); }
+.frame-mecha.framed::after   { background-image: url("../assets/frames/frame-mecha.png"); }
+.frame-wolf.framed::after    { background-image: url("../assets/frames/frame-wolf.png"); }
+.frame-sakura.framed::after  { background-image: url("../assets/frames/frame-sakura.png"); }
+.frame-magic.framed::after   { background-image: url("../assets/frames/frame-magic.png"); }
+.frame-princess.framed::after{ background-image: url("../assets/frames/frame-princess.png"); }
+.frame-queen.framed::after   { background-image: url("../assets/frames/frame-queen.png"); }
+.frame-rose.framed::after    { background-image: url("../assets/frames/frame-rose.png"); }
+.frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.png"); }
+.frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.png"); }
+/* 头像框选择区预览（直接显示素材图） */
+.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / contain no-repeat; }
+.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / contain no-repeat; }
+.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / contain no-repeat; }
+.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.png") center / contain no-repeat; }
+.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.png") center / contain no-repeat; }
+.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.png") center / contain no-repeat; }
+.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.png") center / contain no-repeat; }
+.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.png") center / contain no-repeat; }
+.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.png") center / contain no-repeat; }
+.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / contain no-repeat; }
+.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / contain no-repeat; }
+.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / contain no-repeat; }
+
+
+
+/* ============================================================
+   v105：成就徽章墙
+   ============================================================ */
+.ach-count { font-size: 13px; font-weight: 700; color: #e07a3f; }
+.ach-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.ach-item {
+  text-align: center; padding: 8px 4px 7px; border-radius: 14px;
+  background: #f7faf8; border: 1.5px solid transparent;
+}
+.ach-item .ach-ic { font-size: 26px; line-height: 1.2; }
+.ach-item .ach-n  { font-size: 12px; font-weight: 800; color: #5a6b62; margin-top: 2px; }
+.ach-item .ach-p  { font-size: 10.5px; color: #9aa8a0; margin-top: 1px; }
+.ach-item.unlocked { background: #fff7e6; border-color: #f5b945; }
+.ach-item.unlocked .ach-n { color: #b07a1a; }
+.ach-item.locked { opacity: .6; filter: grayscale(.8); }
+@media (min-width: 700px) {
+  .ach-grid { grid-template-columns: repeat(6, minmax(0,1fr)); }
+  .frame-grid { grid-template-columns: repeat(8, minmax(0,1fr)); }
+}
+
+/* 已完成任务卡片置灰 */
+.stu-task.done { opacity:.62; }
+.stu-task.done .stu-task-title { color:#8a7b58; }
+.stu-task.done .stu-task-detail { color:#9a8c6a; }
+.stu-task.done .stu-task-grades button.on { background:#3d9469; border-color:#2f7a55; opacity:1; }
+
+/* ============================================================
+   v137(RSK-13)：头像框粒子动效系统
+   性能优先：CSS transform/opacity 动画（GPU 合成），40 人共用电脑可用
+   粒子只出现在框外围环带（fp-layer 覆盖 176% 直径），不遮挡中心头像
+   ============================================================ */
+.fp-layer{
+  position:absolute; left:50%; top:50%;
+  width:176%; height:176%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:3;
+  overflow:visible;
+}
+.fp-p{
+  position:absolute; border-radius:50%;
+  opacity:0;
+  will-change:transform,opacity;
+  animation:fpFloat 3.6s linear infinite;
+}
+.fp-spark{ border-radius:40% 8% 40% 8%; transform-origin:center; }
+.fp-petal{ border-radius:62% 38% 58% 42%; }
+.fp-star{ box-shadow:0 0 2px currentColor; }
+.fp-ember{ border-radius:50% 50% 50% 50%; }
+.fp-bolt{ border-radius:2px; }
+
+/* ---- 动画主题 ---- */
+@keyframes fpFloat{
+  0%{opacity:0; transform:translateY(6px) scale(.5);}
+  25%{opacity:1;}
+  100%{opacity:0; transform:translateY(-16px) scale(1.1);}
+}
+@keyframes fpRise{
+  0%{opacity:0; transform:translate(0,8px) scale(.4);}
+  30%{opacity:1;}
+  100%{opacity:0; transform:translate(4px,-20px) scale(1.2);}
+}
+@keyframes fpEmber{
+  0%{opacity:0; transform:translate(0,0) scale(.5);}
+  18%{opacity:.95;}
+  55%{opacity:.75; transform:translate(-4px,-12px) scale(.9);}
+  100%{opacity:0; transform:translate(-8px,-26px) scale(.35);}
+}
+@keyframes fpTwinkle{
+  0%,100%{opacity:0; transform:scale(.3);}
+  50%{opacity:1; transform:scale(1.25);}
+}
+@keyframes fpPetal{
+  0%{opacity:0; transform:translate(0,-6px) rotate(0deg) scale(.7);}
+  25%{opacity:.95;}
+  100%{opacity:0; transform:translate(10px,22px) rotate(150deg) scale(1.05);}
+}
+@keyframes fpBolt{
+  0%,100%{opacity:0; transform:scaleX(.3) scaleY(1);}
+  40%{opacity:1; transform:scaleX(1.5) scaleY(.8);}
+  70%{opacity:.6; transform:scaleX(.8) scaleY(1.3);}
+}
+.fp-p.fp-a-float { animation-name:fpFloat; }
+.fp-p.fp-a-rise  { animation-name:fpRise; }
+.fp-p.fp-a-ember { animation-name:fpEmber; }
+.fp-p.fp-a-twinkle{ animation-name:fpTwinkle; }
+.fp-p.fp-a-petal { animation-name:fpPetal; }
+.fp-p.fp-a-bolt  { animation-name:fpBolt; }
+
+/* 预览格轻微呼吸光晕（保持预览只显示框，不加粒子） */
+.frame-choice .fc-ring{ animation:fcBreath 2.8s ease-in-out infinite; }
+@keyframes fcBreath{ 0%,100%{filter:drop-shadow(0 0 1px rgba(255,255,255,0)); opacity:.96;} 50%{filter:drop-shadow(0 0 6px rgba(255,255,255,.5)); opacity:1;} }
+.frame-choice.selected .fc-ring{ animation-duration:1.6s; }
+
+/* 减少动态效果偏好：关闭粒子动画 */
+@media (prefers-reduced-motion: reduce){
+  .fp-p{ animation:none; opacity:.6; }
+  .frame-choice .fc-ring{ animation:none; }
+}
+
+/* ============ v139：写实少年头像专属粒子 + 呼吸光效 ============ */
+.ap-layer{
+  position:absolute; left:50%; top:50%;
+  width:130%; height:130%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:2;
+  overflow:visible;
+}
+.ap-breathe{ position:relative; --glow:0,0,0; }
+.ap-breathe::after{
+  content:''; position:absolute; left:50%; top:50%;
+  width:102%; height:102%;
+  transform:translate(-50%,-50%);
+  border-radius:50%; pointer-events:none; z-index:1;
+  animation:apBreath 2.8s ease-in-out infinite;
+}
+@keyframes apBreath{
+  0%,100%{ box-shadow:0 0 3px 1px rgba(var(--glow),.12), inset 0 0 4px 0 rgba(var(--glow),.06); }
+  50%    { box-shadow:0 0 16px 4px rgba(var(--glow),.55), inset 0 0 10px 1px rgba(var(--glow),.25); }
+}
+/* 圆形容器若未定位则补上（mate-avatar/mp-avatar 已定位） */
+.detail-avatar.ap-breathe,
+.identity-avatar-emoji.ap-breathe { position:relative; }
