@@ -246,6 +246,24 @@
 
 <div id="toast"></div>
 
+<!-- 天气联动装饰层（固定定位、低透明、不遮挡内容） -->
+<div class="sky-deco" id="skyDeco" aria-hidden="true"></div>
+
+<div class="plant plant-left" aria-hidden="true">
+  <img id="flowerLeft" class="wx-flower" src="assets/flower-sunny.png" alt="">
+  <img id="cloudLeft" class="wx-cloud" src="assets/cloud.png" alt="">
+</div>
+
+<div class="plant plant-right" aria-hidden="true">
+  <img id="flowerRight" class="wx-flower" src="assets/flower-sunny.png" alt="">
+  <img id="cloudRight" class="wx-cloud" src="assets/cloud.png" alt="">
+</div>
+
+<!-- 天气主题切换（自动按洞口县天气，可手动演示兜底） -->
+<button type="button" id="weatherSwitch" class="weather-switch" aria-label="切换天气主题" title="切换天气主题">
+  <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4.5" fill="#f0b64e"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" stroke="#f0b64e" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
+
 <script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/offline.js"></script>
