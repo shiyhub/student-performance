@@ -1047,7 +1047,7 @@ html,body{background:#e8e6e1 !important;}
 html[data-weather="sunny"]{ --wx-bg1:#fdf8ec; --wx-bg2:#fdf3dc; --wx-card:#fffdf7; --wx-shadow:0 4px 18px rgba(232,180,76,.20);  --wx-deco:#e9c878; }
 html[data-weather="cloudy"]{ --wx-bg1:#eef3f6; --wx-bg2:#e3eaf0; --wx-card:#fbfcfa; --wx-shadow:0 4px 14px rgba(120,136,148,.16); --wx-deco:#9fb2bd; }
 html[data-weather="rainy"]{ --wx-bg1:#eef3f7; --wx-bg2:#dde7ee; --wx-card:#f6fafd; --wx-shadow:0 8px 24px rgba(96,128,150,.16);  --wx-deco:#8fb0c4; }
-html[data-weather="snowy"]{ --wx-bg1:#f6f9fb; --wx-bg2:#e9eef3; --wx-card:#fcfdfc; --wx-shadow:0 4px 16px rgba(150,168,182,.16), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#c3d4de; }
+html[data-weather="snowy"]{ --wx-bg1:#f0f5f8; --wx-bg2:#dde6ee; --wx-card:#fcfdfc; --wx-shadow:0 4px 16px rgba(150,168,182,.16), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#b8cbd8; }
 
 html[data-weather] body{
   background:linear-gradient(180deg,var(--wx-bg1) 0%,var(--wx-bg2) 100%) !important;
@@ -1093,8 +1093,8 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
   10%{opacity:.55}
   100%{transform:translateY(108vh);opacity:0}
 }
-.snow{position:absolute;top:-12px;border-radius:50%;background:#fff;opacity:0;
-  box-shadow:0 0 4px rgba(200,220,235,.8);animation:wxSnowFall linear infinite}
+.snow{position:absolute;top:-12px;border-radius:50%;background:#d9e6f2;opacity:0;
+  box-shadow:0 0 0 1px rgba(255,255,255,.95), 0 0 7px 1px rgba(110,145,180,.55);animation:wxSnowFall linear infinite}
 @keyframes wxSnowFall{
   0%{transform:translateY(0) translateX(0);opacity:0}
   10%{opacity:.5}
@@ -1109,22 +1109,26 @@ html[data-weather] #formView{position:relative;z-index:2}
 .plant img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 5px rgba(80,70,50,.10))}
 .plant-left{left:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
 .plant-right{right:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
-.wx-flower{transition:opacity .8s ease}
+.wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
 
 /* 花朵动画按主题：晴轻摇 / 多云稳摆 / 雨随风晃 / 雪抖雪 */
-html[data-weather="sunny"] .wx-flower{animation:wxSway 7s ease-in-out infinite}
-@keyframes wxSway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
-html[data-weather="cloudy"] .wx-flower{animation:wxSwayC 10s ease-in-out infinite}
-@keyframes wxSwayC{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
-html[data-weather="rainy"] .wx-flower{animation:wxSwayR 3.8s ease-in-out infinite}
-@keyframes wxSwayR{0%,100%{transform:rotate(-8deg) translateY(1px)}50%{transform:rotate(6deg) translateY(-1px)}}
-html[data-weather="snowy"] .wx-flower{animation:wxSnowShake 8s ease-in-out infinite}
+/* 晴：花茎柔韧轻快摇曳（呼吸感） */
+html[data-weather="sunny"] .wx-flower{animation:wxSway 5s ease-in-out infinite}
+@keyframes wxSway{0%,100%{transform:rotate(-6deg) translateY(0)}25%{transform:rotate(2deg) translateY(-3px)}50%{transform:rotate(7deg) translateY(0)}75%{transform:rotate(-1deg) translateY(-2px)}}
+/* 多云：挺立稳重摆动 */
+html[data-weather="cloudy"] .wx-flower{animation:wxSwayC 8s ease-in-out infinite}
+@keyframes wxSwayC{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+/* 雨：被风吹弯，颤抖晃动摇摆 */
+html[data-weather="rainy"] .wx-flower{animation:wxSwayR 2.2s ease-in-out infinite}
+@keyframes wxSwayR{0%,100%{transform:rotate(-12deg) translateY(2px)}50%{transform:rotate(10deg) translateY(-2px)}}
+/* 雪：缓慢堆雪 → 抖落 → 再堆雪循环 */
+html[data-weather="snowy"] .wx-flower{animation:wxSnowShake 6s ease-in-out infinite}
 @keyframes wxSnowShake{
-  0%,50%{transform:rotate(0)}
-  59%{transform:rotate(-6deg)} 68%{transform:rotate(6deg)}
-  76%{transform:rotate(-4deg)} 84%{transform:rotate(0)}
-  100%{transform:rotate(0)}
+  0%,54%{transform:rotate(0)}
+  61%{transform:rotate(-8deg)} 70%{transform:rotate(8deg)}
+  78%{transform:rotate(-6deg)} 86%{transform:rotate(5deg)}
+  94%,100%{transform:rotate(0)}
 }
 
 /* 云朵：仅多云主题显示并缓慢漂移 */
