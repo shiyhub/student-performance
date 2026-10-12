@@ -2356,7 +2356,7 @@ function escapeHtml(s) {
         el = document.createElement('span');
         el.className = 'snow';
         el.style.left = (Math.random() * 100) + '%';
-        el.style.width = el.style.height = (3 + Math.random() * 4) + 'px';
+        el.style.width = el.style.height = (4 + Math.random() * 5) + 'px';
         el.style.animationDuration = (7 + Math.random() * 6) + 's';
         el.style.animationDelay = (Math.random() * 7) + 's';
         deco.appendChild(el);
@@ -2367,8 +2367,8 @@ function escapeHtml(s) {
   function setTheme(w, manual) {
     if (THEMES.indexOf(w) < 0) w = 'sunny';
     root.setAttribute('data-weather', w);
-    if (flowerL) flowerL.src = 'assets/flower-' + w + '.png';
-    if (flowerR) flowerR.src = 'assets/flower-' + w + '.png';
+    if (flowerL) flowerL.src = 'assets/flowers/flower-' + w + '.png';
+    if (flowerR) flowerR.src = 'assets/flowers/flower-' + w + '.png';
     renderDeco(w);
     btn.title = '天气主题：' + (LABELS[w] || w) + '（自动跟随洞口县天气，点按可切换）';
     if (manual) {
