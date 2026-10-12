@@ -84,7 +84,7 @@
         steps.push([cls + ' 近7天任务', () => supabase.from('daily_task').select('*').eq('class', cls).gte('task_date', dateStr(-6)).order('task_date', { ascending: false }), 'tasks_all_' + cls]);
         steps.push([cls + ' 近7天提交', () => supabase.from('task_submission').select('*').eq('class', cls).gte('task_date', dateStr(-6)).limit(LIMIT), 'subs_all_' + cls]);
         steps.push([cls + ' 表现记录', () => supabase.from('daily_record').select('*').eq('class', cls).order('create_at', { ascending: false }).limit(LIMIT), 'records_all_' + cls]);
-        steps.push([cls + ' 家长记录', () => supabase.from('home_note').select('*').eq('class', cls).limit(LIMIT), 'notes_all_' + cls]);
+        steps.push([cls + ' 家长记录', () => supabase.from('home_note').select('*, student_info:student_id(class, student_name), replies:home_note_reply(id, sender, content, create_at)').eq('student_info.class', cls).limit(LIMIT), 'notes_all_' + cls]);
         steps.push([cls + ' 考试元数据', () => supabase.from('exam_paper').select('*').eq('class', cls).limit(LIMIT), 'papers_all_' + cls]);
         dates.forEach(d => {
           steps.push([cls + ' ' + d + ' 报告', async () => {

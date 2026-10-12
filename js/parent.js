@@ -96,6 +96,9 @@ const els = {
   homeDate: $('#homeDate'),
   homeContent: $('#homeContent'),
   btnHomeSubmit: $('#btnHomeSubmit'),
+  // v50：我的留言与老师交流
+  homeThread: $('#homeThread'),
+  homeThreadList: $('#homeThreadList'),
   // 试卷
   papersCard: $('#papersCard'),
   papersList: $('#papersList'),
@@ -118,6 +121,7 @@ const state = {
   scanCode: '',   // 学生个人二维码带来的密码（优先作凭据）
   allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
   papers: [],           // 该生试卷（独立 RPC，学生端不开放）
+  homeNotes: [],        // v50：我的留言与老师回复线程
   quick: 'all',         // all | week | lastweek | 4w | custom
   picked: null,         // 自选日期 Set（null=未启用自选）
   viewMode: 'detail'    // detail | summary
@@ -140,6 +144,7 @@ async function syncRunner(op) {
   const p = op.params || {};
   try {
     if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
+    if (op.name === 'add_home_note_reply') { const r = await supabase.rpc('add_home_note_reply', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
   return { ok: false };
 }
@@ -274,6 +279,7 @@ async function onQuery() {
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
+        renderHomeThread(v.homeNotes || []);
         toast('离线模式：显示上次查询的缓存数据');
       } else if (v && v.expired) {
         els.mismatchBanner.textContent = '上次查询的缓存已超过 24 小时，请联网重新验证后再离线查看。';
@@ -297,10 +303,11 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
-    const [recRes, paperRes, taskRes] = await Promise.all([
+    const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
       supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }),
       supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }),
-      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth })
+      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }),
+      supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }).catch(() => null)
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
@@ -314,16 +321,20 @@ async function onQuery() {
     const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
     const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
     const tasks = taskData.tasks || [];
-    if (!records.length && !papers.length && !tasks.length) {
+    const noteData = (noteRes && noteRes.data && noteRes.data.ok) ? noteRes.data : { notes: [] };
+    const homeNotes = noteData.notes || [];
+    if (!records.length && !papers.length && !tasks.length && !homeNotes.length) {
       els.mismatchBanner.textContent = '校验通过，但还没有任何记录；稍后再来看看。';
       els.mismatchBanner.hidden = false;
       return;
     }
     state.ctx = { cls, student, birth };
-    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, cachedAt: Date.now() });
+    state.homeNotes = homeNotes;
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, homeNotes, cachedAt: Date.now() });
     renderResults(student, records);
     renderPapers(papers);
     renderTasks(tasks);
+    renderHomeThread(homeNotes);
   } catch (e) {
     // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用（24 小时内有效）
     try {
@@ -333,6 +344,7 @@ async function onQuery() {
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
+        renderHomeThread(v.homeNotes || []);
         toast('当前离线，显示上次查询的缓存数据');
         return;
       } else if (v && v.expired) {
@@ -370,12 +382,100 @@ async function onSubmitHome() {
     }
     els.homeContent.value = '';
     toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : '已提交，只有老师能看到哦 🏠');
+    if (!wr.queued) { try { await refreshHomeThread(); } catch (e3) {} }
   } catch (e) {
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
   } finally {
     els.btnHomeSubmit.disabled = false;
     els.btnHomeSubmit.textContent = '提交在家表现';
   }
+}
+
+/* ---------------- v50：我的留言与老师交流（多轮回复） ---------------- */
+
+function fmtDate(ymd) {
+  const [, m, d] = String(ymd || '').split('-').map(Number);
+  if (!m || !d) return ymd || '';
+  return `${m}月${d}日`;
+}
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function renderHomeThread(notes) {
+  if (!notes || !notes.length) {
+    els.homeThread.hidden = true;
+    els.homeThreadList.innerHTML = '';
+    return;
+  }
+  els.homeThread.hidden = false;
+  els.homeThreadList.innerHTML = notes.map(n => {
+    const replies = (n.replies || []).slice().sort((a, b) =>
+      (a.create_at || '').localeCompare(b.create_at || ''));
+    return `<div class="ht-card">
+              <div class="ht-head">
+                <span class="ht-date">🗓 ${fmtDate(n.record_date)}</span>
+                <span class="ht-who">我</span>
+              </div>
+              <div class="ht-content">${esc(n.content || '')}</div>
+              ${replies.map(r => `
+                <div class="ht-reply ${r.sender === 'teacher' ? 'teacher' : 'me'}">
+                  <span class="htr-who">${r.sender === 'teacher' ? '👩‍🏫 老师' : '我'}</span>
+                  <span class="htr-text">${esc(r.content || '')}</span>
+                  <span class="htr-time">${fmtTime(r.create_at)}</span>
+                </div>`).join('')}
+              <div class="ht-reply-box">
+                <input class="input" data-ht-input="${n.id}" placeholder="回复老师…" maxlength="500">
+                <button class="btn btn-primary btn-sm" data-ht-send="${n.id}">回复</button>
+              </div>
+            </div>`;
+  }).join('');
+
+  els.homeThreadList.querySelectorAll('[data-ht-send]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const noteId = btn.dataset.htSend;
+      const input = els.homeThreadList.querySelector(`[data-ht-input="${noteId}"]`);
+      const content = (input && input.value || '').trim();
+      if (!content) { toast('先输入回复内容'); return; }
+      btn.disabled = true;
+      const wr = await runWrite({ name: 'add_home_note_reply', params: {
+        p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth,
+        p_note_id: noteId, p_content: content.slice(0, 500)
+      } });
+      btn.disabled = false;
+      if (!wr.ok) { toast('回复失败，请重试'); return; }
+      toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复老师 ✅');
+      if (input) input.value = '';
+      await refreshHomeThread();
+    });
+  });
+  els.homeThreadList.querySelectorAll('[data-ht-input]').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const btn = els.homeThreadList.querySelector(`[data-ht-send="${inp.dataset.htInput}"]`);
+        if (btn) btn.click();
+      }
+    });
+  });
+}
+
+async function refreshHomeThread() {
+  if (!state.ctx.cls) return;
+  let notes = state.homeNotes || [];
+  try {
+    const r = await supabase.rpc('get_my_home_notes', { p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth });
+    if (r.data && r.data.ok) notes = r.data.notes || [];
+    state.homeNotes = notes;
+    try {
+      const key = 'parent_' + state.ctx.cls + '_' + state.ctx.student + '_' + state.ctx.birth;
+      const old = await window.Offline.get(key);
+      await window.Offline.set(key, Object.assign({}, old || {}, { homeNotes: notes, cachedAt: Date.now() }));
+    } catch (e2) {}
+  } catch (e) {}
+  renderHomeThread(notes);
 }
 
 /* ---------------- 时间筛选 + 视图 ---------------- */

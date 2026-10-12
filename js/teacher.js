@@ -161,6 +161,7 @@ async function syncRunner(op) {
     if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error, error: r.error }; }
     if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
       const { error: upErr } = await supabase.storage
@@ -507,10 +508,10 @@ async function loadRecords() {
   if (date) q = q.eq('record_date', date);
   if (kw) q = q.ilike('student_name', '%' + kw + '%');
 
-  // 在家表现（家长提交，仅老师可见）
+  // 在家表现（家长提交，仅老师可见）；v50：带上回复线程（教师评论/家长多轮交流）
   let hq = supabase
     .from('home_note')
-    .select('*, student_info:student_id(class, student_name)')
+    .select('*, student_info:student_id(class, student_name), replies:home_note_reply(id, sender, content, create_at)')
     .order('record_date', { ascending: false })
     .order('create_at', { ascending: false })
     .limit(500);
@@ -598,12 +599,39 @@ async function loadRecords() {
   $$('[data-del-note]', els.recordBox).forEach(btn => {
     btn.addEventListener('click', () => deleteHomeNote(btn.dataset.delNote));
   });
+  // v50：回复家长留言（多轮交流）
+  $$('[data-reply-send]', els.recordBox).forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const noteId = btn.dataset.replySend;
+      const input = els.recordBox.querySelector(`[data-reply-input="${noteId}"]`);
+      const content = (input && input.value || '').trim();
+      if (!content) { toast('先输入回复内容'); return; }
+      btn.disabled = true;
+      const wr = await runWrite({ name: 'teacher_home_reply', params: { note_id: noteId, sender: 'teacher', content: content.slice(0, 500) } });
+      btn.disabled = false;
+      if (!wr.ok) { toast('回复失败，请重试'); return; }
+      toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复家长 ✅');
+      loadRecords();
+    });
+  });
+  $$('[data-reply-input]', els.recordBox).forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const btn = els.recordBox.querySelector(`[data-reply-send="${inp.dataset.replyInput}"]`);
+        if (btn) btn.click();
+      }
+    });
+  });
 }
 
 function renderHomeNotes(notes) {
   let html = '<div class="rec-section-title home">🏠 家长留言 · 在家表现<span class="n">仅老师可见</span></div>';
   notes.forEach(n => {
     const info = n.student_info || {};
+    // v50：回复线程（按时间正序展示，教师评论 / 家长回复多轮交流）
+    const replies = (n.replies || []).slice().sort((a, b) =>
+      (a.create_at || '').localeCompare(b.create_at || ''));
     html += `<div class="rec-card home-card-row">
               <div class="rec-meta">
                 <span class="class-pill">${esc(info.class || '')}</span>
@@ -615,6 +643,18 @@ function renderHomeNotes(notes) {
                 </span>
               </div>
               <div class="home-content">${esc(n.content || '')}</div>
+              <div class="home-replies">
+                ${replies.map(r => `
+                  <div class="home-reply ${r.sender === 'teacher' ? 't' : 'p'}">
+                    <span class="hr-who">${r.sender === 'teacher' ? '👩‍🏫 老师' : '👪 家长'}</span>
+                    <span class="hr-text">${esc(r.content || '')}</span>
+                    <span class="hr-time">${formatTime(r.create_at)}</span>
+                  </div>`).join('')}
+              </div>
+              <div class="home-reply-box">
+                <input class="input" data-reply-input="${n.id}" placeholder="回复家长（可多次回复，家长能看到）" maxlength="500">
+                <button class="btn btn-primary btn-sm" data-reply-send="${n.id}">回复</button>
+              </div>
             </div>`;
   });
   return html;

@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v14';
+const CACHE = 'sp-cache-v15';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,9 @@ const ASSETS = [
   './css/teacher.css',
   './js/config.js',
   './js/offline.js',
+  './js/precache.js',
+  './js/sound.js',
+  './js/exam.js',
   './js/student.js',
   './js/parent.js',
   './js/teacher.js',

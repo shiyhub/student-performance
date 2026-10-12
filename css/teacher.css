@@ -359,3 +359,14 @@ body { background: #f3f6f5; }
 .stu-code-label { color: #667; font-size: 13px; }
 .stu-code-value { font-size: 20px; letter-spacing: 3px; color: #1f6f4a; font-family: ui-monospace, monospace; }
 .stu-code-hint { font-size: 12px; color: #98a; margin: -4px 0 8px; }
+
+/* ========== v50：家长留言回复线程 ========== */
+.home-replies { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.home-reply { display: flex; align-items: baseline; gap: 8px; background: #f4f7f5; border-radius: 10px; padding: 7px 11px; font-size: 13.5px; }
+.home-reply.t { background: #eaf3ee; }
+.home-reply .hr-who { font-weight: 700; white-space: nowrap; color: #2a6b4f; }
+.home-reply.p .hr-who { color: #a3631b; }
+.home-reply .hr-text { flex: 1; word-break: break-word; }
+.home-reply .hr-time { color: #98a; font-size: 12px; white-space: nowrap; }
+.home-reply-box { display: flex; gap: 8px; margin-top: 8px; }
+.home-reply-box .input { flex: 1; min-width: 0; }
