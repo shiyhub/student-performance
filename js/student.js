@@ -2322,28 +2322,46 @@ function escapeHtml(s) {
     return 'sunny';
   }
 
+  // 分层均匀分布：n 个粒子把区域均匀分层，每层内随机抖动（近似均匀）
+  function layerPos(i, n, jitter) {
+    var seg = 100 / n;
+    return seg * i + (Math.random() - 0.5) * seg * (jitter || 1);
+  }
   function renderDeco(w) {
     deco.innerHTML = '';
     var narrow = window.innerWidth <= 900;
     var i, el;
     if (w === 'sunny') {
-      var n = narrow ? 8 : 16;
+      var n = narrow ? 16 : 30;
       for (i = 0; i < n; i++) {
         el = document.createElement('span');
-        el.className = 'star' + (w === 'sunny' && i % 3 === 0 ? ' tw' : '');
-        el.style.left = (Math.random() * 100) + '%';
-        el.style.width = el.style.height = (2 + Math.random() * 3) + 'px';
+        el.className = 'star' + (i % 3 === 0 ? ' tw' : '');
+        el.style.left = Math.max(0, Math.min(100, layerPos(i, n, 1.4))) + '%';
+        el.style.top = Math.max(0, Math.min(100, layerPos((i * 7) % n, n, 1.4))) + '%';
+        el.style.width = el.style.height = (2 + Math.random() * 3.5) + 'px';
         el.style.animationDuration = (6 + Math.random() * 8) + 's';
         el.style.animationDelay = (Math.random() * 8) + 's';
         deco.appendChild(el);
       }
+      /* 太阳光斑：大号柔和金色光晕，均匀分布于页面（卡片后方） */
+      var gn = narrow ? 2 : 4;
+      var glowLeft = narrow ? [15, 85] : [6, 32, 68, 94];
+      for (i = 0; i < gn; i++) {
+        el = document.createElement('span');
+        el.className = 'sun-glow';
+        el.style.left = glowLeft[i] + '%';
+        el.style.top = (8 + i * 22 + Math.random() * 8) + '%';
+        el.style.width = el.style.height = (narrow ? 90 : 150 + i * 40) + 'px';
+        el.style.animationDelay = (Math.random() * 4) + 's';
+        deco.appendChild(el);
+      }
     }
     if (w === 'rainy') {
-      var rn = narrow ? 12 : 22;
+      var rn = narrow ? 36 : 70;
       for (i = 0; i < rn; i++) {
         el = document.createElement('span');
         el.className = 'rain';
-        el.style.left = narrow ? (4 + Math.random() * 92) + '%' : (i % 2 === 0 ? '2' : '96') + '%';
+        el.style.left = Math.max(0, Math.min(100, layerPos(i, rn, 1.3))) + '%';
         el.style.top = (-20 - Math.random() * 60) + 'px';
         el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
         el.style.animationDelay = (Math.random() * 3) + 's';
@@ -2351,14 +2369,15 @@ function escapeHtml(s) {
       }
     }
     if (w === 'snowy') {
-      var sn = narrow ? 14 : 24;
+      var sn = narrow ? 26 : 46;
       for (i = 0; i < sn; i++) {
         el = document.createElement('span');
         el.className = 'snow';
-        el.style.left = (Math.random() * 100) + '%';
-        el.style.width = el.style.height = (4 + Math.random() * 5) + 'px';
+        el.style.left = Math.max(0, Math.min(100, layerPos(i, sn, 1.3))) + '%';
+        el.style.width = el.style.height = (6 + Math.random() * 8) + 'px';
         el.style.animationDuration = (7 + Math.random() * 6) + 's';
         el.style.animationDelay = (Math.random() * 7) + 's';
+        el.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 1.5l1 6.4 6.4-1L14 12l5.4 5.1-6.4-1-1 6.4-1-6.4-6.4 1L10 12 4.6 6.9l6.4 1z" fill="#eef5fb" stroke="#7fa6c9" stroke-width="1.1" stroke-linejoin="round"/></svg>';
         deco.appendChild(el);
       }
     }

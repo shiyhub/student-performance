@@ -1093,8 +1093,14 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
   10%{opacity:.55}
   100%{transform:translateY(108vh);opacity:0}
 }
-.snow{position:absolute;top:-12px;border-radius:50%;background:#d9e6f2;opacity:0;
-  box-shadow:0 0 0 1px rgba(255,255,255,.95), 0 0 7px 1px rgba(110,145,180,.55);animation:wxSnowFall linear infinite}
+.snow{position:absolute;top:-16px;opacity:0;animation:wxSnowFall linear infinite}
+.snow svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 0 5px rgba(110,145,180,.45))}
+
+/* 晴天太阳光斑：柔和弥散金色光晕，缓慢呼吸闪烁 */
+.sun-glow{position:absolute;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,222,145,.55) 0%,rgba(255,222,145,.24) 42%,rgba(255,222,145,0) 72%);
+  opacity:0;animation:wxGlowBreathe 7s ease-in-out infinite}
+@keyframes wxGlowBreathe{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.4;transform:scale(1.18)}}
 @keyframes wxSnowFall{
   0%{transform:translateY(0) translateX(0);opacity:0}
   10%{opacity:.5}
@@ -1103,12 +1109,12 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
 }
 
 /* ===== 两侧花草（固定于视口两侧空白，素材随天气切换） ===== */
-.plant{position:fixed;bottom:0;z-index:1;opacity:.38;pointer-events:none;transition:opacity 1.2s ease}
+.plant{position:fixed;bottom:0;z-index:1;opacity:.45;pointer-events:none;transition:opacity 1.2s ease}
 html[data-weather] #wallView,
 html[data-weather] #formView{position:relative;z-index:2}
 .plant img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 5px rgba(80,70,50,.10))}
-.plant-left{left:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
-.plant-right{right:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
+.plant-left{left:max(6px,calc((100vw - 1320px)/2 - 96px));width:96px}
+.plant-right{right:max(6px,calc((100vw - 1320px)/2 - 96px));width:96px}
 .wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
 
@@ -1148,7 +1154,7 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
 
 /* 窄屏：花草收窄，粒子减量由 JS 控制 */
 @media (max-width:900px){
-  .plant-left,.plant-right{width:60px}
+  .plant-left,.plant-right{width:76px}
 }
 @media (prefers-reduced-motion: reduce){
   .star,.cloud,.rain,.snow,
