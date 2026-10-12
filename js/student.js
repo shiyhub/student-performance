@@ -2300,3 +2300,119 @@ async function onPickTaskGrade(grade, taskId, btn) {
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+/* ============ 天气联动主题（v21：自动读洞口县实时天气，可手动切换兜底） ============ */
+(function () {
+  var THEMES = ['sunny', 'cloudy', 'rainy', 'snowy'];
+  var LABELS = { sunny: '晴', cloudy: '多云', rainy: '雨', snowy: '雪' };
+  var root = document.documentElement;
+  var deco = document.getElementById('skyDeco');
+  var btn = document.getElementById('weatherSwitch');
+  var flowerL = document.getElementById('flowerLeft');
+  var flowerR = document.getElementById('flowerRight');
+  if (!deco || !btn) return;
+  var AUTO_KEY = 'sp_weather_auto';
+
+  function codeToTheme(c) {
+    c = Number(c);
+    if (c === 0 || c === 1) return 'sunny';
+    if (c === 2 || c === 3 || c === 45 || c === 48) return 'cloudy';
+    if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95) return 'rainy';
+    if ((c >= 71 && c <= 77) || (c >= 85 && c <= 86)) return 'snowy';
+    return 'sunny';
+  }
+
+  function renderDeco(w) {
+    deco.innerHTML = '';
+    var narrow = window.innerWidth <= 900;
+    var i, el;
+    if (w === 'sunny') {
+      var n = narrow ? 8 : 16;
+      for (i = 0; i < n; i++) {
+        el = document.createElement('span');
+        el.className = 'star' + (w === 'sunny' && i % 3 === 0 ? ' tw' : '');
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.width = el.style.height = (2 + Math.random() * 3) + 'px';
+        el.style.animationDuration = (6 + Math.random() * 8) + 's';
+        el.style.animationDelay = (Math.random() * 8) + 's';
+        deco.appendChild(el);
+      }
+    }
+    if (w === 'rainy') {
+      var rn = narrow ? 12 : 22;
+      for (i = 0; i < rn; i++) {
+        el = document.createElement('span');
+        el.className = 'rain';
+        el.style.left = narrow ? (4 + Math.random() * 92) + '%' : (i % 2 === 0 ? '2' : '96') + '%';
+        el.style.top = (-20 - Math.random() * 60) + 'px';
+        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        el.style.animationDelay = (Math.random() * 3) + 's';
+        deco.appendChild(el);
+      }
+    }
+    if (w === 'snowy') {
+      var sn = narrow ? 14 : 24;
+      for (i = 0; i < sn; i++) {
+        el = document.createElement('span');
+        el.className = 'snow';
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.width = el.style.height = (3 + Math.random() * 4) + 'px';
+        el.style.animationDuration = (7 + Math.random() * 6) + 's';
+        el.style.animationDelay = (Math.random() * 7) + 's';
+        deco.appendChild(el);
+      }
+    }
+  }
+
+  function setTheme(w, manual) {
+    if (THEMES.indexOf(w) < 0) w = 'sunny';
+    root.setAttribute('data-weather', w);
+    if (flowerL) flowerL.src = 'assets/flower-' + w + '.png';
+    if (flowerR) flowerR.src = 'assets/flower-' + w + '.png';
+    renderDeco(w);
+    btn.title = '天气主题：' + (LABELS[w] || w) + '（自动跟随洞口县天气，点按可切换）';
+    if (manual) {
+      try { localStorage.setItem(AUTO_KEY, w + ':' + Date.now()); } catch (e) {}
+    }
+  }
+
+  // 手动切换（演示/离线兜底；点击后 30 分钟内保持手动，之后恢复自动）
+  var manualUntil = 0;
+  var savedTheme = 'sunny';
+  try {
+    var mv = localStorage.getItem(AUTO_KEY);
+    if (mv && mv.indexOf(':') > 0) {
+      var parts = mv.split(':');
+      manualUntil = Number(parts[1]) || 0;
+      if (manualUntil > Date.now()) savedTheme = parts[0];
+    }
+  } catch (e) {}
+  // 初始立即应用（默认/记忆主题），避免等待天气接口期间页面保持裸状态
+  setTheme(savedTheme, false);
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-weather') || 'sunny';
+    var next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+    manualUntil = Date.now() + 30 * 60 * 1000;
+    setTheme(next, true);
+  });
+
+  // 自动获取湖南省洞口县实时天气（Open-Meteo，免 key、支持跨域）
+  var done = false;
+  function fetchWeather() {
+    if (done) return;
+    done = true;
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 7000) : null;
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=27.0572&longitude=110.5759&current_weather=true', ctrl ? { signal: ctrl.signal } : {})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var code = d && d.current_weather && d.current_weather.weathercode;
+        if (code !== undefined) setTheme(codeToTheme(code), false);
+      })
+      .catch(function () {
+        if (Date.now() >= manualUntil) setTheme('sunny', false);  // 获取失败且未手动指定 → 默认晴天
+      })
+      .finally(function () { if (timer) clearTimeout(timer); });
+  }
+  fetchWeather();
+})();
