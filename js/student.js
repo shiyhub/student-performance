@@ -756,6 +756,7 @@ function renderWall() {
       </button>`;
   });
 
+  els.matesGrid.classList.toggle('seat-mode', !!useSeat);
   els.matesGrid.innerHTML = html;
   els.matesGrid.hidden = false;
 
