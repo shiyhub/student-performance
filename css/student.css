@@ -1042,3 +1042,118 @@ html,body{background:#e8e6e1 !important;}
 /* 圆形容器若未定位则补上（mate-avatar/mp-avatar 已定位） */
 .detail-avatar.ap-breathe,
 .identity-avatar-emoji.ap-breathe { position:relative; }
+
+/* ============ 天气联动主题（v21：跟随洞口县实时天气，仅背景/侧边/卡片微样式，布局不动） ============ */
+html[data-weather="sunny"]{ --wx-bg1:#fdf8ec; --wx-bg2:#fdf3dc; --wx-card:#fffdf7; --wx-shadow:0 4px 18px rgba(232,180,76,.20);  --wx-deco:#e9c878; }
+html[data-weather="cloudy"]{ --wx-bg1:#eef3f6; --wx-bg2:#e3eaf0; --wx-card:#fbfcfa; --wx-shadow:0 4px 14px rgba(120,136,148,.16); --wx-deco:#9fb2bd; }
+html[data-weather="rainy"]{ --wx-bg1:#eef3f7; --wx-bg2:#dde7ee; --wx-card:#f6fafd; --wx-shadow:0 8px 24px rgba(96,128,150,.16);  --wx-deco:#8fb0c4; }
+html[data-weather="snowy"]{ --wx-bg1:#f6f9fb; --wx-bg2:#e9eef3; --wx-card:#fcfdfc; --wx-shadow:0 4px 16px rgba(150,168,182,.16), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#c3d4de; }
+
+html[data-weather] body{
+  background:linear-gradient(180deg,var(--wx-bg1) 0%,var(--wx-bg2) 100%) !important;
+  background-attachment:fixed;
+  transition:background 1.2s ease;
+}
+/* 第3轮：卡片微样式（尺寸/排版/头像/文字不动，仅底色与阴影微调） */
+html[data-weather] .mate,
+html[data-weather] .card.wall-class-card{
+  background:var(--wx-card); box-shadow:var(--wx-shadow);
+  border:1px solid rgba(255,255,255,.75);
+  transition:background 1.2s ease,box-shadow 1.2s ease;
+}
+
+/* ===== 装饰层：粒子容器（JS 填充） ===== */
+.sky-deco{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;transition:opacity 1.2s ease}
+.star{position:absolute;top:-8px;border-radius:50%;background:#fff;opacity:0;
+  box-shadow:0 0 6px 1px var(--wx-deco);animation:wxStarFloat linear infinite}
+@keyframes wxStarFloat{
+  0%{transform:translateY(0) scale(.6);opacity:0}
+  12%{opacity:.35}
+  50%{transform:translateY(34vh) scale(1);opacity:.22}
+  88%{opacity:.35}
+  100%{transform:translateY(72vh) scale(.7);opacity:0}
+}
+html[data-weather="sunny"] .star{background:#ffe9b8;box-shadow:0 0 8px 2px rgba(236,196,120,.55)}
+html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-duration:5s}
+@keyframes wxStarTwinkle{0%,100%{opacity:.08;transform:scale(.7)}50%{opacity:.34;transform:scale(1.12)}}
+.cloud{position:absolute;opacity:0;animation:wxCloudDrift linear infinite}
+.cloud svg{display:block}
+@keyframes wxCloudDrift{
+  0%{transform:translateX(-18vw);opacity:0}
+  8%{opacity:.5}
+  50%{opacity:.38}
+  92%{opacity:.5}
+  100%{transform:translateX(118vw);opacity:0}
+}
+.rain{position:absolute;top:-60px;width:1px;height:56px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(140,175,200,.45));opacity:0;
+  animation:wxRainFall linear infinite}
+@keyframes wxRainFall{
+  0%{transform:translateY(0);opacity:0}
+  10%{opacity:.55}
+  100%{transform:translateY(108vh);opacity:0}
+}
+.snow{position:absolute;top:-12px;border-radius:50%;background:#fff;opacity:0;
+  box-shadow:0 0 4px rgba(200,220,235,.8);animation:wxSnowFall linear infinite}
+@keyframes wxSnowFall{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  10%{opacity:.5}
+  50%{transform:translateY(52vh) translateX(16px)}
+  100%{transform:translateY(110vh) translateX(-10px);opacity:0}
+}
+
+/* ===== 两侧花草（固定于视口两侧空白，素材随天气切换） ===== */
+.plant{position:fixed;bottom:0;z-index:1;opacity:.38;pointer-events:none;transition:opacity 1.2s ease}
+html[data-weather] #wallView,
+html[data-weather] #formView{position:relative;z-index:2}
+.plant img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 5px rgba(80,70,50,.10))}
+.plant-left{left:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
+.plant-right{right:max(6px,calc((100vw - 1320px)/2 - 54px));width:54px}
+.wx-flower{transition:opacity .8s ease}
+.wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
+
+/* 花朵动画按主题：晴轻摇 / 多云稳摆 / 雨随风晃 / 雪抖雪 */
+html[data-weather="sunny"] .wx-flower{animation:wxSway 7s ease-in-out infinite}
+@keyframes wxSway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+html[data-weather="cloudy"] .wx-flower{animation:wxSwayC 10s ease-in-out infinite}
+@keyframes wxSwayC{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+html[data-weather="rainy"] .wx-flower{animation:wxSwayR 3.8s ease-in-out infinite}
+@keyframes wxSwayR{0%,100%{transform:rotate(-8deg) translateY(1px)}50%{transform:rotate(6deg) translateY(-1px)}}
+html[data-weather="snowy"] .wx-flower{animation:wxSnowShake 8s ease-in-out infinite}
+@keyframes wxSnowShake{
+  0%,50%{transform:rotate(0)}
+  59%{transform:rotate(-6deg)} 68%{transform:rotate(6deg)}
+  76%{transform:rotate(-4deg)} 84%{transform:rotate(0)}
+  100%{transform:rotate(0)}
+}
+
+/* 云朵：仅多云主题显示并缓慢漂移 */
+html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s ease-in-out infinite}
+@keyframes wxCloudFloat{0%,100%{transform:translateX(0)}50%{transform:translateX(14px)}}
+
+/* ===== 手动切换按钮（右下角小圆钮，自动获取失败/演示时兜底） ===== */
+.weather-switch{
+  position:fixed;right:12px;bottom:14px;z-index:8;
+  width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.85);
+  background:rgba(255,255,255,.55);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 10px rgba(76,98,88,.12);
+}
+.weather-switch:active{transform:scale(.92)}
+
+/* 窄屏：花草收窄，粒子减量由 JS 控制 */
+@media (max-width:900px){
+  .plant-left,.plant-right{width:60px}
+}
+@media (prefers-reduced-motion: reduce){
+  .star,.cloud,.rain,.snow,
+  .plant .wx-flower,.plant .wx-cloud{animation:none !important}
+}
+/* 前置页与日记页容器也随主题（仅背景氛围，布局不动） */
+html[data-weather] .device-gate{background:linear-gradient(160deg,var(--wx-bg1),var(--wx-bg2))}
+html[data-weather] .student-view,
+html[data-weather] .wall-view{background:transparent}
+/* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题），进墙后出现 */
+.device-gate:not([hidden]) ~ .plant,
+.device-gate:not([hidden]) ~ .weather-switch{display:none}
