@@ -1981,6 +1981,7 @@ function openStudentPreview() {
 function friendlyAuthError(msg) {
   if (/invalid login credentials/i.test(msg)) return '邮箱或密码不正确';
   if (/email not confirmed/i.test(msg)) return '邮箱尚未确认，请查收邀请邮件';
+  if (/failed to fetch|networkerror|network error|load failed|request failed/i.test(msg)) return '网络连接失败：请检查网络（WiFi/流量）后重试';
   return msg;
 }
 function esc(s) {
@@ -2736,3 +2737,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 });
+//（注：内容由AI生成）
