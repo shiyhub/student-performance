@@ -109,8 +109,8 @@ const els = {
   // 标签
   addTagForm: $('#addTagForm'),
   addTagLabel: $('#addTagLabel'),
-  addTagType: $('#addTagType'),
   addTagCategory: $('#addTagCategory'),
+  addTagRepeat: $('#addTagRepeat'),
   addTagOptions: $('#addTagOptions'),
   addTagXp: $('#addTagXp'),
   tagBox: $('#tagBox'),
@@ -269,11 +269,6 @@ function init() {
   els.recClass.addEventListener('change', fillRecStudents);
   els.addStudentForm.addEventListener('submit', onAddStudent);
   els.addTagForm.addEventListener('submit', onAddTag);
-  // 填写型标签固定为积极分类
-  els.addTagType.addEventListener('change', () => {
-    if (els.addTagType.value === 'text') els.addTagCategory.value = 'positive';
-    els.addTagCategory.disabled = els.addTagType.value === 'text';
-  });
 
   // 单个录入：动态家长输入（至少 1 位，最多 10 位）
   renderParentFields(['']);
@@ -1787,25 +1782,22 @@ async function renderTags() {
 
   els.tagBox.innerHTML = data.map(t => `
     <div class="tag-edit-row${t.category === 'negative' ? ' row-neg' : ''}" data-tag-id="${t.id}">
-      <input type="text" class="tag-label" value="${esc(t.label)}" maxlength="30" placeholder="标签文字">
+      <input type="text" class="tag-label" value="${esc(t.label)}" maxlength="600" placeholder="标签文字（最长600字）">
       <input type="text" class="tag-options" value="${esc((t.options || []).join(','))}"
-             maxlength="200" placeholder="二级选项，逗号分隔（选填），如：数学课堂作业,语文课堂作业">
-      <select class="tag-cat" title="分类（影响学生心情）">
-        <option value="positive"${t.category === 'positive' ? ' selected' : ''}>积极</option>
-        <option value="negative"${t.category === 'negative' ? ' selected' : ''}>消极</option>
+             maxlength="600" placeholder="二级标签，逗号分隔（选填），如：语文作业,数学作业">
+      <select class="tag-cat" title="心情分类（影响学生心情）">
+        <option value="positive"${t.category === 'positive' ? ' selected' : ''}>🌟 积极</option>
+        <option value="negative"${t.category === 'negative' ? ' selected' : ''}>💧 消极</option>
       </select>
-      <select class="tag-type">
-        <option value="check"${t.tag_type === 'check' ? ' selected' : ''}>勾选型</option>
-        <option value="text"${t.tag_type === 'text' ? ' selected' : ''}>填写型</option>
-      </select>
+      <span class="tag-type-badge" title="仅支持勾选型">勾选型</span>
+      <label class="tag-off-toggle" title="可重复提交：每天/多次都能选；不勾选=不可重复，同一具体项一生只能记一次">
+        <input type="checkbox" class="tag-repeat" ${t.history_unique === false ? 'checked' : ''}> 可重复提交
+      </label>
       <label class="tag-off-toggle">
         <input type="checkbox" class="tag-active" ${t.is_active ? 'checked' : ''}> 启用
       </label>
-      <label class="tag-off-toggle" title="勾选后，学生选过的具体二级项永久置灰、不能重复得分">
-        <input type="checkbox" class="tag-once" ${t.history_unique !== false ? 'checked' : ''}> 历史唯一
-      </label>
       <input type="number" class="tag-sort" value="${Number(t.sort_order) || 0}" min="0" max="9999" title="排序，数字越小越靠前">
-      <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="学生选这个表现加多少经验（消极建议0）">
+      <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="经验值，老师可自定义（消极建议0）">
       <div class="tag-row-actions">
         <button class="btn btn-primary btn-sm tag-save">保存</button>
         <button class="btn btn-danger-ghost btn-sm tag-delete">删除</button>
@@ -1815,40 +1807,28 @@ async function renderTags() {
   $$('.tag-edit-row', els.tagBox).forEach(row => {
     const id = row.dataset.tagId;
     const syncControls = () => {
-      const isText = $('.tag-type', row).value === 'text';
-      $('.tag-options', row).disabled = ($('.tag-type', row).value !== 'check');
-      // 填写型固定为积极
-      $('.tag-cat', row).disabled = isText;
-      if (isText) $('.tag-cat', row).value = 'positive';
       row.classList.toggle('row-neg', $('.tag-cat', row).value === 'negative');
     };
     $('.tag-save', row).addEventListener('click', async () => {
       const label = $('.tag-label', row).value.trim();
       if (!label) return toast('标签文字不能为空');
-      const tagType = $('.tag-type', row).value;
-      const options = tagType === 'check'
-        ? parseTagOptions($('.tag-options', row).value)
-        : [];
-      let category = $('.tag-cat', row).value === 'negative' ? 'negative' : 'positive';
-      if (tagType === 'text') category = 'positive';
+      const options = parseTagOptions($('.tag-options', row).value);
+      const category = $('.tag-cat', row).value === 'negative' ? 'negative' : 'positive';
       const score = category === 'negative' ? -1 : 1;
-      let xpVal = Math.max(0, Math.min(100, parseInt($('.tag-xp', row).value, 10) || 0));
-      if (category === 'negative' && xpVal > 0) {
-        xpVal = 0;
-        toast('消极表现不加分，经验已自动设为0');
-      }
+      // 经验值老师可自定义：积极/消极都不强制（0~100）
+      const xpVal = Math.max(0, Math.min(100, parseInt($('.tag-xp', row).value, 10) || 0));
       const btn = $('.tag-save', row);
       btn.disabled = true;
       btn.textContent = '…';
       const { error } = await supabase.from('behavior_tags').update({
         label,
-        tag_type: tagType,
+        tag_type: 'check',
         options,
         category,
         score,
         xp_value: xpVal,
         is_active: $('.tag-active', row).checked,
-        history_unique: $('.tag-once', row).checked,
+        history_unique: !$('.tag-repeat', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
       }).eq('id', id);
       btn.disabled = false;
@@ -1856,8 +1836,7 @@ async function renderTags() {
       if (error) { toast('保存失败：' + error.message); return; }
       toast('标签已更新');
     });
-    // 类型 / 分类切换联动
-    $('.tag-type', row).addEventListener('change', syncControls);
+    // 分类切换联动
     $('.tag-cat', row).addEventListener('change', syncControls);
     syncControls();
     $('.tag-delete', row).addEventListener('click', async () => {
@@ -1871,7 +1850,7 @@ async function renderTags() {
   });
 }
 
-// 解析二级选项文本：支持中英文逗号、顿号、换行/空格分隔；去重、限量、限长
+// 解析二级标签文本：支持中英文逗号、顿号、换行/空格分隔；去重、限量（20项）、单项限长600
 function parseTagOptions(text) {
   const arr = String(text || '')
     .split(/[,，、\n\r;；\s]+/)
@@ -1880,7 +1859,7 @@ function parseTagOptions(text) {
   const out = [];
   arr.forEach(s => {
     if (out.length >= 20) return;
-    const v = s.slice(0, 20);
+    const v = s.slice(0, 600);
     if (!out.includes(v)) out.push(v);
   });
   return out;
@@ -1892,22 +1871,21 @@ async function onAddTag(e) {
   if (!label) return toast('请输入标签文字');
   const btn = els.addTagForm.querySelector('button[type=submit]') || els.addTagForm.querySelector('button');
   if (btn) { btn.disabled = true; btn.textContent = '添加中…'; }
-  const tagType = els.addTagType.value;
-  const options = tagType === 'check' ? parseTagOptions(els.addTagOptions.value) : [];
-  let category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
-  if (tagType === 'text') category = 'positive';
+  const options = parseTagOptions(els.addTagOptions.value);
+  const category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
   const score = category === 'negative' ? -1 : 1;
   const xpVal = Math.max(0, Math.min(100, parseInt(els.addTagXp.value, 10) || 0));
+  const repeatable = !els.addTagRepeat || els.addTagRepeat.value !== 'unique';
   const { data, error } = await supabase
     .from('behavior_tags')
     .insert({
       label,
-      tag_type: tagType,
+      tag_type: 'check',
       options,
       category,
       score,
       xp_value: xpVal,
-      history_unique: !els.addTagUnique || els.addTagUnique.checked,
+      history_unique: !repeatable,
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
     .select('id');
@@ -1917,6 +1895,7 @@ async function onAddTag(e) {
   els.addTagLabel.value = '';
   els.addTagOptions.value = '';
   els.addTagCategory.value = 'positive';
+  els.addTagRepeat.value = 'repeat';
   els.addTagXp.value = '2';
   els.addTagLabel.focus();
   if (loaded.tags) renderTags();
