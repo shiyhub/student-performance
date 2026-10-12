@@ -1165,3 +1165,47 @@ html[data-weather] .wall-view{background:transparent}
 /* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题），进墙后出现 */
 .device-gate:not([hidden]) ~ .plant,
 .device-gate:not([hidden]) ~ .weather-switch{display:none}
+
+/* ===== 座位编排模式：固定 6 列矩阵（与学生端 seat_row*6+col 槽位公式一致） ===== */
+.mates.seat-mode { grid-template-columns: repeat(6, 1fr) !important; gap: 10px 8px; }
+.mates.seat-mode .mate { padding: 10px 2px 8px; }
+.mates.seat-mode .mate-avatar { width: 46px; height: 46px; font-size: 26px; }
+.mates.seat-mode .mate-name { font-size: 11px; margin-top: 18px; }
+.mates.seat-mode .mate-badge { top: 40px; font-size: 10px; padding: 1px 6px; }
+.mates.seat-mode .mate-lv { font-size: 10px; }
+.mates.seat-mode .mate-today { font-size: 10px; }
+@media (min-width: 860px) {
+  .mates.seat-mode { gap: 16px 10px; }
+  .mates.seat-mode .mate { padding: 14px 4px 12px; }
+  .mates.seat-mode .mate-avatar { width: 68px; height: 68px; font-size: 36px; }
+  .mates.seat-mode .mate-name { font-size: 14px; margin-top: 26px; }
+  .mates.seat-mode .mate-badge { top: 60px; font-size: 11px; padding: 2px 8px; }
+  .mates.seat-mode .mate-lv { font-size: 12px; }
+  .mates.seat-mode .mate-today { font-size: 12px; }
+}
+@media (min-width: 1280px) {
+  .mates.seat-mode .mate { padding: 18px 6px 16px; }
+  .mates.seat-mode .mate-avatar { width: 92px; height: 92px; font-size: 50px; }
+  .mates.seat-mode .mate-name { font-size: 16px; margin-top: 36px; }
+  .mates.seat-mode .mate-badge { top: 80px; font-size: 12px; padding: 2px 10px; }
+  .mates.seat-mode .mate-lv { font-size: 13px; }
+  .mates.seat-mode .mate-today { font-size: 13px; }
+}
+
+/* 座位模式窄屏压缩：列宽不足时收缩卡片内容，避免横向溢出 */
+.mates.seat-mode .mate { min-width: 0; }
+@media (max-width: 479px) {
+  .mates.seat-mode { gap: 8px 6px; }
+  .mates.seat-mode .mate { padding: 8px 1px 6px; }
+  .mates.seat-mode .mate-avatar { width: 38px; height: 38px; font-size: 20px; }
+  .mates.seat-mode .mate-name { font-size: 9px; margin-top: 14px; }
+  .mates.seat-mode .mate-badge { top: 32px; font-size: 8px; padding: 0 4px; }
+  .mates.seat-mode .mate-lv, .mates.seat-mode .mate-today { font-size: 9px; }
+}
+@media (min-width: 480px) and (max-width: 859px) {
+  .mates.seat-mode .mate { padding: 12px 3px 10px; }
+  .mates.seat-mode .mate-avatar { width: 56px; height: 56px; font-size: 30px; }
+  .mates.seat-mode .mate-name { font-size: 12px; margin-top: 22px; }
+  .mates.seat-mode .mate-badge { top: 48px; font-size: 10px; padding: 1px 6px; }
+  .mates.seat-mode .mate-lv, .mates.seat-mode .mate-today { font-size: 11px; }
+}
