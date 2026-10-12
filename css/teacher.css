@@ -376,3 +376,9 @@ body { background: #f3f6f5; }
 .rf-btn { border: 1px solid #d8d2c4; background: #fff; color: #5a5648; border-radius: 999px; padding: 5px 13px; font-size: 13px; cursor: pointer; transition: all .15s; }
 .rf-btn:hover { border-color: #b7a98c; }
 .rf-btn.on { background: #2a6b4f; border-color: #2a6b4f; color: #fff; font-weight: 600; }
+
+/* ========== v54：未完成按钮红色高亮 ========== */
+/* 未选中：红字+红边+浅红底；选中（该学生当前未完成）：红底白字，对比鲜明便于扫视 */
+.task-grade-btn[data-grade="none"] { color:#d64545; border-color:#e8a3a3; background:#fff8f8; font-weight:600; }
+.task-grade-btn[data-grade="none"]:hover { background:#ffecec; border-color:#d64545; }
+.task-grade-btn[data-grade="none"].on { background:#d64545; border-color:#d64545; color:#fff; font-weight:800; box-shadow:0 1px 4px rgba(214,69,69,.35); }
