@@ -1117,9 +1117,9 @@ function applyLocalSubmitFeedback(cls, name, items) {
   mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key);
   items.forEach(it => {
     const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
-    if (tg && tg.history_unique !== false && it.value) {
+    if (tg && tg.history_unique !== false) {
       if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
-      state.doneItems[tg.id].add(it.value);
+      state.doneItems[tg.id].add(it.value || null);
     }
   });
   renderTagGrid();
@@ -1177,10 +1177,9 @@ async function loadDoneItems() {
     const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
     items.forEach(it => {
       const tid = it.id;
-      if (it.value) {
-        if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
-        state.doneItems[tid].add(it.value);
-      }
+      if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
+      // 不可重复标签：只要出现过即记录；value 为空（教师批量评价/一级标签）用 null 标记"整标签已评"
+      state.doneItems[tid].add(it.value || null);
     });
   });
 }
@@ -1188,12 +1187,19 @@ async function loadDoneItems() {
 function buildCheckTag(t) {
   const wrap = document.createElement('div');
   wrap.className = 'opt-tag' + (t.category === 'negative' ? ' is-neg' : '');
+  // 不可重复标签置灰：doneSet 含 null 标记 → 整标签已评（教师批量/一级标签）；含具体值 → 该二级项已评
+  const doneSet = state.doneItems[t.id];
+  const wholeDone = t.history_unique !== false && doneSet && doneSet.has(null);
 
   const chip = document.createElement('button');
   chip.type = 'button';
-  chip.className = 'chip' + (t.category === 'negative' ? ' chip-neg' : '');
-  chip.textContent = t.label;
-  chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
+  chip.className = 'chip' + (t.category === 'negative' ? ' chip-neg' : '') + (wholeDone ? ' done' : '');
+  chip.textContent = wholeDone ? t.label + ' ✓' : t.label;
+  if (wholeDone) {
+    chip.disabled = true;
+  } else {
+    chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
+  }
   wrap.appendChild(chip);
 
   if (t.options.length) {
@@ -1209,9 +1215,9 @@ function buildCheckTag(t) {
       b.type = 'button';
       b.className = 'sub-chip';
       b.textContent = opt;
-      // 历史唯一标签：打过的具体二级项永久置灰
-      const doneSet = state.doneItems[t.id];
-      if (t.history_unique !== false && doneSet && doneSet.has(opt)) {
+      // 历史唯一标签：整标签已评或该具体二级项已评 → 置灰
+      const optDone = wholeDone || (doneSet && doneSet.has(opt));
+      if (t.history_unique !== false && optDone) {
         b.classList.add('done');
         b.disabled = true;
         b.textContent = opt + ' ✓';
@@ -2024,12 +2030,12 @@ async function onSubmit() {
     // v128(RSK-08)：以服务端 record_date 为"今日"基准，墙的今日判定与服务端一致
     if (subRes.record_date) state.serverToday = String(subRes.record_date).slice(0, 10);
     mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key, state.serverToday);
-    // 置灰：本次提交的历史唯一项直接加入 doneItems（本地），标签区就地重渲染
+    // 置灰：本次提交的不可重复项直接加入 doneItems（本地），标签区就地重渲染
     items.forEach(it => {
       const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
-      if (tg && tg.history_unique !== false && it.value) {
+      if (tg && tg.history_unique !== false) {
         if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
-        state.doneItems[tg.id].add(it.value);
+        state.doneItems[tg.id].add(it.value || null);
       }
     });
     renderTagGrid();
