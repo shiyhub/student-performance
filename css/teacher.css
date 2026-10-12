@@ -370,3 +370,9 @@ body { background: #f3f6f5; }
 .home-reply .hr-time { color: #98a; font-size: 12px; white-space: nowrap; }
 .home-reply-box { display: flex; gap: 8px; margin-top: 8px; }
 .home-reply-box .input { flex: 1; min-width: 0; }
+
+/* ========== v53：任务报告筛选条 ========== */
+.report-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 12px; }
+.rf-btn { border: 1px solid #d8d2c4; background: #fff; color: #5a5648; border-radius: 999px; padding: 5px 13px; font-size: 13px; cursor: pointer; transition: all .15s; }
+.rf-btn:hover { border-color: #b7a98c; }
+.rf-btn.on { background: #2a6b4f; border-color: #2a6b4f; color: #fff; font-weight: 600; }
