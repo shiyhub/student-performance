@@ -789,14 +789,12 @@ html,body{background:#e8e6e1 !important;}
 .s-header .s-title{margin:0;font-size:1.3em;}
 .s-header .s-date{margin-left:auto;}
 .mate-class-all{grid-column:1/-1;max-width:220px;}
-.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:12px;}
 .mate-class-all{grid-column:auto;max-width:none;}
 .wall-class-card{display:flex;flex-direction:column;justify-content:space-between;gap:10px;}
 .wall-class-card .class-progress{flex:1;display:flex;flex-direction:column;justify-content:space-between;}
 .wall-top{display:flex;gap:14px;align-items:stretch;}
 .wall-class-left{flex:0 0 180px;}
 .wall-top .wall-class-card{flex:1;margin:0;}
-.mates{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .mate.seat-empty{background:transparent;border:1.5px dashed #d8cfc4;min-height:140px;}
 #wallView .s-header{justify-content:center;text-align:center;}
 #wallView .s-title{font-size:2em !important;}
@@ -1109,12 +1107,12 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
 }
 
 /* ===== 两侧花草（固定于视口两侧空白，素材随天气切换） ===== */
-.plant{position:fixed;bottom:0;z-index:1;opacity:.45;pointer-events:none;transition:opacity 1.2s ease}
+.plant{position:fixed;bottom:0;z-index:1;opacity:.5;pointer-events:none;transition:opacity 1.2s ease}
 html[data-weather] #wallView,
 html[data-weather] #formView{position:relative;z-index:2}
-.plant img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 5px rgba(80,70,50,.10))}
-.plant-left{left:max(6px,calc((100vw - 1320px)/2 - 96px));width:96px}
-.plant-right{right:max(6px,calc((100vw - 1320px)/2 - 96px));width:96px}
+.plant img{display:block;width:100%;height:auto;filter:drop-shadow(0 3px 8px rgba(80,70,50,.14))}
+.plant-left{left:max(6px,calc((100vw - 1320px)/2 - 150px));width:150px}
+.plant-right{right:max(6px,calc((100vw - 1320px)/2 - 150px));width:150px}
 .wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
 
@@ -1154,7 +1152,7 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
 
 /* 窄屏：花草收窄，粒子减量由 JS 控制 */
 @media (max-width:900px){
-  .plant-left,.plant-right{width:76px}
+  .plant-left,.plant-right{width:100px}
 }
 @media (prefers-reduced-motion: reduce){
   .star,.cloud,.rain,.snow,

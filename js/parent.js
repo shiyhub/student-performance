@@ -307,7 +307,7 @@ async function onQuery() {
       supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }),
       supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }),
       supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }),
-      supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }).catch(() => null)
+      supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }).then(r => r, () => null)
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）

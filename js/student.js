@@ -516,8 +516,8 @@ function showDeviceGate() {
     const cls = clsSel.value;
     let data = null;
     try {
-      const res = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
-      data = res.data;
+      const res = await supabase.rpc('get_class_roster', { p_class: cls });
+      data = (res && res.data) || null;
     } catch (e) { data = null; }
     if (!data) {
       // 离线：用班级墙缓存里的名单做校验
@@ -651,10 +651,8 @@ async function loadWall() {
   let todayTaskSubs = [];
   if (state.todayTaskDefs.length) {
     const ids = state.todayTaskDefs.map(t => t.id);
-    const subRes = await supabase.from('task_submission')
-      .select('student_name,grade,task_id')
-      .in('task_id', ids);
-    todayTaskSubs = subRes.data || [];
+    const subRes = await supabase.rpc('get_today_subs', { p_task_ids: ids });
+    todayTaskSubs = (subRes && subRes.data) || [];
   }
   state.todayTaskSubs = todayTaskSubs;
   try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs })); } catch(e) {}

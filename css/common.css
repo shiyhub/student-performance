@@ -48,6 +48,7 @@ img { max-width: 100%; display: block; }
 .input, select.input, textarea.input {
   width: 100%; border: 1.5px solid var(--line); border-radius: 12px;
   padding: 12px 14px; background: #fbfdfc; outline: none;
+  font-size: 16px;   /* 移动端防 iOS 聚焦缩放 */
   transition: border-color .15s, background .15s;
 }
 .input:focus { border-color: var(--primary); background: #fff; }
