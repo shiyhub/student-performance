@@ -2189,8 +2189,26 @@ async function loadTaskReport() {
     return;
   }
 
+  renderTaskReportData(tasks, allStudents, seatMap, cls, date);
+  await window.Offline.set('taskreport_' + cls + '_' + date, { allStudents, tasks, seatMap });
+}
+
+/* v53：任务报告渲染 + 任务筛选（当天多任务时按任务切换，方便逐任务填写） */
+let reportTaskFilter = 'all';
+function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
+  const box = document.getElementById('taskReportBox');
+  let visibleTasks = reportTaskFilter === 'all' ? tasks : tasks.filter(t => t.id === reportTaskFilter);
+  if (!visibleTasks.length) { reportTaskFilter = 'all'; visibleTasks = tasks; }
+
   let html = '';
-  tasks.forEach(t => {
+  // 任务筛选条：当天多任务时显示（点任务只看它，点"全部"看所有）
+  if (tasks.length > 1) {
+    html += `<div class="report-filter">
+      <button type="button" class="rf-btn${reportTaskFilter === 'all' ? ' on' : ''}" data-rf="all">📋 全部任务（${tasks.length}）</button>
+      ${tasks.map(t => `<button type="button" class="rf-btn${reportTaskFilter === t.id ? ' on' : ''}" data-rf="${t.id}">${TASK_TYPE_LABEL[t.task_type] || t.task_type}·${esc(t.title)}</button>`).join('')}
+    </div>`;
+  }
+  visibleTasks.forEach(t => {
     const sub = t.submissions || {};
     const counts = { none: 0, done: 0, good: 0, perfect: 0 };
     allStudents.forEach(name => {
@@ -2225,8 +2243,14 @@ async function loadTaskReport() {
     html += '</div></div>';
   });
   box.innerHTML = html;
-  await window.Offline.set('taskreport_' + cls + '_' + date, { allStudents, tasks, seatMap });
 
+  // 任务筛选切换（数据已加载，仅重新渲染，秒切）
+  box.querySelectorAll('.rf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      reportTaskFilter = btn.dataset.rf;
+      renderTaskReportData(tasks, allStudents, seatMap, cls, date);
+    });
+  });
   box.querySelectorAll('.task-grade-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const card = btn.closest('.task-stu');
@@ -2737,4 +2761,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 });
-//（注：内容由AI生成）
