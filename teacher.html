@@ -161,38 +161,35 @@
       <div class="card">
         <div class="card-title">➕ 新增表现标签</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          积极表现会让学生今日心情上升，消极表现会让心情下降。勾选型：学生直接点选；填写型：学生补充文字。
+          标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，经验值可自定义。
         </p>
         <form id="addTagForm">
           <div class="add-form-grid">
             <div class="field">
-              <label for="addTagLabel">标签文字</label>
-              <input class="input" id="addTagLabel" type="text" placeholder="例如：优秀数学作业" maxlength="30">
+              <label for="addTagLabel">标签文字（最长600字）</label>
+              <input class="input" id="addTagLabel" type="text" placeholder="例如：优秀数学作业" maxlength="600">
             </div>
             <div class="field">
-              <label for="addTagCategory">分类（影响心情）</label>
+              <label for="addTagCategory">心情分类</label>
               <select class="input" id="addTagCategory">
-                <option value="positive">🌟 积极表现（心情 +1）</option>
-                <option value="negative">💧 消极表现（心情 -1）</option>
+                <option value="positive">🌟 积极（心情 +1）</option>
+                <option value="negative">💧 消极（心情 -1）</option>
               </select>
             </div>
             <div class="field">
-              <label for="addTagType">类型</label>
-              <select class="input" id="addTagType">
-                <option value="check">勾选型</option>
-                <option value="text">填写型</option>
+              <label for="addTagRepeat">提交方式</label>
+              <select class="input" id="addTagRepeat">
+                <option value="repeat" selected>🔁 可重复提交（每天/多次都能选）</option>
+                <option value="unique">🔒 不可重复提交（同一具体项只能记一次）</option>
               </select>
             </div>
             <div class="field">
-              <label for="addTagXp">加多少经验</label>
-              <input class="input" id="addTagXp" type="number" min="0" max="100" value="2" title="消极表现建议填 0">
-            </div>
-            <div class="field check-line">
-              <label class="inline-label"><input type="checkbox" id="addTagUnique" checked> 历史唯一（同一具体项只算一次，打过永久置灰）</label>
+              <label for="addTagXp">经验值（自定义）</label>
+              <input class="input" id="addTagXp" type="number" min="0" max="100" value="2" title="积极建议 2~10，消极建议 0；老师可自定义">
             </div>
             <div class="field full">
-              <label for="addTagOptions">二级选项（仅"勾选型"有效，选填）</label>
-              <input class="input" id="addTagOptions" type="text" maxlength="200"
+              <label for="addTagOptions">二级标签（选填，逗号分隔，最长600字）</label>
+              <input class="input" id="addTagOptions" type="text" maxlength="600"
                      placeholder="用逗号分隔，如：数学课堂作业,语文课堂作业,英语课堂作业">
             </div>
           </div>
@@ -203,7 +200,7 @@
       <div class="sec-label">已有标签（修改后即时生效）</div>
       <div id="tagBox"></div>
       <p class="text-muted" style="margin-top:6px;">
-        勾选型标签可设置"二级选项"（如「优秀作业」下再分数学/语文课堂作业），学生勾选后要再选一项。停用或删除标签不影响历史记录（历史中保存了文字快照）。
+        标签均可设置"二级标签"（如「欠作业」下再分语文作业/数学作业），学生勾选后要再选一项。停用或删除标签不影响历史记录（历史中保存了文字快照）。
       </p>
     </section>
 
