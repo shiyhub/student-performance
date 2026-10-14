@@ -128,14 +128,13 @@ const state = {
 };
 
 /* ---------- v107：统一离线层辅助（家长端） ---------- */
-/* ---------- v128：家长缓存 24 小时过期（RSK-01） ---------- */
-const PARENT_CACHE_TTL = 24 * 3600 * 1000;   // 缓存 24 小时后需重新联网验证
+/* ---------- v37(RSK-12)：家长缓存长期有效（不再 24 小时过期） ---------- */
+// 缓存不再设置有效期：弱网/断网时家长仍可查看最近一次查询结果；
+// cachedAt 仅用于展示缓存时间，联网查询成功会自动更新缓存。
 async function readParentCache(key) {
   try {
     const v = await window.Offline.get(key);
     if (!v) return null;
-    // 无时间戳的旧缓存：视为可用但提示（升级过渡期）；有时间戳则按 TTL 判断
-    if (v.cachedAt && (Date.now() - v.cachedAt) > PARENT_CACHE_TTL) return { expired: true };
     return v;
   } catch (e) { return null; }
 }
@@ -277,22 +276,43 @@ async function onQuery() {
     p,
     new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
   ]);
+  // v37(RSK-12)：弱网自动重试——RPC 失败最多重试 3 次（间隔 1.5s），仅网络类错误重试
+  const rpcRetry = async (fn, ms, tag) => {
+    let lastErr = null;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const r = await Promise.race([
+          fn(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
+        ]);
+        if (r && r.error) {
+          lastErr = r.error;
+          if (!isNetErr(r.error)) return r;   // 业务错误（三要素不对等）不重试
+        } else {
+          return r;
+        }
+      } catch (err) {
+        lastErr = err;
+        if (!isNetErr(err)) throw err;
+      }
+      if (i < 2) await new Promise(res => setTimeout(res, 1500));
+    }
+    throw lastErr;
+  };
   try {
-    // 离线：跳过在线校验，直接读上次验证通过的缓存（24 小时内）
+    // 离线：跳过在线校验，直接读上次验证通过的缓存（长期有效）
     if (!window.Offline || !window.Offline.online) {
       const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
       els.btnQuery.disabled = false;
       els.btnQuery.textContent = '查询记录';
-      if (v && !v.expired) {
+      if (v) {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
-        toast('离线模式：显示上次查询的缓存数据');
-      } else if (v && v.expired) {
-        els.mismatchBanner.textContent = '上次查询的缓存已超过 24 小时，请联网重新验证后再离线查看。';
-        els.mismatchBanner.hidden = false;
+        const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
+        toast(t ? `离线模式：显示缓存数据（缓存于 ${t}）` : '离线模式：显示上次查询的缓存数据');
       } else {
         els.mismatchBanner.textContent = '当前离线，且这台设备还没有查询过这组信息：请先联网查询一次，之后断网也能看。';
         els.mismatchBanner.hidden = false;
@@ -300,7 +320,7 @@ async function onQuery() {
       return;
     }
     // 先校验三要素，给出具体原因
-    const vRes = await withTimeout(supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 12000, '身份校验');
+    const vRes = await rpcRetry(() => supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 8000, '身份校验');
     const v = vRes.data;
     if (v && v.ok === false) {
       if (state.scanCode) { state.scanCode = ''; }
@@ -313,15 +333,15 @@ async function onQuery() {
       return;
     }
     const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
-      withTimeout(supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 15000, '记录'),
-      withTimeout(supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 15000, '试卷'),
-      withTimeout(supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 15000, '任务'),
-      withTimeout(supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 15000, '留言').then(r => r, () => null)
+      rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 10000, '记录'),
+      rpcRetry(() => supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 10000, '试卷'),
+      rpcRetry(() => supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 10000, '任务'),
+      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 10000, '留言').then(r => r, () => null)
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
     try {
-      const { data: tags } = await withTimeout(supabase.from('behavior_tags').select('label,options').eq('is_active', true), 12000, '标签');
+      const { data: tags } = await rpcRetry(() => supabase.from('behavior_tags').select('label,options').eq('is_active', true), 8000, '标签');
       const m = {};
       (tags || []).forEach(t => (t.options || []).forEach(o => { m[o] = t.label; }));
       window.__tagOptionMap = m;
@@ -345,24 +365,21 @@ async function onQuery() {
     renderTasks(tasks);
     renderHomeThread(homeNotes);
   } catch (e) {
-    // 在线查询失败（断网/服务异常）：回退本地缓存，保持离线可用（24 小时内有效）
+    // 在线查询失败（断网/服务异常）：自动重试已由 rpcRetry 处理；仍失败则回退本地缓存（长期有效）
     try {
       const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
-      if (v && !v.expired) {
+      if (v) {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
-        toast('当前离线，显示上次查询的缓存数据');
-        return;
-      } else if (v && v.expired) {
-        els.mismatchBanner.textContent = '上次查询的缓存已超过 24 小时，请联网重新验证后再离线查看。';
-        els.mismatchBanner.hidden = false;
+        const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
+        toast(t ? `网络请求失败，已显示缓存数据（缓存于 ${t}，联网后重试可更新）` : '网络请求失败，已显示上次查询的缓存数据');
         return;
       }
     } catch (e2) {}
-    toast('查询失败：' + ((e && e.message) || '请稍后再试'));
+    toast('网络请求失败，且本机暂无这组信息的缓存：请检查网络后点「查询记录」重试。');
   } finally {
     els.btnQuery.disabled = false;
     els.btnQuery.textContent = '查询记录';
