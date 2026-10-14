@@ -122,9 +122,11 @@ const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
   return arr;
 }, []);
 const CAMPUS_UNLOCK_LEVEL = 3;
-/* v2.0：新头像四档（按图片质量 Lv4/5/6/7 解锁；sweet 最亲民 → fantasy 最华丽） */
+/* v2.1：新头像四档（按图片质量 Lv4/5/6/7 解锁；sweet 最亲民 → fantasy 最华丽）
+   v2.1 追加：game1~8 硬核游戏风并入 Lv4（与甜美少女并存） */
 const NEW_GROUPS = [
   { name: '甜美少女', prefix: 'sweet',   count: 10, level: 4, emoji: '🎀' },
+  { name: '游戏风',   prefix: 'game',    count: 8,  level: 4, emoji: '🎮' },
   { name: '森系田园', prefix: 'nature',  count: 4,  level: 5, emoji: '🌿' },
   { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
   { name: '奇幻神域', prefix: 'fantasy', count: 7,  level: 7, emoji: '✨' }
@@ -164,10 +166,10 @@ const FRAMES = [
   { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|10)|nature[1-4]|mecha[1-4]|fantasy[1-7])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|10)|game[1-8]|nature[1-4]|mecha[1-4]|fantasy[1-7])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|10)|nature[1-4]|mecha[1-4]|fantasy[1-7])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|10)|game[1-8]|nature[1-4]|mecha[1-4]|fantasy[1-7])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -179,7 +181,7 @@ function migrateLegacyAvatar(key) {
   const k = String(key || '');
   const m = /^(cyber|mecha|rider|ultra)([1-8])$/.exec(k);
   if (m) return LEGACY_AVATAR_MAP[m[1]];
-  if (/^(girl|boy|neutral|animal|sweet|nature|mecha|fantasy)/.test(k)) return k;
+  if (/^(girl|boy|neutral|animal|sweet|game|nature|mecha|fantasy)/.test(k)) return k;
   const h = hashCode(k);
   return 'animal' + (((h % 24) + 24) % 24 + 1);
 }
