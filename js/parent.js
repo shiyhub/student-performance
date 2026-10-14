@@ -149,8 +149,10 @@ async function syncRunner(op) {
   return { ok: false };
 }
 async function runWrite(op) {
-  if (!window.Offline || !window.Offline.online) {
-    await window.Offline.enqueue(op);
+  if (!window.Offline) return { ok: false, queued: false };   // 离线层未加载：明确失败，不抛异常
+  if (!window.Offline.online) {
+    const q = await window.Offline.enqueue(op);
+    if (!q) return { ok: false, queued: false };   // 入队失败（存储异常）：明确失败，不丢不卡
     return { ok: true, queued: true };
   }
   try {
@@ -270,10 +272,17 @@ async function onQuery() {
   els.mismatchBanner.hidden = true;
   els.btnQuery.disabled = true;
   els.btnQuery.textContent = '查询中…';
+  // 查询超时兜底：弱网/请求挂起时 12~15s 后报错并恢复按钮，避免一直停在"查询中"
+  const withTimeout = (p, ms, tag) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
+  ]);
   try {
     // 离线：跳过在线校验，直接读上次验证通过的缓存（24 小时内）
     if (!window.Offline || !window.Offline.online) {
       const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
+      els.btnQuery.disabled = false;
+      els.btnQuery.textContent = '查询记录';
       if (v && !v.expired) {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
@@ -291,7 +300,7 @@ async function onQuery() {
       return;
     }
     // 先校验三要素，给出具体原因
-    const vRes = await supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth });
+    const vRes = await withTimeout(supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 12000, '身份校验');
     const v = vRes.data;
     if (v && v.ok === false) {
       if (state.scanCode) { state.scanCode = ''; }
@@ -304,15 +313,15 @@ async function onQuery() {
       return;
     }
     const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
-      supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }),
-      supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }),
-      supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }),
-      supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }).then(r => r, () => null)
+      withTimeout(supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 15000, '记录'),
+      withTimeout(supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 15000, '试卷'),
+      withTimeout(supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 15000, '任务'),
+      withTimeout(supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 15000, '留言').then(r => r, () => null)
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
     try {
-      const { data: tags } = await supabase.from('behavior_tags').select('label,options').eq('is_active', true);
+      const { data: tags } = await withTimeout(supabase.from('behavior_tags').select('label,options').eq('is_active', true), 12000, '标签');
       const m = {};
       (tags || []).forEach(t => (t.options || []).forEach(o => { m[o] = t.label; }));
       window.__tagOptionMap = m;
@@ -440,15 +449,20 @@ function renderHomeThread(notes) {
       const content = (input && input.value || '').trim();
       if (!content) { toast('先输入回复内容'); return; }
       btn.disabled = true;
-      const wr = await runWrite({ name: 'add_home_note_reply', params: {
-        p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth,
-        p_note_id: noteId, p_content: content.slice(0, 500)
-      } });
-      btn.disabled = false;
-      if (!wr.ok) { toast('回复失败，请重试'); return; }
-      toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复老师 ✅');
-      if (input) input.value = '';
-      await refreshHomeThread();
+      try {
+        const wr = await runWrite({ name: 'add_home_note_reply', params: {
+          p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth,
+          p_note_id: noteId, p_content: content.slice(0, 500)
+        } });
+        if (!wr.ok) { toast('回复失败，请重试'); return; }
+        toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复老师 ✅');
+        if (input) input.value = '';
+        await refreshHomeThread();
+      } catch (e) {
+        toast('回复失败：' + ((e && e.message) || '请稍后再试'));
+      } finally {
+        btn.disabled = false;
+      }
     });
   });
   els.homeThreadList.querySelectorAll('[data-ht-input]').forEach(inp => {
@@ -932,7 +946,7 @@ function renderPapers(papers) {
     const subject = (p.subject || '').trim();
     const note = (p.note || '').trim();
     return `<button type="button" class="paper-card" data-url="${esc(p.image_url)}">
-      <span class="paper-thumb"><img src="${esc(p.image_url)}" alt="试卷照片" loading="lazy"></span>
+      <span class="paper-thumb"><img src="${esc(p.image_url)}" alt="试卷照片" loading="lazy" onerror="this.closest('.paper-card').style.display='none'"></span>
       <span class="paper-meta">
         <span class="paper-line1"><b>${esc(subject || '试卷')}</b><span class="paper-date">${esc(shortPaperDate(p.record_date))}</span></span>
         <span class="paper-score">${scoreTxt}</span>
