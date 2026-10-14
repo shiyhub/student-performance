@@ -831,17 +831,6 @@ html,body{background:#e8e6e1 !important;}
   content: ''; position: absolute; inset: -4px; border-radius: 50%;
   pointer-events: none; z-index: 2;
 }
-.frame-bronze.framed::before  { border: 3px solid #cd7f32; }
-.frame-silver.framed::before  { border: 3px solid #b9c4d4; }
-.frame-gold.framed::before    { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.65); }
-.frame-star.framed::before    { border: 3px dashed #ffd54a; }
-.frame-heart.framed::before   { border: 3px solid #ff8fb1; }
-.frame-crown.framed::before   { border: 3px solid #f5b945; box-shadow: 0 0 12px rgba(245,185,69,.8); }
-.frame-rainbow.framed::before {
-  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-}
 @media (min-width: 1400px) { .framed::before { inset: -5px; border-width: 4px; } }
 
 /* ---- 头像框选择区 ---- */
@@ -855,17 +844,6 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice:hover { transform: translateY(-3px); }
 .frame-choice.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(31,157,107,.28); }
 .frame-choice .fc-ring { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; }
-.frame-choice.fc-bronze  .fc-ring { border: 3px solid #cd7f32; }
-.frame-choice.fc-silver  .fc-ring { border: 3px solid #b9c4d4; }
-.frame-choice.fc-gold    .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 8px rgba(245,185,69,.6); }
-.frame-choice.fc-star    .fc-ring { border: 3px dashed #ffd54a; }
-.frame-choice.fc-heart   .fc-ring { border: 3px solid #ff8fb1; }
-.frame-choice.fc-crown   .fc-ring { border: 3px solid #f5b945; box-shadow: 0 0 10px rgba(245,185,69,.75); }
-.frame-choice.fc-rainbow .fc-ring {
-  background: conic-gradient(#ff5f6d,#ffc371,#f9d423,#7be495,#42e2b8,#4facfe,#c471ed,#ff5f6d);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-}
 .frame-choice .fc-lock {
   position: absolute; inset: 0; border-radius: 50%;
   background: rgba(255,255,255,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
@@ -876,12 +854,16 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
 /* ============================================================
    v130（RSK-11）：12 款游戏风头像框（透明 PNG 素材叠加）
+   v141：7 款基础成就框同步改为 PNG 素材叠加（frame-bronze/silver/gold/rainbow/star/heart/crown）
    素材 assets/frames/frame-*.png：中心 70% 镂空放头像，粒子只在四周
    ============================================================ */
 .frame-tac.framed::after, .frame-gun.framed::after, .frame-dragon.framed::after,
 .frame-mecha.framed::after, .frame-wolf.framed::after, .frame-sakura.framed::after,
 .frame-magic.framed::after, .frame-princess.framed::after, .frame-queen.framed::after,
-.frame-rose.framed::after, .frame-fairy.framed::after, .frame-pixie.framed::after {
+.frame-rose.framed::after, .frame-fairy.framed::after, .frame-pixie.framed::after,
+.frame-bronze.framed::after, .frame-silver.framed::after, .frame-gold.framed::after,
+.frame-rainbow.framed::after, .frame-star.framed::after, .frame-heart.framed::after,
+.frame-crown.framed::after {
   content: ''; position: absolute; inset: -21%; border-radius: 50%;
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
@@ -898,6 +880,25 @@ html,body{background:#e8e6e1 !important;}
 .frame-rose.framed::after    { background-image: url("../assets/frames/frame-rose.png"); }
 .frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.png"); }
 .frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.png"); }
+.frame-bronze.framed::after  { background-image: url("../assets/frames/frame-bronze.png"); }
+.frame-silver.framed::after  { background-image: url("../assets/frames/frame-silver.png"); }
+.frame-gold.framed::after    { background-image: url("../assets/frames/frame-gold.png"); }
+.frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.png"); }
+.frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.png"); }
+.frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.png"); }
+/* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好） */
+.frame-star.framed::after {
+  background-image: url("../assets/frames/frame-star.png");
+  animation: starBreath 4.5s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes starBreath {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(0.955); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame-star.framed::after { animation: none; }
+}
 /* 头像框选择区预览（直接显示素材图） */
 .frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / contain no-repeat; }
 .frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / contain no-repeat; }
@@ -911,6 +912,13 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / contain no-repeat; }
 .frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / contain no-repeat; }
 .frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / contain no-repeat; }
+.frame-choice.fc-bronze  .fc-ring { background: url("../assets/frames/frame-bronze.png") center / contain no-repeat; }
+.frame-choice.fc-silver  .fc-ring { background: url("../assets/frames/frame-silver.png") center / contain no-repeat; }
+.frame-choice.fc-gold    .fc-ring { background: url("../assets/frames/frame-gold.png") center / contain no-repeat; }
+.frame-choice.fc-rainbow .fc-ring { background: url("../assets/frames/frame-rainbow.png") center / contain no-repeat; }
+.frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.png") center / contain no-repeat; }
+.frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.png") center / contain no-repeat; }
+.frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.png") center / contain no-repeat; }
 
 
 

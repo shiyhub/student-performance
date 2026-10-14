@@ -1,0 +1,2342 @@
+{
+  "src": "index.html",
+  "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/index.html",
+  "outdir": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots",
+  "include": [
+    "lint",
+    "screenshots",
+    "structure"
+  ],
+  "shots": {
+    "desktop": {
+      "revealed": 0,
+      "eval": {
+        "executed": true,
+        "result": null
+      },
+      "screenshot": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots/index_desktop.jpg",
+      "screenshotBytes": 7493,
+      "truncated": false,
+      "structure": {
+        "title": "我们班的在校表现",
+        "firstH1": "我们班的星光墙",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "fullpage": {
+          "w": 1440,
+          "h": 900
+        },
+        "counts": {
+          "section": 9,
+          "h1": 2,
+          "h2": 2,
+          "img": 7,
+          "canvas": 0,
+          "svg": 2,
+          "links": 0,
+          "buttons": 70
+        }
+      },
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "horizontalOverflow": [],
+      "resourceErrors": [],
+      "localImageWarnings": [
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal2.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+        }
+      ],
+      "localImageHint": "含义：页面里存在 file:// 本地图片引用。云电脑交付的 HTML 不能包含文件系统引用。 | 修法：对每张图跑 `lark-cli drive +html-image-upload --file <图片路径>`，把返回里 data.url 的链接换进 <img src>；图片文件本身保留在 assets/ 里不要删。 | 豁免：本地电脑（Computer OS 为 Windows / Mac）不报此项——那里用 assets/ 相对路径引用是规定做法。本规则只匹配 file://，http(s)/data URI 都不会报。",
+      "duplicateImagesWarning": [
+        {
+          "count": 2,
+          "contentImageTotal": 4,
+          "sameRenderedSize": true,
+          "distinctAlts": 0,
+          "sizes": [
+            "150x150",
+            "150x150"
+          ],
+          "alts": [
+            "",
+            ""
+          ],
+          "src": "…705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+        },
+        {
+          "count": 2,
+          "contentImageTotal": 4,
+          "sameRenderedSize": true,
+          "distinctAlts": 0,
+          "sizes": [
+            "150x150",
+            "150x150"
+          ],
+          "alts": [
+            "",
+            ""
+          ],
+          "src": "…s/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+        }
+      ],
+      "duplicateImagesHint": "info · 同一图片资源在多处使用；count 是次数，contentImageTotal 是内容图总数。尺寸和 alt 差异仅供参考，不代表使用错误；总览、局部探索和详情可以复用同图。本项不要求换图、减少展示数量或修改布局。",
+      "emojiUsageWarning": [
+        {
+          "tag": "h2",
+          "chars": "👋",
+          "contextText": "👋 你好呀，你是哪位同学？"
+        },
+        {
+          "tag": "span",
+          "chars": "🧡",
+          "contextText": "🧡 班级经验"
+        },
+        {
+          "tag": "span",
+          "chars": "📅",
+          "contextText": "📅 今日已填写"
+        },
+        {
+          "tag": "div",
+          "chars": "🪄",
+          "contextText": "🪄"
+        },
+        {
+          "tag": "span",
+          "chars": "✨",
+          "contextText": "点我换头像 ✨"
+        },
+        {
+          "tag": "div",
+          "chars": "🏅",
+          "contextText": "🏅 我的成就"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        },
+        {
+          "tag": "div",
+          "chars": "😐",
+          "contextText": "😐 一般"
+        },
+        {
+          "tag": "span",
+          "chars": "😢",
+          "contextText": "😢"
+        },
+        {
+          "tag": "span",
+          "chars": "😟",
+          "contextText": "😟"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        },
+        {
+          "tag": "span",
+          "chars": "🙂",
+          "contextText": "🙂"
+        },
+        {
+          "tag": "span",
+          "chars": "😄",
+          "contextText": "😄"
+        },
+        {
+          "tag": "div",
+          "chars": "🗓",
+          "contextText": "🗓️ 往日任务（近7天）"
+        },
+        {
+          "tag": "div",
+          "chars": "📋",
+          "contextText": "📋 今日任务"
+        }
+      ],
+      "emojiUsageHint": "warning · 含义：页面正文里检出 emoji 字符（U+1F300–U+1FAFF 或 U+2600–U+27BF 平面）。SKILL.md 视觉设计段明确禁用 emoji——不作图标、不作装饰、不放进数据。 | 修法：换成内联 SVG 图标（<svg viewBox=\"0 0 24 24\">）建立风格连贯的图标语言。 | 豁免：(1) **用户品牌资产明确包含 emoji**（罕见，但如即时通讯、社交媒体主题的产物合理）；(2) 主题本身就是关于 emoji 的（emoji 历史 / 表情包研究 / Unicode 演进）；(3) 引用某条真实文本原文（如推文截图的文字版），emoji 是内容而非装饰——保留原文可接受，但仍应权衡；(4) 装饰性 dingbat（如 U+2713 勾选符 ✓、U+2192 箭头 →、U+2605 星 ★）落入 U+2600–U+27BF 平面被误报的，如确认是符号非 emoji 可忽略。",
+      "faviconWarning": {
+        "present": true,
+        "count": 1,
+        "externalRefs": [
+          "favicon.svg"
+        ],
+        "unencodedHash": []
+      },
+      "faviconHint": "warning · 含义：favicon 指向了外部文件（见 externalRefs），不是 data URI。 | 修法：用**内联 SVG data URI**，一行搞定、零额外文件：`<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F766E'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='white'%3EA%3C/text%3E%3C/svg%3E\">`。图形取产物主题里的一个符号（首字母、核心图标、品牌形状），配色沿用页面主色，别用无关的通用图标。 | **三个必须注意的编码细节**：外层 href 用双引号、SVG 内部属性用单引号；`<` `>` 写成 `%3C` `%3E`；**颜色的 `#` 必须写成 `%23`**——不编码会被当成 URL fragment，图标直接不显示。想做深浅色两版就写两个 link，加 `media=\"(prefers-color-scheme: dark)\"`。 | 为什么只能用 data URI：`link href` **不在发布链路的资源收集白名单里**（那里只认 `src` 属性和 CSS `url()`），指向 `assets/` 的图标文件发布后必然 404；而且额外文件破坏单文件自包含，用户拿到一个 html 就该能用。 | 会不会被平台图标覆盖：不会。发布平台把自己的默认 favicon 注入在 `<head>` 最前面，浏览器对多个 icon link **取最后一个**，模型写在后面的那个生效。 | 豁免：(1) 产物是页面片段（没有完整 `<head>`）时不适用；(2) externalRefs 指向 CDN 域名（`lf3-static.bytednsdoc.com` 之类）时，那是**发布平台注入的**默认图标，不是你写的——迭代已发布产物时会看到，忽略即可，自己另加一个 data URI 的 link 就行（浏览器对多个 icon link 取最后一个）。"
+    },
+    "mobile": {
+      "revealed": 0,
+      "eval": {
+        "executed": true,
+        "result": null
+      },
+      "screenshot": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots/index_mobile.jpg",
+      "screenshotBytes": 122927,
+      "truncated": false,
+      "structure": {
+        "title": "我们班的在校表现",
+        "firstH1": "我们班的星光墙",
+        "viewport": {
+          "w": 390,
+          "h": 844
+        },
+        "fullpage": {
+          "w": 676,
+          "h": 1431
+        },
+        "counts": {
+          "section": 9,
+          "h1": 2,
+          "h2": 2,
+          "img": 47,
+          "canvas": 0,
+          "svg": 2,
+          "links": 0,
+          "buttons": 111
+        }
+      },
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "horizontalOverflow": [
+        {
+          "tag": "button",
+          "cls": "mate",
+          "left": 351,
+          "right": 453,
+          "width": 102
+        },
+        {
+          "tag": "span",
+          "cls": "mate-avatar mood-l3 is-img",
+          "left": 372,
+          "right": 432,
+          "width": 60
+        },
+        {
+          "tag": "img",
+          "cls": "avatar-img",
+          "left": 372,
+          "right": 432,
+          "width": 60
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge done-badge",
+          "left": 375,
+          "right": 430,
+          "width": 55
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge task-badge",
+          "left": 378,
+          "right": 426,
+          "width": 48
+        },
+        {
+          "tag": "span",
+          "cls": "mate-name",
+          "left": 356,
+          "right": 448,
+          "width": 92
+        },
+        {
+          "tag": "button",
+          "cls": "mate",
+          "left": 463,
+          "right": 565,
+          "width": 102
+        },
+        {
+          "tag": "span",
+          "cls": "mate-avatar is-img",
+          "left": 484,
+          "right": 544,
+          "width": 60
+        },
+        {
+          "tag": "img",
+          "cls": "avatar-img",
+          "left": 484,
+          "right": 544,
+          "width": 60
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge count-badge",
+          "left": 486,
+          "right": 541,
+          "width": 55
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge task-badge",
+          "left": 490,
+          "right": 538,
+          "width": 48
+        },
+        {
+          "tag": "span",
+          "cls": "mate-name",
+          "left": 468,
+          "right": 560,
+          "width": 92
+        },
+        {
+          "tag": "button",
+          "cls": "mate",
+          "left": 575,
+          "right": 676,
+          "width": 102
+        },
+        {
+          "tag": "span",
+          "cls": "mate-avatar mood-l3 is-img",
+          "left": 596,
+          "right": 656,
+          "width": 60
+        },
+        {
+          "tag": "img",
+          "cls": "avatar-img",
+          "left": 596,
+          "right": 656,
+          "width": 60
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge done-badge",
+          "left": 598,
+          "right": 653,
+          "width": 55
+        },
+        {
+          "tag": "span",
+          "cls": "mate-badge task-badge",
+          "left": 601,
+          "right": 650,
+          "width": 48
+        },
+        {
+          "tag": "span",
+          "cls": "mate-name",
+          "left": 580,
+          "right": 671,
+          "width": 92
+        },
+        {
+          "tag": "button",
+          "cls": "mate",
+          "left": 351,
+          "right": 453,
+          "width": 102
+        },
+        {
+          "tag": "span",
+          "cls": "mate-avatar mood-l3 is-img",
+          "left": 372,
+          "right": 432,
+          "width": 60
+        }
+      ],
+      "resourceErrors": [
+        {
+          "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/daily_task?select=id%2Ctitle%2Ctask_type&class=eq.%E5%85%AD%E5%B9%B4%E7%BA%A7%E4%B8%80%E7%8F%AD&task_date=eq.2026-10-12",
+          "resourceType": "fetch",
+          "status": null,
+          "reason": "network_error"
+        },
+        {
+          "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/daily_record?select=id%2Cstudent_name%2Cclass%2Crecord_date%2Cself_evaluation%2Cbehavior%2Cteacher_comment%2Ccreate_at&class=eq.%E5%85%AD%E5%B9%B4%E7%B",
+          "resourceType": "fetch",
+          "status": null,
+          "reason": "network_error"
+        },
+        {
+          "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/student_directory?select=*&class=eq.%E5%85%AD%E5%B9%B4%E7%BA%A7%E4%B8%80%E7%8F%AD&order=student_name.asc",
+          "resourceType": "fetch",
+          "status": null,
+          "reason": "network_error"
+        }
+      ],
+      "localImageWarnings": [
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal4.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal7.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal19.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal6.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal11.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal16.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal24.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal14.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal10.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal2.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal5.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal21.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal15.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal22.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal23.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal20.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal13.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal1.webp"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+        },
+        {
+          "tag": "img",
+          "attr": "src",
+          "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+        }
+      ],
+      "localImageHint": "含义：页面里存在 file:// 本地图片引用。云电脑交付的 HTML 不能包含文件系统引用。 | 修法：对每张图跑 `lark-cli drive +html-image-upload --file <图片路径>`，把返回里 data.url 的链接换进 <img src>；图片文件本身保留在 assets/ 里不要删。 | 豁免：本地电脑（Computer OS 为 Windows / Mac）不报此项——那里用 assets/ 相对路径引用是规定做法。本规则只匹配 file://，http(s)/data URI 都不会报。",
+      "duplicateImagesWarning": [
+        {
+          "count": 2,
+          "contentImageTotal": 4,
+          "sameRenderedSize": true,
+          "distinctAlts": 0,
+          "sizes": [
+            "100x100",
+            "100x100"
+          ],
+          "alts": [
+            "",
+            ""
+          ],
+          "src": "…705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+        },
+        {
+          "count": 2,
+          "contentImageTotal": 4,
+          "sameRenderedSize": true,
+          "distinctAlts": 0,
+          "sizes": [
+            "100x100",
+            "100x100"
+          ],
+          "alts": [
+            "",
+            ""
+          ],
+          "src": "…s/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+        }
+      ],
+      "duplicateImagesHint": "info · 同一图片资源在多处使用；count 是次数，contentImageTotal 是内容图总数。尺寸和 alt 差异仅供参考，不代表使用错误；总览、局部探索和详情可以复用同图。本项不要求换图、减少展示数量或修改布局。",
+      "deadButtons": [
+        {
+          "tag": "button",
+          "text": "🌈\n      🧡 1257 经验\n      全班 Lv3 · 再743升Lv4",
+          "reason": "button-no-onclick",
+          "rect": [
+            16,
+            130,
+            143,
+            273
+          ],
+          "note": "ancestor-has-data-attr: 可能被 addEventListener 委托捕获，请核对"
+        }
+      ],
+      "deadButtonsHint": "含义：视觉上可点、但点了不发生任何事的元素。覆盖 6 种模式，reason 字段指明是哪种： | button-no-onclick：<button> 既无 onclick 也没被 addEventListener('click') 绑过。 | onclick-noop：onclick 属性是占位/无副作用字符串（`return false` / `void(0)` / 空串 / 分号 / 纯注释等），extra 字段 onclickAttr 展示原始值。这类写法在生产代码里几乎没有正当用途，视同没写。 | a-no-href / a-href-empty / a-href-hash-no-handler：<a> 无 href / href=\"\" / href=\"#\" 且无 handler。 | a-href-javascript-noop-no-handler：<a href=\"javascript:void(0)\" / \"javascript:;\">，作者显式关掉 native 导航，但 JS 侧也没人接手。收紧路径：祖先有 click listener 时，还要验证 listener 源码是否引用了本元素的 class/id/data-* 才放行；listener 源码不可读（native/bound/被 minify）时保守放行，避免误伤。extra 字段 hrefAttr 展示原始 href。 | a-broken-anchor：<a href=\"#foo\"> 但页面里没有 id=\"foo\" 也没有 name=\"foo\" 的元素。已排除 SPA hash 路由（href 含 / 或 ? 的形式，如 #/dashboard）。 | cursor-pointer-no-handler：<div>/<span> 等非交互标签加了 cursor:pointer 却没绑任何 click。 | input-no-handler：<input type=button|submit|reset|image> 无 onclick 也无 listener。form 里的 submit/reset 已豁免。 | label-for-not-found：<label for=\"xxx\"> 但页面里没有 id=\"xxx\"。用户点 label 期望 focus 到 input，实际什么都不发生。extra 字段 forAttr 展示 for 值。 | 已排除：form submit/reset、popover 触发器、role=button/link/tab/menuitem/option/switch/checkbox/radio、<label> 包裹、body/html 上继承 cursor:pointer；cursor-pointer-no-handler 只报尺寸 ≥ 24×16 且有可见文字的元素。 | 修法：给 <button>/<input> 加 onclick 或 addEventListener；给 <a> 补真实 href 或改成 <button>；把 <div class=\"nav-item\">…</div> 之类假按钮换成真 <button> 或 <a>，或给它加 role=button+tabindex+键盘 handler；onclick=\"return false\" 之类占位符要么删掉（配合真 handler），要么替换为 toast 提示「演示中」这类可感知反馈；断链锚点核对目标 id 拼写；label 断链核对 for 与 input id 是否一致。 | 豁免：(1) 带 note=ancestor-has-data-attr 的项可能是**祖先事件委托**目标（document/window 上的全局委托本规则查不到），对着代码核对，如果确实有 document.addEventListener('click', e => e.target.closest(...)) 之类的委托捕获就忽略；(2) 纯装饰按钮（无 hover/focus 反馈的 mock 页面）——但这本身也算 slop，建议改成非 <button>；(3) cursor-pointer-no-handler：如果元素只是 hover 变鼠标做微交互提示（如 tooltip trigger）而非真按钮，去掉 cursor:pointer 更合适；(4) a-href-javascript-noop-no-handler：如果确实有全局委托捕获（如 window.addEventListener 或 minify 后的框架 handler），本规则的 listener 源码启发式可能读不到明文标识 → 结合 note 字段和实际代码核对；(5) a-broken-anchor：如果目标 id 是运行时由 JS 动态注入的（比如懒加载章节），核对确认后可忽略。",
+      "emojiUsageWarning": [
+        {
+          "tag": "h2",
+          "chars": "👋",
+          "contextText": "👋 你好呀，你是哪位同学？"
+        },
+        {
+          "tag": "span",
+          "chars": "🌈",
+          "contextText": "🌈"
+        },
+        {
+          "tag": "span",
+          "chars": "🧡",
+          "contextText": "🧡 1257 经验"
+        },
+        {
+          "tag": "span",
+          "chars": "🧡",
+          "contextText": "🧡 班级经验"
+        },
+        {
+          "tag": "span",
+          "chars": "📅",
+          "contextText": "📅 今日已填写"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "📋",
+          "contextText": "📋 0/3"
+        },
+        {
+          "tag": "span",
+          "chars": "😐",
+          "contextText": "😐"
+        }
+      ],
+      "emojiUsageHint": "warning · 含义：页面正文里检出 emoji 字符（U+1F300–U+1FAFF 或 U+2600–U+27BF 平面）。SKILL.md 视觉设计段明确禁用 emoji——不作图标、不作装饰、不放进数据。 | 修法：换成内联 SVG 图标（<svg viewBox=\"0 0 24 24\">）建立风格连贯的图标语言。 | 豁免：(1) **用户品牌资产明确包含 emoji**（罕见，但如即时通讯、社交媒体主题的产物合理）；(2) 主题本身就是关于 emoji 的（emoji 历史 / 表情包研究 / Unicode 演进）；(3) 引用某条真实文本原文（如推文截图的文字版），emoji 是内容而非装饰——保留原文可接受，但仍应权衡；(4) 装饰性 dingbat（如 U+2713 勾选符 ✓、U+2192 箭头 →、U+2605 星 ★）落入 U+2600–U+27BF 平面被误报的，如确认是符号非 emoji 可忽略。",
+      "faviconWarning": {
+        "present": true,
+        "count": 1,
+        "externalRefs": [
+          "favicon.svg"
+        ],
+        "unencodedHash": []
+      },
+      "faviconHint": "warning · 含义：favicon 指向了外部文件（见 externalRefs），不是 data URI。 | 修法：用**内联 SVG data URI**，一行搞定、零额外文件：`<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F766E'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='white'%3EA%3C/text%3E%3C/svg%3E\">`。图形取产物主题里的一个符号（首字母、核心图标、品牌形状），配色沿用页面主色，别用无关的通用图标。 | **三个必须注意的编码细节**：外层 href 用双引号、SVG 内部属性用单引号；`<` `>` 写成 `%3C` `%3E`；**颜色的 `#` 必须写成 `%23`**——不编码会被当成 URL fragment，图标直接不显示。想做深浅色两版就写两个 link，加 `media=\"(prefers-color-scheme: dark)\"`。 | 为什么只能用 data URI：`link href` **不在发布链路的资源收集白名单里**（那里只认 `src` 属性和 CSS `url()`），指向 `assets/` 的图标文件发布后必然 404；而且额外文件破坏单文件自包含，用户拿到一个 html 就该能用。 | 会不会被平台图标覆盖：不会。发布平台把自己的默认 favicon 注入在 `<head>` 最前面，浏览器对多个 icon link **取最后一个**，模型写在后面的那个生效。 | 豁免：(1) 产物是页面片段（没有完整 `<head>`）时不适用；(2) externalRefs 指向 CDN 域名（`lf3-static.bytednsdoc.com` 之类）时，那是**发布平台注入的**默认图标，不是你写的——迭代已发布产物时会看到，忽略即可，自己另加一个 data URI 的 link 就行（浏览器对多个 icon link 取最后一个）。",
+      "mobileFontIssues": [
+        {
+          "kind": "input-under-16px",
+          "tag": "input[type=text]",
+          "fontSize": 14,
+          "text": "例如：三年级2班"
+        },
+        {
+          "kind": "input-under-16px",
+          "tag": "input[type=text]",
+          "fontSize": 14,
+          "text": "请写和名单上一样的名字"
+        }
+      ],
+      "mobileFontIssuesHint": "error · <input> / <textarea> font-size < 16px：iOS Safari 聚焦时会自动缩放页面，严重影响移动端表单体验。 | 修法：`input, textarea { font-size: 16px; }`；或在移动端断点里针对性调大。 | 豁免：目标环境只在 Android WebView 或桌面时可豁免（罕见）。"
+    }
+  },
+  "engine": "playwright",
+  "chromiumExec": "/opt/vm/preinstall/ms-playwright/chromium-1169/chrome-linux/chrome",
+  "publishBrokenAssets": [
+    {
+      "file": "assets/avatars/animal1.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal10.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal11.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal13.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal14.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal15.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal16.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal19.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal2.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal20.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal21.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal22.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal23.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal24.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal4.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal5.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal6.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "assets/avatars/animal7.webp",
+      "reason": "js-concat",
+      "severity": "error",
+      "loadedAtRuntime": true,
+      "onDisk": true
+    },
+    {
+      "file": "favicon.svg",
+      "reason": "non-src-attr:href",
+      "severity": "error",
+      "loadedAtRuntime": false,
+      "onDisk": true
+    }
+  ],
+  "publishBrokenAssetsHint": "含义：发布链路靠静态扫描 HTML 源码决定上传哪些图片文件，**只认 `src` 属性和 CSS `url()` 两个位置**（线上实测）。写在别处的路径不会被上传，发布后 404 裂图。本地打开和自检截图都看不出来——文件真实存在，浏览器照样加载。 | severity=error 的逐条改，改法都是同一个：把路径挪到 `<img src=\"assets/x.png\">` 或 CSS `url('assets/x.png')`。reason=js-literal 路径写在 JS 字符串里（`const g=['assets/x.png']` 这种常量数组也算，照样裂）；reason=js-concat 路径由 JS 拼接（`'assets/img'+i+'.png'`）；reason=non-src-attr 路径写在 `data-src`、`srcset`、`poster` 等非 `src` 属性上——**这类即便静态写在 HTML 属性里也会裂**，懒加载写法要在 `src` 上放真实路径。 | severity=warning（reason=unreferenced-file）是提醒不是错误：`assets/` 里有这个文件，但源码和运行时都没引用到它。可能是没用上的多余素材（删掉即可），也可能是路径拼接且当前视口没渲染到的图（那就是会裂的，按 error 处理）。**这一条只在本地电脑（macOS / Windows）检测**——云电脑图片走 `lark-cli drive +html-image-upload`，HTML 引用外链、`assets/` 里的原图本就该保留且不被引用，在那儿报是纯误报，所以直接不报；**别因为这条去删云电脑上的原图**。自行判断，别的规则不受它影响。",
+  "elapsedSec": 13.55,
+  "schemaVersion": 2,
+  "status": "fail",
+  "engineInfo": {
+    "name": "playwright",
+    "degraded": false,
+    "degradedReasons": []
+  },
+  "input": {
+    "original": "index.html",
+    "resolvedPath": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/index.html",
+    "baseUrl": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/index.html",
+    "protocol": "file",
+    "cwd": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151",
+    "mediaMode": {
+      "reducedMotion": true
+    }
+  },
+  "artifacts": {
+    "screenshots": [
+      {
+        "viewport": "desktop",
+        "path": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots/index_desktop.jpg",
+        "size": 7493,
+        "visualCoverage": {
+          "complete": true,
+          "reason": null
+        }
+      },
+      {
+        "viewport": "mobile",
+        "path": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots/index_mobile.jpg",
+        "size": 122927,
+        "visualCoverage": {
+          "complete": true,
+          "reason": null
+        }
+      }
+    ]
+  },
+  "summary": {
+    "blocker": 0,
+    "error": 45,
+    "warning": 55,
+    "info": 4
+  },
+  "findings": [
+    {
+      "ruleId": "duplicateImagesWarning",
+      "severity": "info",
+      "kind": "content",
+      "viewport": "desktop",
+      "selector": null,
+      "evidence": {
+        "count": 2,
+        "contentImageTotal": 4,
+        "sameRenderedSize": true,
+        "distinctAlts": 0,
+        "sizes": [
+          "150x150",
+          "150x150"
+        ],
+        "alts": [
+          "",
+          ""
+        ],
+        "src": "…705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+      },
+      "dedupeKey": "duplicateImagesWarning|desktop||0"
+    },
+    {
+      "ruleId": "duplicateImagesWarning",
+      "severity": "info",
+      "kind": "content",
+      "viewport": "desktop",
+      "selector": null,
+      "evidence": {
+        "count": 2,
+        "contentImageTotal": 4,
+        "sameRenderedSize": true,
+        "distinctAlts": 0,
+        "sizes": [
+          "150x150",
+          "150x150"
+        ],
+        "alts": [
+          "",
+          ""
+        ],
+        "src": "…s/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+      },
+      "dedupeKey": "duplicateImagesWarning|desktop||1"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "desktop",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal2.webp"
+      },
+      "dedupeKey": "localImageWarnings|desktop|img|0"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "desktop",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+      },
+      "dedupeKey": "localImageWarnings|desktop|img|1"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "desktop",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+      },
+      "dedupeKey": "localImageWarnings|desktop|img|2"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "h2",
+      "evidence": {
+        "tag": "h2",
+        "chars": "👋",
+        "contextText": "👋 你好呀，你是哪位同学？"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|h2|0"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "🧡",
+        "contextText": "🧡 班级经验"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|1"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📅",
+        "contextText": "📅 今日已填写"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|2"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "div",
+      "evidence": {
+        "tag": "div",
+        "chars": "🪄",
+        "contextText": "🪄"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|div|3"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "✨",
+        "contextText": "点我换头像 ✨"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|4"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "div",
+      "evidence": {
+        "tag": "div",
+        "chars": "🏅",
+        "contextText": "🏅 我的成就"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|div|5"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|6"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "div",
+      "evidence": {
+        "tag": "div",
+        "chars": "😐",
+        "contextText": "😐 一般"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|div|7"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😢",
+        "contextText": "😢"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|8"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😟",
+        "contextText": "😟"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|9"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|10"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "🙂",
+        "contextText": "🙂"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|11"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😄",
+        "contextText": "😄"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|span|12"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "div",
+      "evidence": {
+        "tag": "div",
+        "chars": "🗓",
+        "contextText": "🗓️ 往日任务（近7天）"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|div|13"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "desktop",
+      "selector": "div",
+      "evidence": {
+        "tag": "div",
+        "chars": "📋",
+        "contextText": "📋 今日任务"
+      },
+      "dedupeKey": "emojiUsageWarning|desktop|div|14"
+    },
+    {
+      "ruleId": "faviconWarning",
+      "severity": "warning",
+      "kind": "metadata",
+      "viewport": "desktop",
+      "selector": null,
+      "evidence": {
+        "present": true,
+        "count": 1,
+        "externalRefs": [
+          "favicon.svg"
+        ],
+        "unencodedHash": []
+      },
+      "dedupeKey": "faviconWarning|desktop||0"
+    },
+    {
+      "ruleId": "resourceErrors",
+      "severity": "error",
+      "kind": "network",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/daily_task?select=id%2Ctitle%2Ctask_type&class=eq.%E5%85%AD%E5%B9%B4%E7%BA%A7%E4%B8%80%E7%8F%AD&task_date=eq.2026-10-12",
+        "resourceType": "fetch",
+        "status": null,
+        "reason": "network_error"
+      },
+      "dedupeKey": "resourceErrors|mobile||0"
+    },
+    {
+      "ruleId": "resourceErrors",
+      "severity": "error",
+      "kind": "network",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/daily_record?select=id%2Cstudent_name%2Cclass%2Crecord_date%2Cself_evaluation%2Cbehavior%2Cteacher_comment%2Ccreate_at&class=eq.%E5%85%AD%E5%B9%B4%E7%B",
+        "resourceType": "fetch",
+        "status": null,
+        "reason": "network_error"
+      },
+      "dedupeKey": "resourceErrors|mobile||1"
+    },
+    {
+      "ruleId": "resourceErrors",
+      "severity": "error",
+      "kind": "network",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "url": "https://nsvpboqhnemzlblhcugl.supabase.co/rest/v1/student_directory?select=*&class=eq.%E5%85%AD%E5%B9%B4%E7%BA%A7%E4%B8%80%E7%8F%AD&order=student_name.asc",
+        "resourceType": "fetch",
+        "status": null,
+        "reason": "network_error"
+      },
+      "dedupeKey": "resourceErrors|mobile||2"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "button.mate",
+      "evidence": {
+        "tag": "button",
+        "cls": "mate",
+        "left": 351,
+        "right": 453,
+        "width": 102
+      },
+      "dedupeKey": "horizontalOverflow|mobile|button.mate|0"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-avatar",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-avatar mood-l3 is-img",
+        "left": 372,
+        "right": 432,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-avatar|1"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "img.avatar-img",
+      "evidence": {
+        "tag": "img",
+        "cls": "avatar-img",
+        "left": 372,
+        "right": 432,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|img.avatar-img|2"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge done-badge",
+        "left": 375,
+        "right": 430,
+        "width": 55
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|3"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge task-badge",
+        "left": 378,
+        "right": 426,
+        "width": 48
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|4"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-name",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-name",
+        "left": 356,
+        "right": 448,
+        "width": 92
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-name|5"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "button.mate",
+      "evidence": {
+        "tag": "button",
+        "cls": "mate",
+        "left": 463,
+        "right": 565,
+        "width": 102
+      },
+      "dedupeKey": "horizontalOverflow|mobile|button.mate|6"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-avatar",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-avatar is-img",
+        "left": 484,
+        "right": 544,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-avatar|7"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "img.avatar-img",
+      "evidence": {
+        "tag": "img",
+        "cls": "avatar-img",
+        "left": 484,
+        "right": 544,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|img.avatar-img|8"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge count-badge",
+        "left": 486,
+        "right": 541,
+        "width": 55
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|9"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge task-badge",
+        "left": 490,
+        "right": 538,
+        "width": 48
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|10"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-name",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-name",
+        "left": 468,
+        "right": 560,
+        "width": 92
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-name|11"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "button.mate",
+      "evidence": {
+        "tag": "button",
+        "cls": "mate",
+        "left": 575,
+        "right": 676,
+        "width": 102
+      },
+      "dedupeKey": "horizontalOverflow|mobile|button.mate|12"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-avatar",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-avatar mood-l3 is-img",
+        "left": 596,
+        "right": 656,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-avatar|13"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "img.avatar-img",
+      "evidence": {
+        "tag": "img",
+        "cls": "avatar-img",
+        "left": 596,
+        "right": 656,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|img.avatar-img|14"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge done-badge",
+        "left": 598,
+        "right": 653,
+        "width": 55
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|15"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-badge",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-badge task-badge",
+        "left": 601,
+        "right": 650,
+        "width": 48
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-badge|16"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-name",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-name",
+        "left": 580,
+        "right": 671,
+        "width": 92
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-name|17"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "button.mate",
+      "evidence": {
+        "tag": "button",
+        "cls": "mate",
+        "left": 351,
+        "right": 453,
+        "width": 102
+      },
+      "dedupeKey": "horizontalOverflow|mobile|button.mate|18"
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "kind": "layout",
+      "viewport": "mobile",
+      "selector": "span.mate-avatar",
+      "evidence": {
+        "tag": "span",
+        "cls": "mate-avatar mood-l3 is-img",
+        "left": 372,
+        "right": 432,
+        "width": 60
+      },
+      "dedupeKey": "horizontalOverflow|mobile|span.mate-avatar|19"
+    },
+    {
+      "ruleId": "duplicateImagesWarning",
+      "severity": "info",
+      "kind": "content",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "count": 2,
+        "contentImageTotal": 4,
+        "sameRenderedSize": true,
+        "distinctAlts": 0,
+        "sizes": [
+          "100x100",
+          "100x100"
+        ],
+        "alts": [
+          "",
+          ""
+        ],
+        "src": "…705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+      },
+      "dedupeKey": "duplicateImagesWarning|mobile||0"
+    },
+    {
+      "ruleId": "duplicateImagesWarning",
+      "severity": "info",
+      "kind": "content",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "count": 2,
+        "contentImageTotal": 4,
+        "sameRenderedSize": true,
+        "distinctAlts": 0,
+        "sizes": [
+          "100x100",
+          "100x100"
+        ],
+        "alts": [
+          "",
+          ""
+        ],
+        "src": "…s/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+      },
+      "dedupeKey": "duplicateImagesWarning|mobile||1"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal4.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|0"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal7.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|1"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal19.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|2"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal6.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|3"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal11.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|4"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal16.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|5"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal24.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|6"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal14.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|7"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal10.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|8"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal2.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|9"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal5.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|10"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal21.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|11"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal15.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|12"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal22.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|13"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal23.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|14"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal20.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|15"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal13.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|16"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/avatars/animal1.webp"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|17"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/flower-sunny.png"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|18"
+    },
+    {
+      "ruleId": "localImageWarnings",
+      "severity": "warning",
+      "kind": "publish",
+      "viewport": "mobile",
+      "selector": "img",
+      "evidence": {
+        "tag": "img",
+        "attr": "src",
+        "url": "file:///home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/assets/flowers/cloud.png"
+      },
+      "dedupeKey": "localImageWarnings|mobile|img|19"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "h2",
+      "evidence": {
+        "tag": "h2",
+        "chars": "👋",
+        "contextText": "👋 你好呀，你是哪位同学？"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|h2|0"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "🌈",
+        "contextText": "🌈"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|1"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "🧡",
+        "contextText": "🧡 1257 经验"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|2"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "🧡",
+        "contextText": "🧡 班级经验"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|3"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📅",
+        "contextText": "📅 今日已填写"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|4"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|5"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|6"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|7"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|8"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|9"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|10"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|11"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|12"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "📋",
+        "contextText": "📋 0/3"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|13"
+    },
+    {
+      "ruleId": "emojiUsageWarning",
+      "severity": "warning",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "span",
+      "evidence": {
+        "tag": "span",
+        "chars": "😐",
+        "contextText": "😐"
+      },
+      "dedupeKey": "emojiUsageWarning|mobile|span|14"
+    },
+    {
+      "ruleId": "mobileFontIssues",
+      "severity": "error",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "input[type=text]",
+      "evidence": {
+        "kind": "input-under-16px",
+        "tag": "input[type=text]",
+        "fontSize": 14,
+        "text": "例如：三年级2班"
+      },
+      "dedupeKey": "mobileFontIssues|mobile|input[type=text]|0"
+    },
+    {
+      "ruleId": "mobileFontIssues",
+      "severity": "error",
+      "kind": "typography",
+      "viewport": "mobile",
+      "selector": "input[type=text]",
+      "evidence": {
+        "kind": "input-under-16px",
+        "tag": "input[type=text]",
+        "fontSize": 14,
+        "text": "请写和名单上一样的名字"
+      },
+      "dedupeKey": "mobileFontIssues|mobile|input[type=text]|1"
+    },
+    {
+      "ruleId": "faviconWarning",
+      "severity": "warning",
+      "kind": "metadata",
+      "viewport": "mobile",
+      "selector": null,
+      "evidence": {
+        "present": true,
+        "count": 1,
+        "externalRefs": [
+          "favicon.svg"
+        ],
+        "unencodedHash": []
+      },
+      "dedupeKey": "faviconWarning|mobile||0"
+    },
+    {
+      "ruleId": "deadButtons",
+      "severity": "error",
+      "kind": "interaction",
+      "viewport": "mobile",
+      "selector": "button",
+      "evidence": {
+        "tag": "button",
+        "text": "🌈\n      🧡 1257 经验\n      全班 Lv3 · 再743升Lv4",
+        "reason": "button-no-onclick",
+        "rect": [
+          16,
+          130,
+          143,
+          273
+        ],
+        "note": "ancestor-has-data-attr: 可能被 addEventListener 委托捕获，请核对"
+      },
+      "dedupeKey": "deadButtons|mobile|button|0"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal1.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||0"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal10.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||1"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal11.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||2"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal13.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||3"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal14.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||4"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal15.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||5"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal16.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||6"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal19.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||7"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal2.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||8"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal20.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||9"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal21.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||10"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal22.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||11"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal23.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||12"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal24.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||13"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal4.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||14"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal5.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||15"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal6.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||16"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "assets/avatars/animal7.webp",
+        "reason": "js-concat",
+        "severity": "error",
+        "loadedAtRuntime": true,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||17"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "kind": "publish",
+      "viewport": null,
+      "selector": null,
+      "evidence": {
+        "file": "favicon.svg",
+        "reason": "non-src-attr:href",
+        "severity": "error",
+        "loadedAtRuntime": false,
+        "onDisk": true
+      },
+      "dedupeKey": "publishBrokenAssets|top||18"
+    }
+  ],
+  "prioritizedActions": [
+    {
+      "ruleId": "resourceErrors",
+      "severity": "error",
+      "viewport": "mobile",
+      "selector": null
+    },
+    {
+      "ruleId": "horizontalOverflow",
+      "severity": "error",
+      "viewport": "mobile",
+      "selector": "button.mate"
+    },
+    {
+      "ruleId": "mobileFontIssues",
+      "severity": "error",
+      "viewport": "mobile",
+      "selector": "input[type=text]"
+    },
+    {
+      "ruleId": "deadButtons",
+      "severity": "error",
+      "viewport": "mobile",
+      "selector": "button"
+    },
+    {
+      "ruleId": "publishBrokenAssets",
+      "severity": "error",
+      "viewport": null,
+      "selector": null
+    }
+  ],
+  "reportPath": "/home/user/Doubao/chats/38446705381321986/student-platform-v151/student-platform-v151/_shots/report.json"
+}

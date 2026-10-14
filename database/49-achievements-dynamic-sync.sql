@@ -64,21 +64,21 @@ begin
   m := public.student_metrics(v_class, v_name);
 
   -- ── 计算应解锁集合（14 项，条件与 get_student_profile 完全一致）──
-  if (m->>'total_records')::int >= 1  then v_should := v_should || 'first_record'; end if;
-  if (m->>'total_days')::int    >= 10 then v_should := v_should || 'days10'; end if;
-  if (m->>'total_days')::int    >= 30 then v_should := v_should || 'days30'; end if;
-  if v_level >= 2 then v_should := v_should || 'level2'; end if;
-  if v_level >= 3 then v_should := v_should || 'level3'; end if;
-  if v_level >= 5 then v_should := v_should || 'level5'; end if;
-  if v_level >= 7 then v_should := v_should || 'level7'; end if;
-  if (m->>'good_tasks')::int    >= 10 then v_should := v_should || 'good10'; end if;
-  if (m->>'good_tasks')::int    >= 30 then v_should := v_should || 'good30'; end if;
-  if (m->>'perfect_tasks')::int >= 5  then v_should := v_should || 'perfect5'; end if;
-  if (m->>'perfect_tasks')::int >= 15 then v_should := v_should || 'perfect15'; end if;
-  if (m->>'tasks_done')::int    >= 10 then v_should := v_should || 'tasks10'; end if;
-  if (m->>'active_records')::int >= 20 then v_should := v_should || 'active20'; end if;
+  if (m->>'total_records')::int >= 1  then v_should := array_append(v_should, 'first_record'); end if;
+  if (m->>'total_days')::int    >= 10 then v_should := array_append(v_should, 'days10'); end if;
+  if (m->>'total_days')::int    >= 30 then v_should := array_append(v_should, 'days30'); end if;
+  if v_level >= 2 then v_should := array_append(v_should, 'level2'); end if;
+  if v_level >= 3 then v_should := array_append(v_should, 'level3'); end if;
+  if v_level >= 5 then v_should := array_append(v_should, 'level5'); end if;
+  if v_level >= 7 then v_should := array_append(v_should, 'level7'); end if;
+  if (m->>'good_tasks')::int    >= 10 then v_should := array_append(v_should, 'good10'); end if;
+  if (m->>'good_tasks')::int    >= 30 then v_should := array_append(v_should, 'good30'); end if;
+  if (m->>'perfect_tasks')::int >= 5  then v_should := array_append(v_should, 'perfect5'); end if;
+  if (m->>'perfect_tasks')::int >= 15 then v_should := array_append(v_should, 'perfect15'); end if;
+  if (m->>'tasks_done')::int    >= 10 then v_should := array_append(v_should, 'tasks10'); end if;
+  if (m->>'active_records')::int >= 20 then v_should := array_append(v_should, 'active20'); end if;
   -- 班级前三：实时排名 <= 3（动态：被挤出前三自动撤销）
-  if (m->>'rank_in_class')::int <= 3 then v_should := v_should || 'top3'; end if;
+  if (m->>'rank_in_class')::int <= 3 then v_should := array_append(v_should, 'top3'); end if;
 
   -- ── 纠错：删除已不再达标的成就（自动撤销）──
   delete from public.student_achievements
