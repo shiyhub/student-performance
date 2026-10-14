@@ -138,7 +138,7 @@ async function readParentCache(key) {
     return v;
   } catch (e) { return null; }
 }
-const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout|超时|请求超时|ECONN|ETIMEDOUT/i.test((e && e.message) || '');
 async function syncRunner(op) {
   const p = op.params || {};
   try {
@@ -276,14 +276,16 @@ async function onQuery() {
     p,
     new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
   ]);
-  // v37(RSK-12)：弱网自动重试——RPC 失败最多重试 3 次（间隔 1.5s），仅网络类错误重试
+  // v39(RSK-14)：弱网自适应重试——最多重试 3 次（共 4 次尝试），超时逐次放宽（慢网挂起时提高成功率）；仅网络/超时类错误重试
+  let retriedOnce = false;
   const rpcRetry = async (fn, ms, tag) => {
     let lastErr = null;
-    for (let i = 0; i < 3; i++) {
+    const timeouts = [ms, ms, ms + 5000, ms + 8000];
+    for (let i = 0; i < 4; i++) {
       try {
         const r = await Promise.race([
           fn(),
-          new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
+          new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时')), timeouts[i]))
         ]);
         if (r && r.error) {
           lastErr = r.error;
@@ -295,7 +297,10 @@ async function onQuery() {
         lastErr = err;
         if (!isNetErr(err)) throw err;
       }
-      if (i < 2) await new Promise(res => setTimeout(res, 1500));
+      if (i < 3) {
+        if (!retriedOnce) { retriedOnce = true; toast('网络较慢，正在自动重试…'); }
+        await new Promise(res => setTimeout(res, 1500));
+      }
     }
     throw lastErr;
   };
@@ -320,7 +325,7 @@ async function onQuery() {
       return;
     }
     // 先校验三要素，给出具体原因
-    const vRes = await rpcRetry(() => supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 8000, '身份校验');
+    const vRes = await rpcRetry(() => supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 12000, '身份校验');
     const v = vRes.data;
     if (v && v.ok === false) {
       if (state.scanCode) { state.scanCode = ''; }
@@ -332,11 +337,12 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
+    // 记录为关键数据必须成功；试卷/任务/留言失败降级为空，不阻断查询（弱网下尽量先出记录）
     const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
-      rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 10000, '记录'),
-      rpcRetry(() => supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 10000, '试卷'),
-      rpcRetry(() => supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 10000, '任务'),
-      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 10000, '留言').then(r => r, () => null)
+      rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 12000, '记录'),
+      rpcRetry(() => supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 12000, '试卷').catch(() => ({ error: true })),
+      rpcRetry(() => supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 12000, '任务').catch(() => ({ error: true })),
+      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 12000, '留言').then(r => r, () => null)
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
@@ -357,6 +363,8 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
+    // v38：部分数据接口失败时不阻断——已显示记录，并提示其余内容待网络好转后更新
+    const partialFailed = paperRes.error || taskRes.error || (noteRes && noteRes.error);
     state.ctx = { cls, student, birth };
     state.homeNotes = homeNotes;
     await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, homeNotes, cachedAt: Date.now() });
@@ -364,6 +372,7 @@ async function onQuery() {
     renderPapers(papers);
     renderTasks(tasks);
     renderHomeThread(homeNotes);
+    if (partialFailed) toast('网络较慢：在校表现已加载，试卷/任务等部分内容稍后自动更新，可再点「查询记录」刷新。');
   } catch (e) {
     // 在线查询失败（断网/服务异常）：自动重试已由 rpcRetry 处理；仍失败则回退本地缓存（长期有效）
     try {
@@ -379,7 +388,12 @@ async function onQuery() {
         return;
       }
     } catch (e2) {}
-    toast('网络请求失败，且本机暂无这组信息的缓存：请检查网络后点「查询记录」重试。');
+    // v39：区分服务端错误与网络错误，避免误判——服务端可达但报错 ≠ 网络问题
+    const msg = (e && e.message) || '';
+    const isServerErr = !isNetErr(e) && (!!(e && e.code) || /PGRST|PostgrestError|API key|JWT|permission|violat|duplicate|row-level|relationship/i.test(msg));
+    toast(isServerErr
+      ? '服务器暂时繁忙，请稍后再点「查询记录」重试。'
+      : '网络请求失败（当前网络较慢），且本机暂无这组信息的缓存：建议连接 WiFi 或到信号好的位置，再点「查询记录」重试。');
   } finally {
     els.btnQuery.disabled = false;
     els.btnQuery.textContent = '查询记录';
