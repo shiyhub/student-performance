@@ -2276,6 +2276,163 @@ function escapeHtml(s) {
     var seg = 100 / n;
     return seg * i + (Math.random() - 0.5) * seg * (jitter || 1);
   }
+
+  /* ============ v3.0：雨/雪 Canvas 粒子引擎 ============
+     参考雪花粒子系统：球面随机发射 · 左右摆动飘落 · additive 叠加发光 ·
+     淡入淡出 · 密度按面积自适应 · DPR≤2 · reduced-motion 停用 */
+  var wxCanvas = document.getElementById('wxCanvas');
+  var wxCtx = wxCanvas ? wxCanvas.getContext('2d') : null;
+  var wxParticles = [];
+  var wxMode = '';            // '' | 'rain' | 'snow'
+  var wxRunning = false;
+  var wxRafId = 0, wxLastT = 0, wxAcc = 0;
+  var wxDPR = Math.min(window.devicePixelRatio || 1, 2);
+  var wxW = 0, wxH = 0, wxMax = 400;
+  var wxReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var WX_CFG = {
+    rain: { rate: 160, lifeMin: 1.0, lifeMax: 2.2, sizeMin: 3.0, sizeMax: 5.5,
+            vyMin: 520, vyMax: 840, vxMin: -30, vxMax: 30, swayAmp: 10, swayFreq: 1.4,
+            areaPer: 1200, lenK: 4 },
+    snow: { rate: 40, lifeMin: 8, lifeMax: 20, sizeMin: 2, sizeMax: 30,
+            vyMin: 40, vyMax: 75, vxMin: -25, vxMax: -8, swayAmp: 27, swayFreq: 0.9,
+            areaPer: 4800, lenK: 2.1 }
+  };
+
+  function wxResize() {
+    if (!wxCanvas || !wxCtx) return;
+    wxW = window.innerWidth; wxH = window.innerHeight;
+    wxCanvas.width = Math.round(wxW * wxDPR);
+    wxCanvas.height = Math.round(wxH * wxDPR);
+    wxCanvas.style.width = wxW + 'px';
+    wxCanvas.style.height = wxH + 'px';
+    wxCtx.setTransform(wxDPR, 0, 0, wxDPR, 0, 0);
+    var cfg = WX_CFG[wxMode];
+    wxMax = cfg ? Math.max(120, Math.min(900, Math.round((wxW * wxH) / cfg.areaPer))) : 400;
+  }
+
+  function wxSpawn(force) {
+    var cfg = WX_CFG[wxMode];
+    if (!cfg || wxParticles.length >= wxMax) return;
+    var p = {
+      x: Math.random() * wxW * 1.12 - wxW * 0.06,
+      y: force ? Math.random() * wxH * 0.5 : -20 - Math.random() * wxH * 0.06,
+      life: 0,
+      maxLife: (cfg.lifeMin + Math.random() * (cfg.lifeMax - cfg.lifeMin)) * 60,
+      size: cfg.sizeMin + Math.random() * (cfg.sizeMax - cfg.sizeMin),
+      vx: cfg.vxMin + Math.random() * (cfg.vxMax - cfg.vxMin),
+      vy: cfg.vyMin + Math.random() * (cfg.vyMax - cfg.vyMin),
+      swayAmp: cfg.swayAmp * (0.6 + Math.random() * 0.8),
+      swayFreq: cfg.swayFreq + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2,
+      alpha: 0.7 + Math.random() * 0.3,
+      shade: Math.random()
+    };
+    wxParticles.push(p);
+  }
+
+  function wxDraw(p, t) {
+    var cfg = WX_CFG[wxMode];
+    if (!cfg) return;
+    var fadeIn = Math.min(p.life / (0.1 * 60), 1);          // 0.1s 淡入
+    var fadeOut = Math.min((p.maxLife - p.life) / (0.12 * 60), 1);
+    var a = p.alpha * fadeIn * fadeOut;
+    if (a <= 0.01) return;
+    var sway = Math.sin(t * p.swayFreq + p.phase) * p.swayAmp;
+    var x = p.x + sway, y = p.y;
+    var r = p.size * (wxW / 1920);                          // 按视口缩放
+    if (r < 0.8) r = 0.8;
+    if (r > 26) r = 26;
+    if (wxMode === 'rain') {
+      // 雨点：发光光点 + 短雨痕（参考发光点风格，浅色底上保证可见）
+      var len = r * cfg.lenK;
+      var g = wxCtx.createLinearGradient(x, y - len, x, y);
+      g.addColorStop(0, 'rgba(196,226,248,0)');
+      g.addColorStop(1, 'rgba(216,238,252,' + (a * 0.8) + ')');
+      wxCtx.strokeStyle = g;
+      wxCtx.lineWidth = Math.max(1.2, r * 0.5);
+      wxCtx.lineCap = 'round';
+      wxCtx.beginPath();
+      wxCtx.moveTo(x, y - len); wxCtx.lineTo(x, y);
+      wxCtx.stroke();
+      var gg = wxCtx.createRadialGradient(x, y, 0, x, y, r * 4.2);
+      gg.addColorStop(0, 'rgba(234,246,254,' + a + ')');
+      gg.addColorStop(0.55, 'rgba(206,232,250,' + (a * 0.55) + ')');
+      gg.addColorStop(1, 'rgba(206,232,250,0)');
+      wxCtx.fillStyle = gg;
+      wxCtx.beginPath(); wxCtx.arc(x, y, r * 4.2, 0, Math.PI * 2); wxCtx.fill();
+    } else {
+      // 雪花：柔和发光光点（白→淡灰蓝，chromaticdot 风格）
+      var gg2 = wxCtx.createRadialGradient(x, y, 0, x, y, r * 2.1);
+      var t0 = 0.85 + p.shade * 0.15;
+      if (p.shade > 0.72) {
+        gg2.addColorStop(0, 'rgba(' + Math.round(232 + (1 - t0) * 23) + ',' + Math.round(247 + (1 - t0) * 8) + ',255,' + a + ')');
+        gg2.addColorStop(0.45, 'rgba(216,240,255,' + (a * 0.55) + ')');
+      } else {
+        gg2.addColorStop(0, 'rgba(255,255,255,' + a + ')');
+        gg2.addColorStop(0.45, 'rgba(236,246,252,' + (a * 0.5) + ')');
+      }
+      gg2.addColorStop(1, 'rgba(230,244,252,0)');
+      wxCtx.fillStyle = gg2;
+      wxCtx.beginPath(); wxCtx.arc(x, y, r * 2.1, 0, Math.PI * 2); wxCtx.fill();
+    }
+  }
+
+  function wxFrame(now) {
+    if (!wxRunning) return;              // 停止后不再自续 raf（避免双循环）
+    wxRafId = requestAnimationFrame(wxFrame);
+    var dt = Math.min((now - wxLastT) / 1000, 0.05);
+    wxLastT = now;
+    var cfg = WX_CFG[wxMode];
+    if (!cfg) return;
+    wxAcc += cfg.rate * dt;
+    while (wxAcc >= 1) { wxSpawn(false); wxAcc -= 1; }
+    if (wxParticles.length < wxMax * 0.5 && Math.random() < 0.3) wxSpawn(false);
+    wxCtx.clearRect(0, 0, wxW, wxH);
+    wxCtx.globalCompositeOperation = 'lighter';            // additive 叠加
+    var t = now / 1000;
+    var i = wxParticles.length;
+    while (i--) {
+      var p = wxParticles[i];
+      p.life += dt * 60;                       // 帧单位寿命
+      p.x += p.vx * dt;                        // vx/vy 为 px/秒
+      p.y += p.vy * dt;
+      if (p.life >= p.maxLife || p.y > wxH + 60 || p.x < -160 || p.x > wxW + 160) {
+        wxParticles.splice(i, 1); continue;
+      }
+      wxDraw(p, t);
+    }
+    wxCtx.globalCompositeOperation = 'source-over';
+  }
+
+  function wxStart(mode) {
+    if (!wxCanvas || !wxCtx || wxReduced) return;
+    if (wxMode === mode && wxRunning) return;
+    wxMode = mode;
+    wxParticles = [];
+    wxAcc = 0;
+    wxResize();
+    for (var k = 0; k < Math.min(90, wxMax); k++) wxSpawn(true);
+    if (!wxRunning) {
+      wxRunning = true;
+      wxLastT = performance.now();
+      wxRafId = requestAnimationFrame(wxFrame);
+    }
+  }
+
+  function wxStop() {
+    if (wxMode === '' && !wxRunning) return;
+    wxMode = '';
+    wxRunning = false;
+    wxParticles = [];
+    if (wxCtx) wxCtx.clearRect(0, 0, wxW, wxH);
+  }
+
+  window.addEventListener('resize', wxResize);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { wxRunning = false; }
+    else if (wxMode) { wxRunning = true; wxLastT = performance.now(); }
+  });
+
   function renderDeco(w) {
     deco.innerHTML = '';
     var narrow = window.innerWidth <= 900;
@@ -2306,30 +2463,14 @@ function escapeHtml(s) {
       }
     }
     if (w === 'rainy') {
-      var rn = narrow ? 36 : 70;
-      for (i = 0; i < rn; i++) {
-        el = document.createElement('span');
-        el.className = 'rain';
-        el.style.left = Math.max(0, Math.min(100, layerPos(i, rn, 1.3))) + '%';
-        el.style.top = (-20 - Math.random() * 60) + 'px';
-        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
-        el.style.animationDelay = (Math.random() * 3) + 's';
-        deco.appendChild(el);
-      }
+      wxStart('rain');     // v3.0：Canvas 雨滴粒子（发光雨丝）
+      return;
     }
     if (w === 'snowy') {
-      var sn = narrow ? 26 : 46;
-      for (i = 0; i < sn; i++) {
-        el = document.createElement('span');
-        el.className = 'snow';
-        el.style.left = Math.max(0, Math.min(100, layerPos(i, sn, 1.3))) + '%';
-        el.style.width = el.style.height = (6 + Math.random() * 8) + 'px';
-        el.style.animationDuration = (7 + Math.random() * 6) + 's';
-        el.style.animationDelay = (Math.random() * 7) + 's';
-        el.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 1.5l1 6.4 6.4-1L14 12l5.4 5.1-6.4-1-1 6.4-1-6.4-6.4 1L10 12 4.6 6.9l6.4 1z" fill="#eef5fb" stroke="#7fa6c9" stroke-width="1.1" stroke-linejoin="round"/></svg>';
-        deco.appendChild(el);
-      }
+      wxStart('snow');     // v3.0：Canvas 雪花粒子（发光光点）
+      return;
     }
+    wxStop();
   }
 
   function setTheme(w, manual) {

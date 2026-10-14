@@ -1062,6 +1062,9 @@ html[data-weather] .card.wall-class-card{
 
 /* ===== 装饰层：粒子容器（JS 填充） ===== */
 .sky-deco{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;transition:opacity 1.2s ease}
+/* v3.0：雨/雪 Canvas 粒子（参考雪花粒子系统：发光光点/雨丝，卡片后方 z-index:1） */
+#wxCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
+@media (prefers-reduced-motion: reduce){ #wxCanvas{display:none} }
 .star{position:absolute;top:-8px;border-radius:50%;background:#fff;opacity:0;
   box-shadow:0 0 6px 1px var(--wx-deco);animation:wxStarFloat linear infinite}
 @keyframes wxStarFloat{
