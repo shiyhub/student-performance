@@ -122,6 +122,18 @@ const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
   return arr;
 }, []);
 const CAMPUS_UNLOCK_LEVEL = 3;
+/* v2.0：新头像四档（按图片质量 Lv4/5/6/7 解锁；sweet 最亲民 → fantasy 最华丽） */
+const NEW_GROUPS = [
+  { name: '甜美少女', prefix: 'sweet',   count: 10, level: 4, emoji: '🎀' },
+  { name: '森系田园', prefix: 'nature',  count: 4,  level: 5, emoji: '🌿' },
+  { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
+  { name: '奇幻神域', prefix: 'fantasy', count: 7,  level: 7, emoji: '✨' }
+];
+const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
+  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
+  return arr;
+}, []);
+const NEW_LEVEL_MAP = Object.fromEntries(NEW_KEYS.map(k => [k, NEW_GROUPS.find(g => k.startsWith(g.prefix)).level]));
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
 const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600];
@@ -152,9 +164,10 @@ const FRAMES = [
   { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4]))$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|10)|nature[1-4]|mecha[1-4]|fantasy[1-7])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|10)|nature[1-4]|mecha[1-4]|fantasy[1-7])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -166,11 +179,9 @@ function migrateLegacyAvatar(key) {
   const k = String(key || '');
   const m = /^(cyber|mecha|rider|ultra)([1-8])$/.exec(k);
   if (m) return LEGACY_AVATAR_MAP[m[1]];
-  if (!/^(girl|boy|neutral|animal)/.test(k)) {
-    const h = hashCode(k);
-    return 'animal' + (((h % 24) + 24) % 24 + 1);
-  }
-  return k;
+  if (/^(girl|boy|neutral|animal|sweet|nature|mecha|fantasy)/.test(k)) return k;
+  const h = hashCode(k);
+  return 'animal' + (((h % 24) + 24) % 24 + 1);
 }
 function levelFromXp(xp) {
   let lv = 1;
@@ -1349,6 +1360,23 @@ function openAvatarPicker() {
   campusSec.appendChild(campusGrid);
   els.avatarPicker.appendChild(campusSec);
 
+  // —— v2.0：新头像四档（Lv4-7 按图片质量解锁）——
+  NEW_GROUPS.forEach(g => {
+    const unlocked = lv >= g.level;
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
+    sec.innerHTML = unlocked
+      ? `<div class="avatar-sec-title">${g.emoji} ${g.name}<span class="avatar-sec-tip ok">Lv.${g.level} 已解锁，可随意更换</span></div>`
+      : `<div class="avatar-sec-title">🔒 ${g.emoji} ${g.name}<span class="avatar-sec-tip">升到 Lv.${g.level} 解锁（品质更高的头像）</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    for (let i = 1; i <= g.count; i++) {
+      grid.appendChild(buildImgChoice(g.prefix + i, cur.key, unlocked, g.level));
+    }
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  });
+
   // —— 头像框（v105）——
   buildFrameSection();
 
@@ -1394,6 +1422,9 @@ async function onChooseAvatar(key, btn) {
     sfx.oops();
     if (reason === 'locked') {
       toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
+    } else if (reason === 'locked_tier' || isNewKey(key)) {
+      const need = NEW_LEVEL_MAP[key] || 4;
+      toast(`这款${need >= 6 ? '高' : '精'}品质头像要升到 Lv.${need} 才能用哦，继续加油～`);
     } else if (reason === 'limit') {
       toast(isAnimalKey(key)
         ? `小动物头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`
