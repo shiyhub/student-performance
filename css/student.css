@@ -80,7 +80,7 @@ body {
 .sub-options {
   display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
   margin: 8px 0 2px; padding: 10px 12px;
-  background: #f3f8f6; border: 1.5px dashed #b9d9cf; border-radius: 12px;
+  background: #f3f8f6; border-radius: 12px;
 }
 .opt-tag.is-neg .sub-options { background: #fdf3f3; border-color: #ecd0d0; }
 .sub-hint { flex: 0 0 100%; font-size: 12.5px; color: var(--ink-2); margin-bottom: 1px; }
@@ -805,7 +805,7 @@ html,body{background:#e8e6e1 !important;}
 .wall-class-left .mate .mate-name{margin-top:auto;}
 .wall-top .wall-class-card{margin-left:8px;}
 /* 顶部内容统一回卡片内边距内缩进：文字与两条进度条对齐（v151d） */
-/* ===== 班级墙顶部与网格列线对齐（v151） ===== */
+/* ===== 班级墙顶部与网格列线对齐（v151） */
 @media (min-width: 860px) {
   .wall-top{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:stretch;}
   .wall-class-left{grid-column:1;flex:none;}
@@ -886,9 +886,12 @@ html,body{background:#e8e6e1 !important;}
 .frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.png"); }
 .frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.png"); }
 .frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.png"); }
-/* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好） */
+/* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好）
+   v152：素材 frame-star.png 外圈自带一圈磨砂白雾光晕，在浅色背景下显脏；
+   用 background-size:128% 放大素材，使紫蓝星空环外边缘正好顶到伪元素边缘，外圈白雾被裁掉。 */
 .frame-star.framed::after {
   background-image: url("../assets/frames/frame-star.png");
+  background-size: 128% 128%;
   animation: starBreath 4.5s ease-in-out infinite;
   transform-origin: center;
 }
@@ -1173,7 +1176,7 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
 html[data-weather] .device-gate{background:linear-gradient(160deg,var(--wx-bg1),var(--wx-bg2))}
 html[data-weather] .student-view,
 html[data-weather] .wall-view{background:transparent}
-/* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题），进墙后出现 */
+/* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题） */
 .device-gate:not([hidden]) ~ .plant,
 .device-gate:not([hidden]) ~ .weather-switch{display:none}
 
