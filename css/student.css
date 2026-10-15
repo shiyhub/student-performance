@@ -192,6 +192,10 @@ body {
 .mate-avatar.mood-l3 { box-shadow: 0 0 0 4px rgba(150,160,156,.4); }
 .mate-avatar.mood-l2 { box-shadow: 0 0 0 4px rgba(234,153,96,.5); }
 .mate-avatar.mood-l1 { box-shadow: 0 0 0 4px rgba(229,96,96,.55); }
+/* 佩戴头像框时隐藏 mood 光圈，避免从框内圈漏出绿/金/红色边 */
+.mate-avatar.framed.mood-l1, .mate-avatar.framed.mood-l2,
+.mate-avatar.framed.mood-l3, .mate-avatar.framed.mood-l4,
+.mate-avatar.framed.mood-l5 { box-shadow: none !important; }
 
 /* ========== 同学表现详情弹窗 ========== */
 .detail-modal { max-width: 460px; padding: 16px 16px 8px; }
