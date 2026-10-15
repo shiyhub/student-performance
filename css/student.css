@@ -47,6 +47,7 @@ body {
   transition: all .15s;
 }
 .mood-meter span.on { filter: none; opacity: 1; background: #fff4e3; box-shadow: inset 0 0 0 2px #f3c57d; }
+/* 各档光圈 */
 .mood-preview-card.lvl5 .mp-avatar { box-shadow: 0 0 0 6px rgba(245,185,69,.45); }
 .mood-preview-card.lvl4 .mp-avatar { box-shadow: 0 0 0 6px rgba(63,178,129,.4); }
 .mood-preview-card.lvl3 .mp-avatar { box-shadow: 0 0 0 6px rgba(150,160,156,.3); }
@@ -57,10 +58,11 @@ body {
 .mood-preview-card.lvl2 .mp-level { color: #c9742f; }
 .mood-preview-card.lvl1 .mp-level { color: #d05252; }
 
+/* 表现标签：分积极 / 需加油两组，一行五个 */
 .tag-group { margin-bottom: 14px; }
 .tag-group-title { font-size: 15px; font-weight: 800; margin: 2px 2px 9px; }
 .tag-group-title.pos { color: #1f9d6b; }
-tag-group-title.neg { color: #d05252; }
+.tag-group-title.neg { color: #d05252; }
 .tag-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .opt-tag { min-width: 0; }
 .opt-tag:has(.sub-options:not([hidden])) { grid-column: 1 / -1; }
@@ -73,10 +75,12 @@ tag-group-title.neg { color: #d05252; }
 .chip.active { border-color: var(--primary); background: var(--primary-soft); color: #1f7a66; box-shadow: 0 2px 8px rgba(31,157,107,.18); }
 .chip-neg { border-color: #f0d2d2; background: #fffafa; color: #c05a5a; }
 .chip-neg.active { border-color: #e07a7a; background: #fdeeee; color: #c64848; box-shadow: 0 2px 8px rgba(208,82,82,.18); }
+
+/* 二级选项（如 优秀作业 → 数学课堂作业） */
 .sub-options {
   display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
   margin: 8px 0 2px; padding: 10px 12px;
-  background: #f3f8f6; border-radius: 12px;
+  background: #f3f8f6; border: 1.5px dashed #b9d9cf; border-radius: 12px;
 }
 .opt-tag.is-neg .sub-options { background: #fdf3f3; border-color: #ecd0d0; }
 .sub-hint { flex: 0 0 100%; font-size: 12.5px; color: var(--ink-2); margin-bottom: 1px; }
@@ -98,10 +102,14 @@ tag-group-title.neg { color: #d05252; }
 }
 .text-tag > label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
 .text-tag .input { padding: 9px 12px; }
+
 .submit-wrap { margin-top: 16px; }
 .submit-wrap .btn { font-size: 17px; min-height: 52px; border-radius: 14px; }
 .submit-status { text-align: center; font-size: 15px; padding: 8px 12px; border-radius: 12px; margin-bottom: 10px; background: #f3f8f4; color: #2c7a4e; border: 1px solid #cfe6d8; }
 .submit-status-ok { background: #e8f6ec; color: #1f6b3d; border-color: #b7dfc5; font-weight: 600; }
+
+
+/* 成功鼓励动画 */
 .success-overlay {
   position: fixed; inset: 0; z-index: 950; display: none;
   align-items: center; justify-content: center;
@@ -122,6 +130,8 @@ tag-group-title.neg { color: #d05252; }
   0% { transform: translateY(0) rotate(0deg); opacity: 1; }
   100% { transform: translateY(112vh) rotate(720deg); opacity: .8; }
 }
+
+/* ========== 班级头像墙 ========== */
 .wall-back {
   display: inline-flex; align-items: center; gap: 6px;
   background: linear-gradient(180deg,#5cc892,#3da770);
@@ -139,6 +149,7 @@ tag-group-title.neg { color: #d05252; }
 .wall-class-row select { width: 100%; min-width: 0; }
 .wall-class-card { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
 .wall-class-card .class-progress { flex: 1; }
+
 .mates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
@@ -175,11 +186,14 @@ tag-group-title.neg { color: #d05252; }
 .mate-class-all .mate-avatar {
   background: linear-gradient(135deg, #ffe6c9, #d8f0e2) !important;
 }
+/* 头像今日心情光圈（1~5 档） */
 .mate-avatar.mood-l5 { box-shadow: 0 0 0 4px rgba(245,185,69,.55); }
 .mate-avatar.mood-l4 { box-shadow: 0 0 0 4px rgba(63,178,129,.5); }
 .mate-avatar.mood-l3 { box-shadow: 0 0 0 4px rgba(150,160,156,.4); }
 .mate-avatar.mood-l2 { box-shadow: 0 0 0 4px rgba(234,153,96,.5); }
 .mate-avatar.mood-l1 { box-shadow: 0 0 0 4px rgba(229,96,96,.55); }
+
+/* ========== 同学表现详情弹窗 ========== */
 .detail-modal { max-width: 460px; padding: 16px 16px 8px; }
 .detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .detail-avatar {
@@ -217,13 +231,18 @@ tag-group-title.neg { color: #d05252; }
   border-radius: 9px; padding: 8px 11px; font-size: 13px; word-break: break-word;
 }
 .detail-comment b { color: #b5791b; }
+
+/* 宽屏（电脑/平板）：头像墙铺满，参考班级墙多列排布 */
 @media (min-width: 860px) {
   #wallView { max-width: 980px; }
   .mates { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 16px 10px; }
   .mate-avatar { width: 68px; height: 68px; font-size: 36px; }
   .mate-badge { top: 60px; }
+
   #formView { max-width: 720px; }
 }
+
+/* 大屏投影 / 教室电视（约 1080p 及以上） */
 @media (min-width: 1400px) {
   #wallView { max-width: 1320px; }
   .s-title { font-size: 34px; }
@@ -245,6 +264,8 @@ tag-group-title.neg { color: #d05252; }
   .sub-chip { font-size: 15px; padding: 8px 18px; }
   .submit-wrap .btn { min-height: 62px; font-size: 20px; }
 }
+
+/* 4K 大屏（教室主屏 2560p / 3840p） */
 @media (min-width: 2400px) {
   #wallView { max-width: 2200px; }
   .s-title { font-size: 52px; }
@@ -283,6 +304,8 @@ tag-group-title.neg { color: #d05252; }
   .detail-rec, .detail-items li, .detail-comment { font-size: 24px; }
   .detail-stars { font-size: 30px; }
 }
+
+/* ========== 自选头像 ========== */
 .identity-avatar {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   margin: 4px auto 14px; background: none; width: 120px;
@@ -297,6 +320,7 @@ tag-group-title.neg { color: #d05252; }
 .identity-avatar:active .identity-avatar-emoji { transform: scale(.9) rotate(-6deg); }
 .identity-avatar-hint { font-size: 12.5px; font-weight: 700; color: var(--primary-d); }
 .identity-avatar:hover .identity-avatar-emoji { animation: floaty 2.2s ease-in-out infinite; }
+
 .avatar-modal { max-width: 480px; padding: 16px; }
 .avatar-picker {
   width: 100%; box-sizing: border-box;
@@ -317,6 +341,8 @@ tag-group-title.neg { color: #d05252; }
   box-shadow: 0 4px 12px rgba(31,157,107,.28);
   animation: pop .25s;
 }
+
+/* ========== 音效开关 ========== */
 .sound-toggle {
   position: fixed; top: 12px; right: 12px; z-index: 1000;
   width: 44px; height: 44px; border-radius: 50%;
@@ -325,6 +351,8 @@ tag-group-title.neg { color: #d05252; }
 }
 .sound-toggle.is-off { opacity: .55; }
 .sound-toggle:active { transform: scale(.9); }
+
+/* ========== 适龄化动效 ========== */
 .chip { transition: transform .1s, box-shadow .12s, background .12s, border-color .12s, color .12s; }
 .chip:active { transform: scale(.92); }
 .chip.active { animation: chipPop .2s ease-out; }
@@ -341,6 +369,8 @@ tag-group-title.neg { color: #d05252; }
   .mate { transition: transform .12s, box-shadow .12s; }
   .mate:hover { transform: translateY(-4px); box-shadow: 0 10px 22px rgba(0,0,0,.10); }
 }
+
+/* 大屏 / 4K 下的新元素放大 */
 @media (min-width: 1400px) {
   .identity-avatar { width: 150px; }
   .identity-avatar-emoji { width: 108px; height: 108px; font-size: 62px; }
@@ -358,12 +388,20 @@ tag-group-title.neg { color: #d05252; }
   .avatar-choice { font-size: 66px; border-radius: 28px; border-width: 5px; }
   .sound-toggle { width: 88px; height: 88px; font-size: 44px; top: 30px; right: 30px; }
 }
+
+/* ====================================================================
+ * v9：经验等级 / 校园图片头像 / 头像框槽位
+ * ==================================================================== */
+
+/* 头像内图片通用 */
 .avatar-img {
   width: 100%; height: 100%; border-radius: 50%;
   object-fit: cover; display: block; pointer-events: none;
 }
 .mate-avatar.is-img { background: #fff; }
 .mate-avatar.is-img .avatar-img { border-radius: 50%; }
+
+/* 头像墙上的小等级徽章 */
 .mate-lv {
   background: linear-gradient(135deg,#f7b955,#ef8e3a); color: #fff;
   font-size: 10px; font-weight: 800; line-height: 1;
@@ -371,6 +409,8 @@ tag-group-title.neg { color: #d05252; }
   box-shadow: 0 1px 4px rgba(222,122,30,.35); pointer-events: none;
   flex: 0 0 auto; position: static;
 }
+
+/* 身份卡：等级徽章 + 经验条 */
 .identity-avatar { position: relative; }
 .identity-avatar-emoji { position: relative; overflow: hidden; }
 .identity-lv-badge {
@@ -392,11 +432,15 @@ tag-group-title.neg { color: #d05252; }
 }
 .identity-xp-text { margin-top: 5px; font-size: 12px; color: #7a8a82; text-align: center; }
 .title-optional { font-size: 13px; color: #8fa098; font-weight: 600; }
+
+/* 预留：高等级头像框（3/4/5 级光环），后续可替换为头像框图片 */
 .identity-avatar.frame-l3 .identity-avatar-emoji { box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(247,185,85,.55), 0 6px 16px rgba(224,122,63,.22); }
 .identity-avatar.frame-l4 .identity-avatar-emoji { box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(110,190,255,.65), 0 6px 16px rgba(224,122,63,.22); }
 .identity-avatar.frame-l5 .identity-avatar-emoji {
   box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(245,185,69,.8), 0 0 16px rgba(245,185,69,.55);
 }
+
+/* 头像弹窗：分组结构（覆盖旧的 grid 容器样式） */
 .avatar-picker {
   display: block; max-height: min(60vh, 560px);
   overflow-y: auto; overflow-x: hidden; padding: 4px 2px 10px;
@@ -422,9 +466,12 @@ tag-group-title.neg { color: #d05252; }
   font-size: 18px; color: #fff; pointer-events: none;
 }
 .avatar-lock em { font-style: normal; font-size: 11px; font-weight: 800; }
+
+/* 详情弹窗 / 心情卡中的图片头像 */
 .detail-avatar img.avatar-img,
 .mp-avatar img.avatar-img { border-radius: 50%; }
 .mp-avatar { overflow: hidden; }
+
 @media (min-width: 1400px) {
   .mate-lv { font-size: 13px; padding: 4px 7px; border-radius: 10px; }
   .identity-lv-badge { font-size: 15px; padding: 5px 10px; border-radius: 12px; transform: translateX(76px); }
@@ -452,12 +499,16 @@ tag-group-title.neg { color: #d05252; }
   .avatar-grid { gap: 20px; }
   .avatar-lock { font-size: 38px; } .avatar-lock em { font-size: 23px; }
 }
+
+/* 老师预览模式提示条 */
 .preview-banner {
   background: linear-gradient(90deg,#fff3d6,#ffe9b8);
   color: #8a5a00; border: 1.5px solid #f0c66a;
   padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 700;
   margin-bottom: 10px; text-align: center;
 }
+
+/* Lv6 典藏头像分组 */
 .avatar-sec.legend { background: linear-gradient(180deg,#fff7e6,#fff); border:1.5px solid #f0c66a; }
 .legend-groups { display:block; }
 .avatar-sub-group { margin: 6px 0 12px; }
@@ -465,6 +516,8 @@ tag-group-title.neg { color: #d05252; }
 .legend-row { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
 .avatar-sec.legend .avatar-choice-img img { border-radius: 50%; }
 @media (min-width: 700px) { .legend-row { grid-template-columns: repeat(8, minmax(0,1fr)); gap: 10px; } }
+
+/* 今日任务（学生端） */
 .task-card { background: linear-gradient(180deg,#fff9f0,#fff); border:1.5px solid #f3d9a8; }
 .stu-task-title { font-size:18px; font-weight:800; color:#5a4316; }
 .stu-task-detail { margin-top:6px; color:#6b5a3a; line-height:1.6; }
@@ -474,11 +527,17 @@ tag-group-title.neg { color: #d05252; }
 .stu-task-grade.on { background:#4caf7d; border-color:#3d9469; color:#fff; font-weight:800; transform:scale(1.03); }
 .stu-task-result { margin-top:10px; font-weight:700; color:#3d9469; min-height:20px; }
 @media (max-width:480px){ .stu-task-grades { grid-template-columns:repeat(2,1fr); } }
+
+/* 多任务 */
 .stu-task { padding:12px 0; border-bottom:1px dashed #ecd9b0; }
 .stu-task:last-child { border-bottom:none; }
 .stu-task-type { display:inline-block; font-size:12px; font-weight:800; padding:2px 10px; border-radius:999px; margin-bottom:6px; }
 .stu-task-type.classwork { background:#dcecfb; color:#2a6fb0; }
 .stu-task-type.homework { background:#ffe6d6; color:#c06a2a; }
+
+/* ===== v16：左侧三角返回 + 横屏双栏 + UI 放大 ===== */
+
+/* 左侧三角返回箭头 */
 .wall-back {
   position: fixed; left: 0; top: 50%; transform: translateY(-50%);
   width: 46px; height: 96px; padding: 0; margin: 0;
@@ -490,10 +549,13 @@ tag-group-title.neg { color: #d05252; }
 }
 .back-tri { font-size: 46px; font-weight: 800; line-height: 0; margin-top: -4px; }
 .wall-back:hover { width: 54px; }
+
+/* 横屏 / 宽屏：表单双栏，整体放大 */
 @media (min-width: 900px) and (orientation: landscape) {
   #formView { max-width: 1280px; padding-left: 60px; }
   #formView .card { padding: 22px 26px; }
   #formView .card-title { font-size: 22px; }
+  /* 两栏排布：身份/星级/心情在左，任务+标签+提交在右 */
   #formView {
     display: grid;
     grid-template-columns: 1fr 1.3fr;
@@ -513,6 +575,8 @@ tag-group-title.neg { color: #d05252; }
   .submit-wrap .btn { min-height: 66px; font-size: 21px; }
   .back-tri { font-size: 56px; }
 }
+
+/* 竖屏大屏（教室竖屏/平板竖握）也放大一点 */
 @media (min-width: 900px) and (orientation: portrait) {
   #formView { max-width: 760px; }
   #formView .card { padding: 22px 24px; }
@@ -520,12 +584,17 @@ tag-group-title.neg { color: #d05252; }
   .input { font-size: 18px; padding: 12px 14px; }
   .submit-wrap .btn { min-height: 66px; font-size: 21px; }
 }
+
+/* v18：已打卡徽标 + 宽屏下左右分类布局 */
 .mate-badge.done-badge { background:#d8f0e2; color:#2c7a4e; }
 @media (min-width: 900px) {
+  /* 表现标签左右分栏：左边"需要加油"，右边"积极表现" */
   #tagsBox { display: flex; gap: 18px; align-items: flex-start; }
   #tagsBox .tag-group.neg { order: 1; flex: 1; }
   #tagsBox .tag-group { order: 2; flex: 1; }
 }
+
+/* v20：往日任务 + 两模块独立卡片 */
 .past-row { display:flex; justify-content:space-between; align-items:center; gap:10px;
   padding:8px 4px; border-bottom:1px dashed #eee; font-size:14px; }
 .past-row:last-child { border-bottom:none; }
@@ -533,15 +602,21 @@ tag-group-title.neg { color: #d05252; }
 @media (min-width: 900px) {
   #tagsBox .tag-group { background:#fafafa; border-radius:14px; padding:14px; }
 }
+
+/* 当天已打过的二级项：置灰 */
 .sub-chip.done, .sub-chip:disabled {
   background:#e8e8e8 !important; color:#aaa !important;
   cursor:not-allowed; opacity:.8; text-decoration:line-through;
 }
+
+/* v23：两个表现模块独立卡片 */
 #tagsBox .tag-group {
   background:#fffdf7; border:1px solid #f0e3c8; border-radius:16px;
   padding:14px 16px; margin:10px 0;
 }
 #tagsBox .tag-group.neg { background:#fff8f8; border-color:#f3d4d4; }
+
+/* v24：表现区拓宽、二级项历史置灰 */
 @media (min-width: 900px) {
   #formView { max-width: 1080px; }
   .tag-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:12px; }
@@ -551,10 +626,14 @@ tag-group-title.neg { color: #d05252; }
   background:#e8e8e8 !important; color:#aaa !important;
   cursor:not-allowed; text-decoration:line-through;
 }
+
+/* v25：往日任务放到心情卡下方（右栏），减少空白 */
 @media (min-width: 900px) and (orientation: landscape) {
   #formView { grid-auto-flow: row dense; }
   #pastTaskCard { grid-column: 2; }
 }
+
+/* v26：教室 4K 横屏铺满，多列布局，减少两侧空白 */
 @media (min-width: 1200px) {
   #formView {
     max-width: 100% !important;
@@ -566,9 +645,13 @@ tag-group-title.neg { color: #d05252; }
     align-items: start;
   }
   #formView .s-header { grid-column: 1 / -1; }
+  /* 左栏：身份 + 心情 */
   #formView .card { margin: 0; }
+  /* 往日任务放心情下方 */
   #pastTaskCard { grid-column: 2; grid-row: auto; }
+  /* 任务卡占中间列 */
   #taskCard { grid-column: 2; }
+  /* 表现卡占右列 */
   #formView > .card:has(#tagsBox) { grid-column: 3; }
   .submit-wrap { grid-column: 1 / -1; }
 }
@@ -578,6 +661,8 @@ tag-group-title.neg { color: #d05252; }
   .chip { min-height: 72px; font-size: 19px; }
   .input { font-size: 18px; padding: 14px 16px; }
 }
+
+/* 明确三栏落点 */
 @media (min-width: 1200px) {
   #identityCard { grid-column: 1; }
   #moodPreviewCard { grid-column: 1; }
@@ -585,6 +670,8 @@ tag-group-title.neg { color: #d05252; }
   #taskCard { grid-column: 2; }
   #tagsBox { display: flex; gap: 16px; }
 }
+
+/* v27：修正三栏对齐 */
 @media (min-width: 1200px) {
   #formView {
     display: grid;
@@ -595,15 +682,21 @@ tag-group-title.neg { color: #d05252; }
   #identityCard, #moodPreviewCard { grid-column: 1; }
   #pastTaskCard, #taskCard { grid-column: 2; width: 100%; }
   #tagsBox, #formView > .card.tags-card { grid-column: 3; }
+  /* 提交按钮跨整行 */
   #formView > .submit-wrap, #formView > #celebrate { grid-column: 1 / -1; }
 }
 @media (min-width: 1200px) {
   #tagsCard { grid-column: 3; }
 }
+/* v28：填写页不再显示今日心情选择，只在班级墙头像预览 */
 #moodPreviewCard { display: none !important; }
+
+/* v31：任务卡收进中栏（覆盖旧的整行规则） */
 @media (min-width: 1200px) {
   #formView #taskCard { grid-column: 2; width: 100%; }
 }
+
+/* v32：返回箭头放大醒目 */
 .wall-back { width:56px !important; height:56px !important; left:12px !important; top:50% !important; }
 .wall-back .back-tri { font-size:34px !important; }
 .wall-back::after { content:"返回"; position:absolute; left:64px; top:50%; transform:translateY(-50%); background:#3aa655; color:#fff; font-size:14px; padding:6px 10px; border-radius:8px; white-space:nowrap; }
@@ -658,6 +751,7 @@ body{background:#eef3ee;}
 .red-card{padding:14px;}
 #formView.container{max-width:100% !important;width:100% !important;margin:0 !important;padding:10px 20px !important;}
 #formView .diary3{width:100%;max-width:none;}
+/* ===== 16:9 大屏适配（2K/4K 希沃白板），只做桌面端 ===== */
 #formView.container{
   max-width: min(96vw, calc(96vh * 16 / 9)) !important;
   width:100% !important; margin:0 auto !important; padding:1vh 2vw !important;
@@ -669,6 +763,7 @@ body{background:#eef3ee;}
 #formView .card-title{font-size:1.1em;}
 #formView .stu-task-grades button,#formView .stu-task-grade{font-size:0.95em;padding:0.6em 0.8em;}
 #btnSubmit{font-size:1.3em;padding:0.9em;}
+/* 强制三栏铺满 */
 #formView{display:flex;flex-direction:column;align-items:stretch;}
 #formView .diary3{display:flex;flex-direction:row;width:100% !important;max-width:none !important;flex:1;}
 #formView .diary-col{width:auto !important;}
@@ -677,6 +772,7 @@ body{background:#eef3ee;}
 #formView .diary-col.c3{flex:2 !important;}
 #formView #tagsCard,#formView #pastTaskCard,#formView #taskCard{width:100% !important;max-width:none !important;}
 #formView .tag-grid{grid-template-columns:repeat(3,1fr) !important;}
+/* ===== 莫兰迪护眼配色 ===== */
 html,body{background:#e8e6e1 !important;}
 .student-view,.wall-view{background:#e8e6e1;}
 .red-card{background:#f4f1ec;border:1.5px solid #b8a9a0;}
@@ -708,6 +804,8 @@ html,body{background:#e8e6e1 !important;}
 .wall-class-left .mate .mate-avatar{margin-bottom:6px;}
 .wall-class-left .mate .mate-name{margin-top:auto;}
 .wall-top .wall-class-card{margin-left:8px;}
+/* 顶部内容统一回卡片内边距内缩进：文字与两条进度条对齐（v151d） */
+/* ===== 班级墙顶部与网格列线对齐（v151） ===== */
 @media (min-width: 860px) {
   .wall-top{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:stretch;}
   .wall-class-left{grid-column:1;flex:none;}
@@ -722,13 +820,20 @@ html,body{background:#e8e6e1 !important;}
 .diary3{align-items:stretch;}
 .diary-col.c2{height:100%;}
 .diary-col.c2 > #pastTaskCard{flex:1 1 auto;max-height:none;}
+
+/* ============================================================
+   v105：头像框（CSS 光环，无需图片素材）
+   ============================================================ */
 .mate-avatar, .identity-avatar-emoji, .detail-avatar, .mp-avatar { position: relative; }
+/* 身份头像原来 overflow:hidden 会裁掉外圈光环，佩戴框时放开 */
 .identity-avatar-emoji.framed { overflow: visible; }
 .framed::before {
   content: ''; position: absolute; inset: -4px; border-radius: 50%;
   pointer-events: none; z-index: 2;
 }
 @media (min-width: 1400px) { .framed::before { inset: -5px; border-width: 4px; } }
+
+/* ---- 头像框选择区 ---- */
 .frame-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; padding: 2px; }
 .frame-choice {
   position: relative; aspect-ratio: 1/1; border-radius: 50%;
@@ -747,6 +852,11 @@ html,body{background:#e8e6e1 !important;}
 }
 .frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
 .frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
+/* ============================================================
+   v130（RSK-11）：12 款游戏风头像框（透明 PNG 素材叠加）
+   v141：7 款基础成就框同步改为 PNG 素材叠加（frame-bronze/silver/gold/rainbow/star/heart/crown）
+   素材 assets/frames/frame-*.png：中心 70% 镂空放头像，粒子只在四周
+   ============================================================ */
 .frame-tac.framed::after, .frame-gun.framed::after, .frame-dragon.framed::after,
 .frame-mecha.framed::after, .frame-wolf.framed::after, .frame-sakura.framed::after,
 .frame-magic.framed::after, .frame-princess.framed::after, .frame-queen.framed::after,
@@ -776,9 +886,10 @@ html,body{background:#e8e6e1 !important;}
 .frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.png"); }
 .frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.png"); }
 .frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.png"); }
+/* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好） */
 .frame-star.framed::after {
   background-image: url("../assets/frames/frame-star.png");
-  background-size: 135% 135%;
+  background-size: 120% 120%;
   animation: starBreath 4.5s ease-in-out infinite;
   transform-origin: center;
 }
@@ -789,6 +900,7 @@ html,body{background:#e8e6e1 !important;}
 @media (prefers-reduced-motion: reduce) {
   .frame-star.framed::after { animation: none; }
 }
+/* 头像框选择区预览（直接显示素材图） */
 .frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / contain no-repeat; }
 .frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / contain no-repeat; }
 .frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / contain no-repeat; }
@@ -808,6 +920,12 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.png") center / contain no-repeat; }
 .frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.png") center / contain no-repeat; }
 .frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.png") center / contain no-repeat; }
+
+
+
+/* ============================================================
+   v105：成就徽章墙
+   ============================================================ */
 .ach-count { font-size: 13px; font-weight: 700; color: #e07a3f; }
 .ach-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
 .ach-item {
@@ -824,10 +942,18 @@ html,body{background:#e8e6e1 !important;}
   .ach-grid { grid-template-columns: repeat(6, minmax(0,1fr)); }
   .frame-grid { grid-template-columns: repeat(8, minmax(0,1fr)); }
 }
+
+/* 已完成任务卡片置灰 */
 .stu-task.done { opacity:.62; }
 .stu-task.done .stu-task-title { color:#8a7b58; }
 .stu-task.done .stu-task-detail { color:#9a8c6a; }
 .stu-task.done .stu-task-grades button.on { background:#3d9469; border-color:#2f7a55; opacity:1; }
+
+/* ============================================================
+   v137(RSK-13)：头像框粒子动效系统
+   性能优先：CSS transform/opacity 动画（GPU 合成），40 人共用电脑可用
+   粒子只出现在框外围环带（fp-layer 覆盖 176% 直径），不遮挡中心头像
+   ============================================================ */
 .fp-layer{
   position:absolute; left:50%; top:50%;
   width:176%; height:176%;
@@ -848,6 +974,8 @@ html,body{background:#e8e6e1 !important;}
 .fp-star{ box-shadow:0 0 2px currentColor; }
 .fp-ember{ border-radius:50% 50% 50% 50%; }
 .fp-bolt{ border-radius:2px; }
+
+/* ---- 动画主题 ---- */
 @keyframes fpFloat{
   0%{opacity:0; transform:translateY(6px) scale(.5);}
   25%{opacity:1;}
@@ -884,13 +1012,19 @@ html,body{background:#e8e6e1 !important;}
 .fp-p.fp-a-twinkle{ animation-name:fpTwinkle; }
 .fp-p.fp-a-petal { animation-name:fpPetal; }
 .fp-p.fp-a-bolt  { animation-name:fpBolt; }
+
+/* 预览格轻微呼吸光晕（保持预览只显示框，不加粒子） */
 .frame-choice .fc-ring{ animation:fcBreath 2.8s ease-in-out infinite; }
 @keyframes fcBreath{ 0%,100%{filter:drop-shadow(0 0 1px rgba(255,255,255,0)); opacity:.96;} 50%{filter:drop-shadow(0 0 6px rgba(255,255,255,.5)); opacity:1;} }
 .frame-choice.selected .fc-ring{ animation-duration:1.6s; }
+
+/* 减少动态效果偏好：关闭粒子动画 */
 @media (prefers-reduced-motion: reduce){
   .fp-p{ animation:none; opacity:.6; }
   .frame-choice .fc-ring{ animation:none; }
 }
+
+/* ============ v139：写实少年头像专属粒子 + 呼吸光效 ============ */
 .ap-layer{
   position:absolute; left:50%; top:50%;
   width:130%; height:130%;
@@ -912,24 +1046,32 @@ html,body{background:#e8e6e1 !important;}
   0%,100%{ box-shadow:0 0 3px 1px rgba(var(--glow),.12), inset 0 0 4px 0 rgba(var(--glow),.06); }
   50%    { box-shadow:0 0 16px 4px rgba(var(--glow),.55), inset 0 0 10px 1px rgba(var(--glow),.25); }
 }
+/* 圆形容器若未定位则补上（mate-avatar/mp-avatar 已定位） */
 .detail-avatar.ap-breathe,
 .identity-avatar-emoji.ap-breathe { position:relative; }
+
+/* ============ 天气联动主题（v21：跟随洞口县实时天气，仅背景/侧边/卡片微样式，布局不动） ============ */
 html[data-weather="sunny"]{ --wx-bg1:#fdf8ec; --wx-bg2:#fdf3dc; --wx-card:#fffdf7; --wx-shadow:0 4px 18px rgba(232,180,76,.20);  --wx-deco:#e9c878; }
 html[data-weather="cloudy"]{ --wx-bg1:#eef3f6; --wx-bg2:#e3eaf0; --wx-card:#fbfcfa; --wx-shadow:0 4px 14px rgba(120,136,148,.16); --wx-deco:#9fb2bd; }
 html[data-weather="rainy"]{ --wx-bg1:#eef3f7; --wx-bg2:#dde7ee; --wx-card:#f6fafd; --wx-shadow:0 8px 24px rgba(96,128,150,.16);  --wx-deco:#8fb0c4; }
 html[data-weather="snowy"]{ --wx-bg1:#f0f5f8; --wx-bg2:#dde6ee; --wx-card:#fcfdfc; --wx-shadow:0 4px 16px rgba(150,168,182,.16), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#b8cbd8; }
+
 html[data-weather] body{
   background:linear-gradient(180deg,var(--wx-bg1) 0%,var(--wx-bg2) 100%) !important;
   background-attachment:fixed;
   transition:background 1.2s ease;
 }
+/* 第3轮：卡片微样式（尺寸/排版/头像/文字不动，仅底色与阴影微调） */
 html[data-weather] .mate,
 html[data-weather] .card.wall-class-card{
   background:var(--wx-card); box-shadow:var(--wx-shadow);
   border:1px solid rgba(255,255,255,.75);
   transition:background 1.2s ease,box-shadow 1.2s ease;
 }
+
+/* ===== 装饰层：粒子容器（JS 填充） ===== */
 .sky-deco{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;transition:opacity 1.2s ease}
+/* v3.0：雨/雪 Canvas 粒子（参考雪花粒子系统：发光光点/雨丝，卡片后方 z-index:1） */
 #wxCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
 @media (prefers-reduced-motion: reduce){ #wxCanvas{display:none} }
 .star{position:absolute;top:-8px;border-radius:50%;background:#fff;opacity:0;
@@ -963,6 +1105,8 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
 }
 .snow{position:absolute;top:-16px;opacity:0;animation:wxSnowFall linear infinite}
 .snow svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 0 5px rgba(110,145,180,.45))}
+
+/* 晴天太阳光斑：柔和弥散金色光晕，缓慢呼吸闪烁 */
 .sun-glow{position:absolute;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,rgba(255,222,145,.55) 0%,rgba(255,222,145,.24) 42%,rgba(255,222,145,0) 72%);
   opacity:0;animation:wxGlowBreathe 7s ease-in-out infinite}
@@ -973,6 +1117,8 @@ html[data-weather="sunny"] .star.tw{animation-name:wxStarTwinkle;animation-durat
   50%{transform:translateY(52vh) translateX(16px)}
   100%{transform:translateY(110vh) translateX(-10px);opacity:0}
 }
+
+/* ===== 两侧花草（固定于视口两侧空白，素材随天气切换） ===== */
 .plant{position:fixed;bottom:0;z-index:1;opacity:.5;pointer-events:none;transition:opacity 1.2s ease}
 html[data-weather] #wallView,
 html[data-weather] #formView{position:relative;z-index:2}
@@ -981,12 +1127,18 @@ html[data-weather] #formView{position:relative;z-index:2}
 .plant-right{right:max(6px,calc((100vw - 1320px)/2 - 150px));width:150px}
 .wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
+
+/* 花朵动画按主题：晴轻摇 / 多云稳摆 / 雨随风晃 / 雪抖雪 */
+/* 晴：花茎柔韧轻快摇曳（呼吸感） */
 html[data-weather="sunny"] .wx-flower{animation:wxSway 5s ease-in-out infinite}
 @keyframes wxSway{0%,100%{transform:rotate(-6deg) translateY(0)}25%{transform:rotate(2deg) translateY(-3px)}50%{transform:rotate(7deg) translateY(0)}75%{transform:rotate(-1deg) translateY(-2px)}}
+/* 多云：挺立稳重摆动 */
 html[data-weather="cloudy"] .wx-flower{animation:wxSwayC 8s ease-in-out infinite}
 @keyframes wxSwayC{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+/* 雨：被风吹弯，颤抖晃动摇摆 */
 html[data-weather="rainy"] .wx-flower{animation:wxSwayR 2.2s ease-in-out infinite}
 @keyframes wxSwayR{0%,100%{transform:rotate(-12deg) translateY(2px)}50%{transform:rotate(10deg) translateY(-2px)}}
+/* 雪：缓慢堆雪 → 抖落 → 再堆雪循环 */
 html[data-weather="snowy"] .wx-flower{animation:wxSnowShake 6s ease-in-out infinite}
 @keyframes wxSnowShake{
   0%,54%{transform:rotate(0)}
@@ -994,8 +1146,12 @@ html[data-weather="snowy"] .wx-flower{animation:wxSnowShake 6s ease-in-out infin
   78%{transform:rotate(-6deg)} 86%{transform:rotate(5deg)}
   94%,100%{transform:rotate(0)}
 }
+
+/* 云朵：仅多云主题显示并缓慢漂移 */
 html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s ease-in-out infinite}
 @keyframes wxCloudFloat{0%,100%{transform:translateX(0)}50%{transform:translateX(14px)}}
+
+/* ===== 手动切换按钮（右下角小圆钮，自动获取失败/演示时兜底） ===== */
 .weather-switch{
   position:fixed;right:12px;bottom:14px;z-index:8;
   width:40px;height:40px;border-radius:50%;
@@ -1005,6 +1161,8 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
   box-shadow:0 2px 10px rgba(76,98,88,.12);
 }
 .weather-switch:active{transform:scale(.92)}
+
+/* 窄屏：花草收窄，粒子减量由 JS 控制 */
 @media (max-width:900px){
   .plant-left,.plant-right{width:100px}
 }
@@ -1012,11 +1170,15 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
   .star,.cloud,.rain,.snow,
   .plant .wx-flower,.plant .wx-cloud{animation:none !important}
 }
+/* 前置页与日记页容器也随主题（仅背景氛围，布局不动） */
 html[data-weather] .device-gate{background:linear-gradient(160deg,var(--wx-bg1),var(--wx-bg2))}
 html[data-weather] .student-view,
 html[data-weather] .wall-view{background:transparent}
+/* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题），进墙后出现 */
 .device-gate:not([hidden]) ~ .plant,
 .device-gate:not([hidden]) ~ .weather-switch{display:none}
+
+/* ===== 座位编排模式：固定 6 列矩阵（与学生端 seat_row*6+col 槽位公式一致） ===== */
 .mates.seat-mode { grid-template-columns: repeat(6, 1fr) !important; gap: 10px 8px; }
 .mates.seat-mode .mate { padding: 10px 2px 8px; }
 .mates.seat-mode .mate-avatar { width: 46px; height: 46px; font-size: 26px; }
@@ -1041,6 +1203,8 @@ html[data-weather] .wall-view{background:transparent}
   .mates.seat-mode .mate-lv { font-size: 13px; }
   .mates.seat-mode .mate-today { font-size: 13px; }
 }
+
+/* 座位模式窄屏压缩：列宽不足时收缩卡片内容，避免横向溢出 */
 .mates.seat-mode .mate { min-width: 0; }
 @media (max-width: 479px) {
   .mates.seat-mode { gap: 8px 6px; }
