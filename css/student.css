@@ -80,7 +80,7 @@ body {
 .sub-options {
   display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
   margin: 8px 0 2px; padding: 10px 12px;
-  background: #f3f8f6; border: 1.5px dashed #b9d9cf; border-radius: 12px;
+  background: #f3f8f6; border-radius: 12px;
 }
 .opt-tag.is-neg .sub-options { background: #fdf3f3; border-color: #ecd0d0; }
 .sub-hint { flex: 0 0 100%; font-size: 12.5px; color: var(--ink-2); margin-bottom: 1px; }
@@ -107,7 +107,6 @@ body {
 .submit-wrap .btn { font-size: 17px; min-height: 52px; border-radius: 14px; }
 .submit-status { text-align: center; font-size: 15px; padding: 8px 12px; border-radius: 12px; margin-bottom: 10px; background: #f3f8f4; color: #2c7a4e; border: 1px solid #cfe6d8; }
 .submit-status-ok { background: #e8f6ec; color: #1f6b3d; border-color: #b7dfc5; font-weight: 600; }
-
 
 /* 成功鼓励动画 */
 .success-overlay {
@@ -242,7 +241,6 @@ body {
   .mates { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 16px 10px; }
   .mate-avatar { width: 68px; height: 68px; font-size: 36px; }
   .mate-badge { top: 60px; }
-
   #formView { max-width: 720px; }
 }
 
@@ -559,7 +557,6 @@ body {
   #formView { max-width: 1280px; padding-left: 60px; }
   #formView .card { padding: 22px 26px; }
   #formView .card-title { font-size: 22px; }
-  /* 两栏排布：身份/星级/心情在左，任务+标签+提交在右 */
   #formView {
     display: grid;
     grid-template-columns: 1fr 1.3fr;
@@ -592,7 +589,6 @@ body {
 /* v18：已打卡徽标 + 宽屏下左右分类布局 */
 .mate-badge.done-badge { background:#d8f0e2; color:#2c7a4e; }
 @media (min-width: 900px) {
-  /* 表现标签左右分栏：左边"需要加油"，右边"积极表现" */
   #tagsBox { display: flex; gap: 18px; align-items: flex-start; }
   #tagsBox .tag-group.neg { order: 1; flex: 1; }
   #tagsBox .tag-group { order: 2; flex: 1; }
@@ -649,13 +645,9 @@ body {
     align-items: start;
   }
   #formView .s-header { grid-column: 1 / -1; }
-  /* 左栏：身份 + 心情 */
   #formView .card { margin: 0; }
-  /* 往日任务放心情下方 */
   #pastTaskCard { grid-column: 2; grid-row: auto; }
-  /* 任务卡占中间列 */
   #taskCard { grid-column: 2; }
-  /* 表现卡占右列 */
   #formView > .card:has(#tagsBox) { grid-column: 3; }
   .submit-wrap { grid-column: 1 / -1; }
 }
@@ -686,7 +678,6 @@ body {
   #identityCard, #moodPreviewCard { grid-column: 1; }
   #pastTaskCard, #taskCard { grid-column: 2; width: 100%; }
   #tagsBox, #formView > .card.tags-card { grid-column: 3; }
-  /* 提交按钮跨整行 */
   #formView > .submit-wrap, #formView > #celebrate { grid-column: 1 / -1; }
 }
 @media (min-width: 1200px) {
@@ -889,7 +880,7 @@ html,body{background:#e8e6e1 !important;}
 .frame-gold.framed::after    { background-image: url("../assets/frames/frame-gold.png"); }
 .frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.png"); }
 .frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.png"); }
-.frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.png"); }
+.frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.svg"); }
 /* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好） */
 .frame-star.framed::after {
   background-image: url("../assets/frames/frame-star.png");
@@ -923,9 +914,7 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-rainbow .fc-ring { background: url("../assets/frames/frame-rainbow.png") center / contain no-repeat; }
 .frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.png") center / contain no-repeat; }
 .frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.png") center / contain no-repeat; }
-.frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.png") center / contain no-repeat; }
-
-
+.frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.svg") center / contain no-repeat; }
 
 /* ============================================================
    v105：成就徽章墙
