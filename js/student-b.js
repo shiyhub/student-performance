@@ -1,3 +1,4 @@
+
 function init() {
   els.wallDate.textContent = todayLabel();
   els.todayLabel.textContent = todayLabel();
@@ -291,9 +292,9 @@ function renderWall() {
     : null;
   const classToday = recs.filter(r => r.record_date === today).length;
 
-  // 班级整体经验 = 全班学生经验总和；400/1000/2000/3000 升级
+  // 班级整体经验 = 全班学生经验总和；v142(RSK-14)：班级等级上限提升至 Lv.10 —— 400/1000/2000/3000/4500/6500/9000/12000/16000 升级
   const classXp = state.roster.reduce((s, x) => s + (Number(x.xp) || 0), 0);
-  const CLASS_LEVELS = [0, 400, 1000, 2000, 3000];
+  const CLASS_LEVELS = [0, 400, 1000, 2000, 3000, 4500, 6500, 9000, 12000, 16000];
   let classLv = 1;
   CLASS_LEVELS.forEach((th, i) => { if (classXp >= th) classLv = i + 1; });
   const nextNeed = CLASS_LEVELS[classLv] || null;
@@ -643,3 +644,4 @@ function renderIdentityLevel() {
   }
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
+//（注：内容由AI生成）

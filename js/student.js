@@ -145,8 +145,9 @@ const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
 }, []);
 const NEW_LEVEL_MAP = Object.fromEntries(NEW_KEYS.map(k => [k, NEW_GROUPS.find(g => k.startsWith(g.prefix)).level]));
 const EMOJI_CHANGE_LIMIT = 2;
-// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400（与数据库 level_from_xp 同口径）
-const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600];
+// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
+// v142(RSK-14)：等级上限提升至 Lv.12 —— L8=900 / L9=1300 / L10=1800 / L11=2500 / L12=3500（与数据库 level_from_xp 同口径）
+const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2500, 3500];
 
 /* ---------- v105：头像框（CSS 光环）与成就 ---------- */
 // 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
@@ -155,7 +156,7 @@ const FRAMES = [
   { key: 'bronze',  name: '铜环',   icon: '🥉', need: '累计记录 10 天' },
   { key: 'silver',  name: '银环',   icon: '🥈', need: '累计记录 30 天' },
   { key: 'gold',    name: '金环',   icon: '🥇', need: '升到 Lv.5' },
-  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.7 满级' },
+  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.12 满级' },
   { key: 'star',    name: '星光环', icon: '⭐', need: '累计 20 次积极表现' },
   { key: 'heart',   name: '爱心环', icon: '💗', need: '获得 5 次完美 A+' },
   { key: 'crown',   name: '皇冠环', icon: '👑', need: '班级经验前三' },
@@ -371,3 +372,4 @@ const state = {
   textValues: {},
   doneItems: {}   // 当天已提交过的二级项：{ [tagId]: Set(已选value) }
 };
+//（注：内容由AI生成）
