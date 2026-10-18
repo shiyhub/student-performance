@@ -1,3 +1,4 @@
+
 async function loadTags() {
   let data = null, error = null;
   if (!window.Offline || !window.Offline.online) {
@@ -90,7 +91,7 @@ function applyLocalSubmitFeedback(cls, name, items) {
     }
   });
   renderTagGrid();
-  const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs };
+  const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
   try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap)); } catch (e) {}
   window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
 }

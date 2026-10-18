@@ -329,11 +329,24 @@ function init() {
   // 恢复登录会话（离线时用本机已登录会话）
   let localSession = null;
   try { localSession = JSON.parse(localStorage.getItem('sp_teacher_session') || 'null'); } catch (e) {}
+  // v152：乐观会话恢复——有本地登录记录就先进入主界面，
+  // 避免 Supabase Auth 请求偶发超时（学校网络不稳定）时卡在登录页。
+  // 后台静默验证会话有效性；验证失败再自然处理。
+  let appEntered = false;
+  if (localSession && localSession.email) {
+    enterApp({ email: localSession.email });
+    appEntered = true;
+  }
   supabase.auth.getSession().then(({ data }) => {
-    if (data.session) { saveLocalSession(data.session.user); enterApp(data.session.user); }
-    else if (localSession && !navigator.onLine) enterApp({ email: localSession.email });
+    if (data.session) {
+      saveLocalSession(data.session.user);
+      if (!appEntered) enterApp(data.session.user);
+    } else if (!localSession && appEntered) {
+      leaveApp();
+    }
+    // 有本地会话但远程session过期：不强制踢出，用户可继续用缓存数据
   }).catch(() => {
-    if (localSession && !navigator.onLine) enterApp({ email: localSession.email });
+    // getSession请求失败（网络波动）：保留在主界面，不踢出，数据走离线缓存
   });
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) enterApp(session.user);
@@ -352,7 +365,26 @@ async function onLogin(e) {
   els.loginError.hidden = true;
   els.btnLogin.disabled = true;
   els.btnLogin.textContent = '登录中…';
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  // v152：登录请求加15秒超时，网络错误自动重试1次（学校网络偶发波动）
+  const doLogin = () => {
+    const loginPromise = supabase.auth.signInWithPassword({ email, password });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('请求超时，请检查网络')), 15000)
+    );
+    return Promise.race([loginPromise, timeoutPromise])
+      .catch(err => ({ data: null, error: { message: err.message || '网络错误' } }));
+  };
+
+  let result = await doLogin();
+  // 网络错误自动重试1次
+  if (result.error && isNetErr(result.error)) {
+    els.btnLogin.textContent = '网络慢，重试中…';
+    await new Promise(r => setTimeout(r, 1500));
+    result = await doLogin();
+  }
+
+  const { data, error } = result;
   if (error) {
     els.loginError.textContent = '登录失败：' + friendlyAuthError(error.message);
     els.loginError.hidden = false;
@@ -487,15 +519,27 @@ async function loadClassesAndRecords() {
 }
 
 async function loadRecords() {
-  els.recordBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载记录…</div>';
-
   const cls = els.filterClass.value;
   const date = els.filterDate.value;
   const kw = els.filterKeyword.value.trim();
 
+  // v145(RSK-15)：教师端 SWR——缓存秒开 + 60s 新鲜期复用 + 后台静默刷新
+  // （数据库在海外，弱网 RTT 高；教师频繁切换筛选，不再每次直连白等）
+  const cacheKey = 't_recs_' + (cls || '?') + '_' + (date || '?') + '_' + (kw || '?');
+  let cached = null;
+  try { cached = await window.Offline.get(cacheKey); } catch (e) {}
+  const invTs = Number(localStorage.getItem('t_recs_inv') || 0);
+  const cacheValid = cached && cached.data && (!invTs || invTs <= (cached.ts || 0));
+  if (cacheValid) {
+    renderRecordList(cached.data, cached.notes);
+    if (Date.now() - (cached.ts || 0) < 60 * 1000) return;   // 60s 内直接复用，不发网络
+  } else {
+    els.recordBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载记录…</div>';
+  }
+
   let q = supabase
     .from('daily_record')
-    .select('*')
+    .select('id, class, student_name, record_date, self_evaluation, behavior, teacher_comment, create_at')
     .order('record_date', { ascending: false })
     .order('create_at', { ascending: false })
     .limit(500);
@@ -506,7 +550,7 @@ async function loadRecords() {
   // 在家表现（家长提交，仅老师可见）；v50：带上回复线程（教师评论/家长多轮交流）
   let hq = supabase
     .from('home_note')
-    .select('*, student_info:student_id(class, student_name), replies:home_note_reply(id, sender, content, create_at)')
+    .select('id, parent_name, content, record_date, create_at, student_info:student_id(class, student_name), replies:home_note_reply(id, sender, content, create_at)')
     .order('record_date', { ascending: false })
     .order('create_at', { ascending: false })
     .limit(500);
@@ -559,7 +603,13 @@ async function loadRecords() {
       return true;
     });
   }
+  // v145：网络成功 → 写缓存（ts 供 TTL 与"操作后失效"判断；仅缓存当次筛选组合）
+  try { await window.Offline.set(cacheKey, { data, notes, ts: Date.now() }); } catch (e) {}
+  renderRecordList(data, notes);
+}
 
+// v145：教师端记录列表渲染（缓存秒开与网络结果共用同一渲染路径）
+function renderRecordList(data, notes) {
   let html = '';
   if (notes.length) html += renderHomeNotes(notes);
   if (data.length) {
@@ -606,6 +656,7 @@ async function loadRecords() {
       btn.disabled = false;
       if (!wr.ok) { toast('回复失败，请重试'); return; }
       toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复家长 ✅');
+      invalidateRecCache();
       loadRecords();
     });
   });
@@ -618,6 +669,11 @@ async function loadRecords() {
       }
     });
   });
+}
+
+// v145：教师端数据变更后使记录缓存失效（下次进入自动刷新，避免 60s 内看到旧数据）
+function invalidateRecCache() {
+  try { localStorage.setItem('t_recs_inv', String(Date.now())); } catch (e) {}
 }
 
 function renderHomeNotes(notes) {
@@ -661,6 +717,7 @@ async function deleteRecord(id) {
   if (error) { toast('删除失败：' + error.message); return; }
   toast('已删除');
   loadRecords();
+  invalidateRecCache();
 }
 
 // 批量删除所选记录
@@ -677,6 +734,7 @@ document.getElementById('btnBatchDelRec')?.addEventListener('click', async () =>
   if (error) { toast('批量删除失败：' + error.message); return; }
   toast('已删除 ' + ids.length + ' 条');
   loadRecords();
+  invalidateRecCache();
 });
 
 async function deleteHomeNote(id) {
@@ -685,6 +743,7 @@ async function deleteHomeNote(id) {
   if (error) { toast('删除失败：' + error.message); return; }
   toast('已删除');
   loadRecords();
+  invalidateRecCache();
 }
 
 /* ---------------- 新增 / 修改记录弹窗 ---------------- */
@@ -1030,6 +1089,7 @@ async function saveRecordModal() {
       const { error } = await supabase.from('daily_record').update(payload).eq('id', recState.id);
       if (error) throw error;
       toast('修改已保存');
+      invalidateRecCache();
     }
     closeRecordModal();
     loadRecords();   // 方案A：班级列表未变，不再全量重查
@@ -1149,6 +1209,7 @@ async function saveComment(id) {
   }
   toast('评语已保存');
   loadRecords();
+  invalidateRecCache();
 }
 
 /* ---------------- 学生名单管理 ---------------- */
@@ -1257,6 +1318,7 @@ async function loadStudents() {
       if (error) { toast('调整失败：' + error.message); return; }
       if (data && data.ok === false) { toast('没找到这个学生'); return; }
       toast(`已设为 ${data.xp} 经验（Lv${data.level}）`);
+      invalidateRecCache();
       loadStudents();
     });
   });

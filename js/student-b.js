@@ -195,7 +195,7 @@ async function loadWall() {
   if (!cls) { els.wallEmpty.hidden = false; return; }
   const sem = els.wallSemester ? els.wallSemester.value : '';
 
-  // v127：① 先渲染本地缓存 → 首屏秒开（网络数据随后静默刷新）
+  // v127+v145(RSK-15)：① 先渲染本地缓存 → 首屏秒开（网络数据随后静默刷新）
   let cache = null;
   try { cache = await window.Offline.get('wall_' + cls); } catch (e) {}
   if (!cache) { try { cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null'); } catch (e2) { cache = null; } }
@@ -213,10 +213,54 @@ async function loadWall() {
     els.wallLoading.innerHTML = '<span class="spinner"></span>正在加载同学们…';
   }
 
-  // ② 后台静默拉取最新数据；失败则保持缓存显示
+  // v145(RSK-15)：60 秒内缓存视为新鲜直接复用——班级墙数据变化不频繁，
+  // 避免每次进出墙都跨洋请求（数据库在海外，弱网下 RTT 高）。超时才后台刷新。
+  const CACHE_TTL = 60 * 1000;
+  if (hasCache && cache.cachedAt && (Date.now() - cache.cachedAt) < CACHE_TTL) {
+    els.wallLoading.hidden = true;
+    return;
+  }
+
+  // ② v145(RSK-15)：优先走聚合 RPC get_wall_data（名单+近30天记录+今日任务+座位+提交，1 次往返）
+  //    需先在 Supabase 执行 58-get-wall-data.sql；RPC 不可用（未执行/离线）时自动回退原多请求
+  let wallData = null;
+  try {
+    if ((!window.Offline || window.Offline.online)) {
+      const r = await supabase.rpc('get_wall_data', (sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls });
+      if (r && !r.error && r.data && r.data.ok !== false) wallData = r.data;
+    }
+  } catch (e) { wallData = null; }
+
+  if (wallData) {
+    state.roster = wallData.roster || [];
+    state.records = wallData.records || [];
+    const seatArr = wallData.seat || [];
+    if (Array.isArray(seatArr) && seatArr.length) {
+      const m = {};
+      seatArr.forEach(s => { m[s.student_name] = (Number(s.seat_row) * 6 + Number(s.seat_col)); });
+      state.seatMap = m;
+    }
+    state.todayTaskDefs = wallData.tasks || [];
+    state.todayTaskSubs = wallData.subs || [];
+    try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+    await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now() });
+    if (!state.roster.length) {
+      els.wallEmpty.hidden = false;
+      return;
+    }
+    els.wallLoading.hidden = true;
+    renderWall();   // 静默重绘为最新数据
+    return;
+  }
+
+  // ③ 回退：原多请求并行（v145：records 加近 30 天时间窗，墙只需近期状态；累计天数由 get_student_profile 计算）
+  const since = new Date(); since.setDate(since.getDate() - 30);
+  const p2 = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p2(since.getMonth()+1)}-${p2(since.getDate())}`;
   const recQ = supabase.from('daily_record')
       .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
-      .eq('class', cls);
+      .eq('class', cls)
+      .gte('record_date', sinceStr);
   if (sem && sem !== '全部') recQ.eq('semester', sem);
   let rosterRes = {}, recordRes = {}, taskDefRes = {};
   try {
@@ -228,7 +272,7 @@ async function loadWall() {
       recQ
         .order('record_date', { ascending: false })
         .order('create_at', { ascending: false })
-        .limit(1000),
+        .limit(500),
       supabase.from('daily_task')
         .select('id,title,task_type')
         .eq('class', cls).eq('task_date', todayStr())
@@ -270,8 +314,8 @@ async function loadWall() {
     todayTaskSubs = (subRes && subRes.data) || [];
   }
   state.todayTaskSubs = todayTaskSubs;
-  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs })); } catch(e) {}
-  await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: todayTaskSubs });
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+  await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: todayTaskSubs, cachedAt: Date.now() });
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
@@ -644,4 +688,3 @@ function renderIdentityLevel() {
   }
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
-//（注：内容由AI生成）

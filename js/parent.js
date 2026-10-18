@@ -337,6 +337,17 @@ async function onQuery() {
       els.mismatchBanner.hidden = false;
       return;
     }
+    // v145(RSK-15)：身份校验通过 → 先渲染本机缓存（秒开），4 个 RPC 随后后台静默刷新覆盖
+    // （数据库在海外，弱网 RTT 高；家长查询语义要求最新数据，故先展示缓存、联网后自动更新）
+    let fastCache = null;
+    try { fastCache = await readParentCache('parent_' + cls + '_' + student + '_' + birth); } catch (e) { fastCache = null; }
+    if (fastCache) {
+      state.ctx = { cls, student, birth };
+      renderResults(student, fastCache.records || []);
+      renderPapers(fastCache.papers || []);
+      renderTasks(fastCache.tasks || []);
+      renderHomeThread(fastCache.homeNotes || []);
+    }
     // 记录为关键数据必须成功；试卷/任务/留言失败降级为空，不阻断查询（弱网下尽量先出记录）
     const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
       rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 12000, '记录'),

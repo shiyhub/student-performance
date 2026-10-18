@@ -372,4 +372,3 @@ const state = {
   textValues: {},
   doneItems: {}   // 当天已提交过的二级项：{ [tagId]: Set(已选value) }
 };
-//（注：内容由AI生成）

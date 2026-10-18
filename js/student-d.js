@@ -1,3 +1,4 @@
+
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
    配置见文件顶部 FRAME_PARTICLES/FP_SHAPE_CLS/FP_ANIM_CLS */
 
@@ -500,6 +501,12 @@ async function onSubmit() {
     });
     renderTagGrid();
     renderWall();  // 本地重绘头像墙（经验/条数/评语即时更新）
+    // v145(RSK-15)：提交成功即同步本地墙缓存（带 cachedAt，刷新不丢本次记录）
+    try {
+      const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
+      localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap));
+      window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+    } catch (eCache) {}
     loadProfile();// 成就/头像框（单请求，轻量）
     // 后台静默全量同步一次（多设备/教师评语一致性，不阻塞界面）
     if (window.Offline && window.Offline.online) {
