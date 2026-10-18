@@ -28,14 +28,15 @@ begin
     from public.student_directory i
    where btrim(i.class) = btrim(p_class);
 
-  -- 2) 近 30 天在校表现（窗口外历史不影响墙展示与"今日条数/平均星级"）
+  -- 2) 近 30 天在校表现（v146(RSK-16)：瘦身——墙只需 星级/日期/表情/时间；
+  --    behavior 明细 items 与 teacher_comment 体积大，改为点开详情时按需单查，墙首屏 payload 降 90%+）
   select coalesce(jsonb_agg(x), '[]'::jsonb)
     into v_records
     from (
       select jsonb_build_object(
                'id', r.id, 'student_name', r.student_name, 'class', r.class,
                'record_date', r.record_date, 'self_evaluation', r.self_evaluation,
-               'behavior', r.behavior, 'teacher_comment', r.teacher_comment, 'create_at', r.create_at)
+               'mood', coalesce(r.behavior->>'mood', ''), 'create_at', r.create_at)
         from public.daily_record r
        where btrim(r.class) = btrim(p_class)
          and r.record_date >= v_since
