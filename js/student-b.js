@@ -387,7 +387,7 @@ function renderWall() {
       : null;
     const todayRecs = mine.filter(r => r.record_date === today);
     const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
-    const todayMood = todayRec && todayRec.behavior ? MOOD_MAP[todayRec.behavior.mood] : null;
+    const todayMood = todayRec ? MOOD_MAP[todayRec.mood || (todayRec.behavior && todayRec.behavior.mood)] : null;
     // 今日任务完成情况
     const totalTasks = (state.todayTaskDefs || []).length;
     const subMap = {};
@@ -398,7 +398,7 @@ function renderWall() {
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
 
-    const av = avatarForName(s.student_name, s.avatar);
+    const av = avatarForName(s.student_name, s.avatar, true);   // v146：墙上用 256 小图（加载快，详情/预览仍用原图）
     const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
     const frameCls = s.frame ? ` framed frame-${s.frame}` : '';
     const lvBadge = (Number(s.level) || 1) > 1
@@ -464,11 +464,26 @@ function openStudentDetail(name) {
   els.detailSub.textContent = rows.length
     ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
     : '还没有提交过表现记录';
-  els.detailBody.innerHTML = renderRecordTimeline(rows);
+  // v146(RSK-16)：墙 records 已瘦身（不含 items/teacher_comment），明细点开详情时按需拉取
+  els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载详细记录…</div>';
   state.detailName = name;
   els.detailFoot.hidden = false;
   els.detailModal.classList.add('show');
   Nav.push('detail');   // RSK-10：打开详情弹窗
+  fetchDetailRecords(name).then(full => {
+    if (state.detailName !== name) return;   // 已切换到其他详情/关闭
+    const rows2 = (full || []).filter(r => r.student_name === name)
+      .sort((a, b) => (a.record_date < b.record_date ? 1 : a.record_date > b.record_date ? -1 :
+                        (a.create_at < b.create_at ? 1 : -1)));
+    const rated2 = rows2.filter(r => Number(r.self_evaluation) > 0);
+    const avg2 = rated2.length
+      ? (rated2.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated2.length).toFixed(1)
+      : null;
+    els.detailSub.textContent = rows2.length
+      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ⭐' + avg2 : ''}`
+      : '还没有提交过表现记录';
+    els.detailBody.innerHTML = renderRecordTimeline(rows2);
+  });
 }
 
 function openClassDetail(avg, todayCount) {
@@ -476,11 +491,43 @@ function openClassDetail(avg, todayCount) {
   els.detailAvatar.style.background = 'linear-gradient(135deg,#ffe6c9,#d8f0e2)';
   els.detailName.textContent = state.currentClass + ' · 全班';
   els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条`;
-  els.detailBody.innerHTML = renderRecordTimeline(state.records);
+  // v146(RSK-16)：全班明细同样按需拉取（墙瘦身记录不含明细）
+  els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载全班详细记录…</div>';
   state.detailName = '';
   els.detailFoot.hidden = true;
   els.detailModal.classList.add('show');
   Nav.push('detail');   // RSK-10：打开班级详情弹窗
+  fetchDetailRecords(null).then(full => {
+    if (els.detailName.textContent !== state.currentClass + ' · 全班') return;
+    const rows2 = full || [];
+    const today2 = state.serverToday || todayStr();
+    const todayCount2 = rows2.filter(r => r.record_date === today2).length;
+    els.detailSub.textContent = `共 ${rows2.length} 条记录 · 今日 ${todayCount2} 条`;
+    els.detailBody.innerHTML = renderRecordTimeline(rows2);
+  });
+}
+
+// v146(RSK-16)：详情弹窗按需拉取完整记录（含 behavior 明细 items / 教师评语）
+// 优先网络单查（30 天窗口，单人或全班）；失败回退本地墙精简记录（明细缺失但界面正常）
+async function fetchDetailRecords(name) {
+  const cls = state.currentClass;
+  if (!cls) return name ? [] : state.records;
+  const since = new Date(); since.setDate(since.getDate() - 30);
+  const p2 = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p2(since.getMonth()+1)}-${p2(since.getDate())}`;
+  try {
+    let q = supabase.from('daily_record')
+      .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
+      .eq('class', cls)
+      .gte('record_date', sinceStr)
+      .order('record_date', { ascending: false })
+      .order('create_at', { ascending: false })
+      .limit(500);
+    if (name) q = q.eq('student_name', name);
+    const r = await q;
+    if (r && !r.error && Array.isArray(r.data)) return r.data;
+  } catch (e) {}
+  return name ? state.records.filter(x => x.student_name === name) : state.records;
 }
 
 function renderClassRanking() {
@@ -532,7 +579,7 @@ function renderRecordTimeline(rows) {
       const stars = starCount
         ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
         : '<span class="text-muted" style="letter-spacing:0;">本次未打星</span>';
-      const mood = MOOD_MAP[r.behavior && r.behavior.mood];
+      const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
       let itemsHtml = '';
       const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
@@ -584,13 +631,13 @@ function renderStars() {
 }
 
 /* ---------- 头像（emoji 或校园图片；按姓名稳定取卡通动物 + 底色兜底） ---------- */
-function avatarForName(name, saved) {
+function avatarForName(name, saved, sm) {
   const h = hashCode(String(name || ''));
   const mod = n => ((h % n) + n) % n;
   let key = saved && String(saved).trim() ? String(saved).trim() : '';
   key = migrateLegacyAvatar(key);   // v140：旧 Q 版头像 key 自动迁移到新写实款
   if (isImgKey(key)) {
-    return { kind: 'img', key, src: AVATAR_BASE + avatarFile(key), bg: '#ffffff' };
+    return { kind: 'img', key, src: AVATAR_BASE + avatarFile(key, sm), bg: '#ffffff' };
   }
   // 未保存过头像：按姓名稳定分配一个小动物
   const animal = AVATARS[mod(AVATARS.length)];

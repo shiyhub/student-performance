@@ -117,7 +117,16 @@ const SVG_AVATAR_KEYS = new Set([
   'sweet11','sweet12','sweet13','sweet14','sweet15','sweet16','sweet17','sweet18',
   'game9','game10','game11','game12','game13','game14','game15'
 ]);
-function avatarFile(key) {
+/* v146(RSK-16)：墙用小图白名单——仅对 >25KB 的大头像生成过 256px 的 `-s.webp`；
+   墙上卡片用 256 小图（加载快），详情/预览仍用原图（保质量）。其余小头像无小图、直接原图。 */
+const AVATAR_SM_KEYS = new Set([
+  'fantasy1','fantasy3','fantasy5','fantasy6','fantasy7',
+  'game1','game2','game3','game4','game5','game6','game7','game8',
+  'mecha1','mecha2','mecha4','nature1','nature2','nature3',
+  'sweet1','sweet2','sweet5','sweet6','sweet7','sweet8','sweet9','sweet10'
+]);
+function avatarFile(key, sm) {
+  if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
   return key + (SVG_AVATAR_KEYS.has(key) ? '.svg' : '.webp');
 }
 const CAMPUS_GROUPS = [
