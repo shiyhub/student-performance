@@ -415,3 +415,10 @@ body { background: #f3f6f5; }
 .auto-rule-row .badge-off { background: #f3f5f4; color: #8a9a93; }
 .auto-rule-row .rule-actions { margin-left: auto; display: flex; gap: 6px; }
 .auto-rule-row.rule-inactive { opacity: .6; }
+
+/* 标签填写情况（每日打卡查询） */
+.tag-dim { font-size:10px; margin-left:4px; font-weight:700; }
+.tag-val { font-size:10px; margin-left:2px; color:#888; }
+.tag-mood { margin-left:6px; font-size:13px; }
+.tag-dim-chip { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px;
+  border:1.5px solid; font-size:12px; font-weight:700; margin-right:6px; background:#fff; }
