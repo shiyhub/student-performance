@@ -114,6 +114,17 @@ const els = {
   addTagOptions: $('#addTagOptions'),
   addTagXp: $('#addTagXp'),
   tagBox: $('#tagBox'),
+  // 自动化任务（五维经验自动加分）
+  autoRuleForm: $('#autoRuleForm'),
+  autoRuleName: $('#autoRuleName'),
+  autoRuleType: $('#autoRuleType'),
+  autoRuleTag: $('#autoRuleTag'),
+  autoRuleDim: $('#autoRuleDim'),
+  autoRuleXp: $('#autoRuleXp'),
+  autoRuleStart: $('#autoRuleStart'),
+  autoRuleEnd: $('#autoRuleEnd'),
+  autoRuleWeek: $('#autoRuleWeek'),
+  autoBox: $('#autoBox'),
   // 测试工具
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
@@ -443,7 +454,7 @@ function switchTab(name) {
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   // 逐页切换，元素缺失时不报错（防止缓存旧 HTML 与新 JS 不同步）
   const panes = {
-    records: 'tabRecords', students: 'tabStudents', tags: 'tabTags',
+    records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
@@ -467,6 +478,7 @@ function switchTab(name) {
   if (name === 'records') loadClassesAndRecords();
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
+  if (name === 'auto') loadAutoTab();
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
   if (name === 'tools') fillPreviewClasses();
   if (name === 'task') activateTaskTab();
@@ -482,6 +494,7 @@ const PANE_DYNAMIC = {
   records: ['recordBox'],
   students: ['studentBox', 'batchResult'],
   tags: ['tagBox'],
+  auto: ['autoBox'],
   exam: [],
   task: ['taskReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
@@ -605,6 +618,14 @@ async function loadRecords() {
   }
   // v145：网络成功 → 写缓存（ts 供 TTL 与"操作后失效"判断；仅缓存当次筛选组合）
   try { await window.Offline.set(cacheKey, { data, notes, ts: Date.now() }); } catch (e) {}
+  // v148：五维自动化规则按日结算（幂等，当天首次进入即触发一次，后台静默，失败不影响页面）
+  try {
+    const settleKey = 'auto_bonus_settled_' + new Date().toISOString().slice(0, 10);
+    if (!localStorage.getItem(settleKey)) {
+      localStorage.setItem(settleKey, '1');
+      supabase.rpc('run_auto_bonus', {}).then(() => {}).catch(() => {});
+    }
+  } catch (e2) {}
   renderRecordList(data, notes);
 }
 
@@ -1839,8 +1860,13 @@ async function renderTags() {
   data.forEach(t => {
     if (!Array.isArray(t.options)) t.options = [];
     if (t.category !== 'negative') t.category = 'positive';
+    if (!['de','zhi','ti','mei','lao'].includes(t.dim)) t.dim = 'zhi';
   });
   cache.tags = data;
+
+  const DIM_OPT = (sel, val) => [
+    ['de','❤️ 德'],['zhi','🧠 智'],['ti','💪 体'],['mei','🎨 美'],['lao','🧹 劳']
+  ].map(([v, l]) => `<option value="${v}"${v === val ? ' selected' : ''}>${l}</option>`).join('');
 
   els.tagBox.innerHTML = data.map(t => `
     <div class="tag-edit-row${t.category === 'negative' ? ' row-neg' : ''}" data-tag-id="${t.id}">
@@ -1851,6 +1877,7 @@ async function renderTags() {
         <option value="positive"${t.category === 'positive' ? ' selected' : ''}>🌟 积极</option>
         <option value="negative"${t.category === 'negative' ? ' selected' : ''}>💧 消极</option>
       </select>
+      <select class="tag-dim" title="加分维度（经验值加进该维度）">${DIM_OPT('', t.dim)}</select>
       <span class="tag-type-badge" title="仅支持勾选型">勾选型</span>
       <label class="tag-off-toggle" title="可重复提交：每天/多次都能选；不勾选=不可重复，同一具体项一生只能记一次">
         <input type="checkbox" class="tag-repeat" ${t.history_unique === false ? 'checked' : ''}> 可重复提交
@@ -1879,6 +1906,7 @@ async function renderTags() {
       const score = category === 'negative' ? -1 : 1;
       // 经验值老师可自定义：积极/消极都不强制（0~100）
       const xpVal = Math.max(0, Math.min(100, parseInt($('.tag-xp', row).value, 10) || 0));
+      const dim = $('.tag-dim', row).value || 'zhi';
       const btn = $('.tag-save', row);
       btn.disabled = true;
       btn.textContent = '…';
@@ -1889,6 +1917,7 @@ async function renderTags() {
         category,
         score,
         xp_value: xpVal,
+        dim,
         is_active: $('.tag-active', row).checked,
         history_unique: !$('.tag-repeat', row).checked,
         sort_order: parseInt($('.tag-sort', row).value, 10) || 0
@@ -1936,6 +1965,7 @@ async function onAddTag(e) {
   const options = parseTagOptions(els.addTagOptions.value);
   const category = els.addTagCategory.value === 'negative' ? 'negative' : 'positive';
   const score = category === 'negative' ? -1 : 1;
+  const dim = (els.addTagDim && els.addTagDim.value) || 'zhi';
   const xpVal = Math.max(0, Math.min(100, parseInt(els.addTagXp.value, 10) || 0));
   const repeatable = !els.addTagRepeat || els.addTagRepeat.value !== 'unique';
   const { data, error } = await supabase
@@ -1947,6 +1977,7 @@ async function onAddTag(e) {
       category,
       score,
       xp_value: xpVal,
+      dim,
       history_unique: !repeatable,
       sort_order: Math.floor(Date.now() / 1000) % 1000
     })
@@ -1957,10 +1988,126 @@ async function onAddTag(e) {
   els.addTagLabel.value = '';
   els.addTagOptions.value = '';
   els.addTagCategory.value = 'positive';
+  if (els.addTagDim) els.addTagDim.value = 'zhi';
   els.addTagRepeat.value = 'repeat';
   els.addTagXp.value = '2';
   els.addTagLabel.focus();
   if (loaded.tags) renderTags();
+}
+
+/* ---------------- 自动化任务（五维经验自动加分） ---------------- */
+
+const DIM_LABEL = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
+const DIM_ICON = { de: '❤️', zhi: '🧠', ti: '💪', mei: '🎨', lao: '🧹' };
+const WEEK_LABEL = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+async function loadAutoTab() {
+  // 目标标签下拉：用激活标签（含停用标签会导致规则不生效困惑，故只列启用项）
+  try {
+    const { data, error } = await supabase
+      .from('behavior_tags')
+      .select('id,label,category,dim')
+      .eq('is_active', true)
+      .order('sort_order').order('created_at');
+    if (!error && data) {
+      els.autoRuleTag.innerHTML = data.length
+        ? data.map(t => `<option value="${t.id}">${esc(t.label)}（${DIM_LABEL[t.dim] || '智'}）</option>`).join('')
+        : '<option value="">（请先在标签页创建标签）</option>';
+    }
+  } catch (e) { /* 下拉加载失败不阻塞规则列表 */ }
+  await loadAutoRules();
+}
+
+async function loadAutoRules() {
+  els.autoBox.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载规则…</div>';
+  let rows;
+  try {
+    const { data, error } = await supabase
+      .from('auto_rules')
+      .select('*, behavior_tags(label)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    rows = data || [];
+  } catch (e) {
+    els.autoBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 61 号 SQL（auto_rules 表）')}</div>`;
+    return;
+  }
+  if (!rows.length) {
+    els.autoBox.innerHTML = '<div class="empty">还没有自动化任务，在上方创建第一条吧。</div>';
+    return;
+  }
+  const fmtRange = r => (r.start_date || r.end_date)
+    ? `${r.start_date || '…'} ~ ${r.end_date || '…'}`
+    : '长期';
+  const fmtWeek = w => {
+    const arr = Array.isArray(w) && w.length ? w : [1, 2, 3, 4, 5];
+    return arr.map(x => WEEK_LABEL[x] || '').filter(Boolean).join('、');
+  };
+  els.autoBox.innerHTML = rows.map(r => `
+    <div class="auto-rule-row${r.is_active ? '' : ' rule-inactive'}" data-rule-id="${r.id}">
+      <span class="rule-name">${esc(r.name)}</span>
+      <span class="rule-badge badge-dim">${DIM_ICON[r.dim] || ''} ${DIM_LABEL[r.dim] || '智'} +${r.xp_value}</span>
+      <span class="rule-badge badge-tag">${r.trigger_type === 'no_tag' ? '当天没有' : '当天有'}「${esc((r.behavior_tags && r.behavior_tags.label) || '(标签已删除)')}」</span>
+      <span class="rule-meta">⏰ ${fmtRange(r)} · ${fmtWeek(r.weekdays)}</span>
+      <span class="rule-meta">${r.is_active ? '🟢 生效中' : '⚪ 已停用'}</span>
+      <div class="rule-actions">
+        <button class="btn btn-ghost btn-sm rule-toggle">${r.is_active ? '停用' : '启用'}</button>
+        <button class="btn btn-danger-ghost btn-sm rule-delete">删除</button>
+      </div>
+    </div>`).join('');
+
+  $$('.auto-rule-row', els.autoBox).forEach(row => {
+    const id = row.dataset.ruleId;
+    $('.rule-toggle', row).addEventListener('click', async () => {
+      const cur = row.classList.contains('rule-inactive');
+      const { error } = await supabase.from('auto_rules').update({ is_active: cur }).eq('id', id);
+      if (error) { toast('操作失败：' + error.message); return; }
+      loadAutoRules();
+    });
+    $('.rule-delete', row).addEventListener('click', async () => {
+      if (!confirm('确定删除该自动化任务吗？\n已产生的历史自动加分记录会一并删除。')) return;
+      const { error } = await supabase.from('auto_rules').delete().eq('id', id);
+      if (error) { toast('删除失败：' + error.message); return; }
+      toast('已删除');
+      loadAutoRules();
+    });
+  });
+}
+
+if (els.autoRuleForm) {
+  els.autoRuleForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = els.autoRuleName.value.trim();
+    if (!name) return toast('请输入规则名称');
+    const tagId = els.autoRuleTag.value;
+    if (!tagId) return toast('请选择目标标签（需先在标签页创建并启用）');
+    const xpVal = Math.max(1, Math.min(100, parseInt(els.autoRuleXp.value, 10) || 1));
+    const week = Array.from(els.autoRuleWeek.querySelectorAll('input:checked')).map(i => parseInt(i.value, 10));
+    if (!week.length) return toast('请至少勾选一个执行星期');
+    const btn = els.autoRuleForm.querySelector('button[type=submit]');
+    if (btn) { btn.disabled = true; btn.textContent = '创建中…'; }
+    const { error } = await supabase.from('auto_rules').insert({
+      name,
+      trigger_type: els.autoRuleType.value,
+      tag_id: tagId,
+      dim: els.autoRuleDim.value,
+      xp_value: xpVal,
+      start_date: els.autoRuleStart.value || null,
+      end_date: els.autoRuleEnd.value || null,
+      weekdays: week,
+      is_active: true
+    });
+    if (btn) { btn.disabled = false; btn.textContent = '创建规则'; }
+    if (error) { toast('创建失败：' + error.message); return; }
+    toast('规则已创建，明天起自动结算');
+    els.autoRuleName.value = '';
+    els.autoRuleXp.value = '1';
+    els.autoRuleStart.value = '';
+    els.autoRuleEnd.value = '';
+    els.autoRuleType.value = 'no_tag';
+    els.autoRuleDim.value = 'de';
+    loadAutoRules();
+  });
 }
 
 /* ---------------- 测试工具 ---------------- */
