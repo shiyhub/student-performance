@@ -381,3 +381,2275 @@ const state = {
   textValues: {},
   doneItems: {}   // 当天已提交过的二级项：{ [tagId]: Set(已选value) }
 };
+
+init();
+
+function init() {
+  els.wallDate.textContent = todayLabel();
+  els.todayLabel.textContent = todayLabel();
+  renderStars();
+  renderMoodPreview();
+  bindEvents();
+  prefillIdentity();
+  updateMood();
+
+  if (!ready) {
+    els.wallConfigBanner.hidden = false;
+    els.configBanner.hidden = false;
+    els.btnSubmit.disabled = true;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
+    els.wallLoading.hidden = true;
+    els.tagsLoading.hidden = true;
+    els.tagsFailed.hidden = false;
+    els.tagsFailed.textContent = '系统尚未配置完成，表现项目暂不可用，请联系老师。';
+    return;
+  }
+  loadTags();
+  loadClasses();
+  Nav.enable();   // RSK-10：初始化完成，之后打开子视图才计入返回栈
+}
+
+/* =====================================================================
+ * 班级头像墙
+ * ===================================================================== */
+
+async function loadClasses() {
+  // v127：① 本地班级缓存秒取 → 立即进墙（网络随后静默刷新，首屏不再等网络）
+  let cached = [];
+  try { cached = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch (e) {}
+  if (!cached.length) { try { const v = await window.Offline.get('classes'); cached = (v && v.data) || []; } catch (e2) {} }
+  if (cached.length) {
+    state.classes = cached;
+    enterWallFlow();
+  }
+
+  // ② 后台网络刷新班级列表（成功则更新下拉；失败且有缓存则保持缓存界面）
+  let data = null, error = null;
+  try {
+    const res = await supabase.from('student_directory').select('class');
+    data = res.data; error = res.error || null;
+  } catch (e) { error = e; }
+  // 视图查询失败（旧设备/权限被改动）→ 尝试直接读 student_info 兜底
+  if (error || !data || !data.length) {
+    try {
+      const r2 = await supabase.from('student_info').select('class');
+      if (!r2.error && r2.data && r2.data.length) { data = r2.data; error = null; }
+      else if (!error) error = r2.error;
+    } catch (e2) { if (!error) error = e2; }
+  }
+  if (error || !data || !data.length) {
+    if (!state.classes.length) {
+      try { state.classes = JSON.parse(localStorage.getItem('sp_classes') || '[]'); } catch(e) { state.classes = []; }
+      if (!state.classes.length) { try { const v = await window.Offline.get('classes'); state.classes = (v && v.data) || []; } catch(e2) {} }
+      if (!state.classes.length) {
+        els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败：'
+          + esc((error && error.message) || '网络异常')
+          + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">🔄 重新加载</button></span>';
+        return;
+      }
+      enterWallFlow();
+      return;
+    }
+    return;   // 有缓存：保持已进入的界面
+  }
+  state.classes = Array.from(new Set((data || []).map(x => x.class))).sort();
+  try { localStorage.setItem('sp_classes', JSON.stringify(state.classes)); } catch(e) {}
+  try { await window.Offline.set('classes', { data: state.classes }); } catch(e) {}
+  if (!state.classes.length) {
+    els.wallLoading.hidden = true;
+    els.wallEmpty.hidden = false;
+    if(els.btnGoWrite) els.btnGoWrite.disabled = true;
+    return;
+  }
+  // 网络成功：更新班级下拉（若缓存先行时尚未进墙，则进墙）
+  els.wallClass.innerHTML = state.classes
+    .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
+    .join('');
+  if (!state._wallEntered) enterWallFlow();
+}
+
+// v127：班级列表就绪后进入班级墙（缓存先行与网络成功两条路径共用）
+function enterWallFlow() {
+  let saved = '', savedMe = '';
+  try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; savedMe = o.studentName || ''; } catch (e) {}
+  const params = new URLSearchParams(location.search);
+  const fromUrl = (params.get('class') || '').trim();
+  state.currentClass = state.classes.includes(fromUrl) ? fromUrl
+                    : state.classes.includes(saved) ? saved
+                    : state.classes[0];
+
+  // 老师预览模式：?readonly=1&student=姓名 —— 自动以该学生身份打开，禁止提交
+  state.readonly = params.get('readonly') === '1';
+  state.previewName = (params.get('student') || '').trim();
+
+  els.wallClass.innerHTML = state.classes
+    .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
+    .join('');
+
+  // 设备信任门：没记住身份且非老师预览 → 先选名字
+  if (!savedMe && !state.readonly) {
+    showDeviceGate();
+    state._wallEntered = true;
+    return;
+  }
+
+  state._wallEntered = true;
+  loadWall().then(() => {
+    if (state.readonly && state.previewName) {
+      showForm(state.previewName);
+      applyReadonlyMode();
+    }
+  });
+  flushPending();
+}
+
+function showDeviceGate() {
+  const gate = document.getElementById('deviceGate');
+  const clsSel = document.getElementById('gateClass');
+  const nameInput = document.getElementById('gateName');
+  const err = document.getElementById('gateError');
+  wallView.hidden = true;
+  gate.hidden = false;
+  clsSel.innerHTML = state.classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  let roster = [];
+  const loadRoster = async () => {
+    const cls = clsSel.value;
+    let data = null;
+    try {
+      const res = await supabase.rpc('get_class_roster', { p_class: cls });
+      data = (res && res.data) || null;
+    } catch (e) { data = null; }
+    if (!data) {
+      // 离线：用班级墙缓存里的名单做校验
+      try {
+        const wall = await window.Offline.get('wall_' + cls);
+        data = ((wall && wall.roster) || []).map(s => ({ student_name: s.student_name }));
+      } catch (e2) { data = null; }
+    }
+    roster = (data||[]).map(s => (s.student_name||'').trim());
+  };
+  clsSel.addEventListener('change', loadRoster);
+  loadRoster();
+  const go = async () => {
+    const cls = clsSel.value;
+    const name = (nameInput.value || '').trim();
+    if (!name) { err.textContent = '请输入姓名'; return; }
+    if (!roster.length) {
+      err.textContent = '离线且暂无名单缓存：暂时无法校验姓名，请确认与老师登记的完全一致。';
+    } else if (!roster.includes(name)) {
+      err.textContent = '名单里没有这个名字，请核对班级和姓名'; return;
+    }
+    localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
+    state.currentClass = cls;
+    gate.hidden = true; wallView.hidden = false;
+    Nav.push('wall');   // RSK-10：进入班级墙 = 打开子视图
+    loadWall();
+    // v111：联网时后台预缓存本班全量（名单/每人任务状态/成就头像），断网体验与在线一致
+    if (window.Precache && window.Offline && window.Offline.online) {
+      setTimeout(() => {
+        window.Precache.runStudent(cls, p => {
+          if (p && p.done === p.total) toast('📥 本班数据已缓存到本机，断网也能完整使用 ✅');
+        });
+      }, 600);
+    }
+  };
+  document.getElementById('gateGo').addEventListener('click', go);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+}
+
+function applyReadonlyMode() {
+  // 隐藏提交按钮，顶部加预览提示
+  const banner = document.createElement('div');
+  banner.className = 'preview-banner';
+  banner.innerHTML = '👁 老师预览模式（只读）——你看到的就是这位学生看到的页面，不能提交记录';
+  const card = document.querySelector('.identity-card') || document.querySelector('main');
+  if (card && !document.querySelector('.preview-banner')) card.prepend(banner);
+  if (els.btnSubmit) {
+    els.btnSubmit.style.display = 'none';
+    const tip = document.createElement('div');
+    tip.className = 'text-muted';
+    tip.style.cssText = 'margin-top:10px;text-align:center;';
+    tip.textContent = '（预览模式下不能提交，仅供老师查看效果）';
+    els.formView.appendChild(tip);
+  }
+}
+
+async function loadWall() {
+  els.wallEmpty.hidden = true;
+  const cls = state.currentClass;
+  if (!cls) { els.wallEmpty.hidden = false; return; }
+  const sem = els.wallSemester ? els.wallSemester.value : '';
+
+  // v127+v145(RSK-15)：① 先渲染本地缓存 → 首屏秒开（网络数据随后静默刷新）
+  let cache = null;
+  try { cache = await window.Offline.get('wall_' + cls); } catch (e) {}
+  if (!cache) { try { cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null'); } catch (e2) { cache = null; } }
+  const hasCache = !!(cache && Array.isArray(cache.roster) && cache.roster.length);
+  if (hasCache) {
+    state.roster = cache.roster || [];
+    state.records = cache.records || [];
+    state.seatMap = cache.seatMap || {};
+    state.todayTaskDefs = cache.tasks || [];
+    state.todayTaskSubs = cache.subs || [];
+    renderWall();   // 本地数据立即渲染
+  } else {
+    els.matesGrid.hidden = true;
+    els.wallLoading.hidden = false;
+    els.wallLoading.innerHTML = '<span class="spinner"></span>正在加载同学们…';
+  }
+
+  // v145(RSK-15)：60 秒内缓存视为新鲜直接复用——班级墙数据变化不频繁，
+  // 避免每次进出墙都跨洋请求（数据库在海外，弱网下 RTT 高）。超时才后台刷新。
+  const CACHE_TTL = 60 * 1000;
+  if (hasCache && cache.cachedAt && (Date.now() - cache.cachedAt) < CACHE_TTL) {
+    els.wallLoading.hidden = true;
+    return;
+  }
+
+  // ② v145(RSK-15)：优先走聚合 RPC get_wall_data（名单+近30天记录+今日任务+座位+提交，1 次往返）
+  //    需先在 Supabase 执行 58-get-wall-data.sql；RPC 不可用（未执行/离线）时自动回退原多请求
+  let wallData = null;
+  try {
+    if ((!window.Offline || window.Offline.online)) {
+      const r = await supabase.rpc('get_wall_data', (sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls });
+      if (r && !r.error && r.data && r.data.ok !== false) wallData = r.data;
+    }
+  } catch (e) { wallData = null; }
+
+  if (wallData) {
+    state.roster = wallData.roster || [];
+    state.records = wallData.records || [];
+    const seatArr = wallData.seat || [];
+    if (Array.isArray(seatArr) && seatArr.length) {
+      const m = {};
+      seatArr.forEach(s => { m[s.student_name] = (Number(s.seat_row) * 6 + Number(s.seat_col)); });
+      state.seatMap = m;
+    }
+    state.todayTaskDefs = wallData.tasks || [];
+    state.todayTaskSubs = wallData.subs || [];
+    try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+    await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now() });
+    if (!state.roster.length) {
+      els.wallEmpty.hidden = false;
+      return;
+    }
+    els.wallLoading.hidden = true;
+    renderWall();   // 静默重绘为最新数据
+    return;
+  }
+
+  // ③ 回退：原多请求并行（v145：records 加近 30 天时间窗，墙只需近期状态；累计天数由 get_student_profile 计算）
+  const since = new Date(); since.setDate(since.getDate() - 30);
+  const p2 = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p2(since.getMonth()+1)}-${p2(since.getDate())}`;
+  const recQ = supabase.from('daily_record')
+      .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
+      .eq('class', cls)
+      .gte('record_date', sinceStr);
+  if (sem && sem !== '全部') recQ.eq('semester', sem);
+  let rosterRes = {}, recordRes = {}, taskDefRes = {};
+  try {
+    [rosterRes, recordRes, taskDefRes] = await Promise.all([
+      supabase.from('student_directory')
+        .select('*')
+        .eq('class', cls)
+        .order('student_name'),
+      recQ
+        .order('record_date', { ascending: false })
+        .order('create_at', { ascending: false })
+        .limit(500),
+      supabase.from('daily_task')
+        .select('id,title,task_type')
+        .eq('class', cls).eq('task_date', todayStr())
+    ]);
+  } catch (e) {
+    // 断网/网络错误：标记失败，走缓存（已在上面渲染过缓存则不打扰）
+    rosterRes.error = { message: 'offline' };
+    recordRes.error = { message: 'offline' };
+  }
+
+  if (rosterRes.error || recordRes.error) {
+    els.wallLoading.hidden = true;
+    if (!hasCache) {
+      els.wallLoading.hidden = false;
+      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">数据加载失败，请稍后刷新重试。</span>';
+    }
+    return;   // 有缓存：静默保持已渲染的缓存界面
+  }
+  state.roster = rosterRes.data || [];
+  state.records = recordRes.data || [];
+  // 座位表：只有在线真正拿到数据才重建；离线/失败保留缓存值（否则座位布局丢失且会被空表覆盖）
+  try {
+    const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
+    if (seatRes && !seatRes.error && seatRes.data && seatRes.data.length) {
+      const m = {};
+      seatRes.data.forEach(s => { m[s.student_name] = (s.seat_row*6 + s.seat_col); });
+      state.seatMap = m;
+    }
+  } catch(e) {}
+  // 今日任务：在线拿到数据才覆盖；离线保留缓存值（离线也显示已发布任务）
+  if (taskDefRes && !taskDefRes.error && taskDefRes.data) {
+    state.todayTaskDefs = taskDefRes.data || [];
+  }
+  // task_submission 没有 task_date/class 列，按当天任务 id 查提交
+  let todayTaskSubs = [];
+  if (state.todayTaskDefs.length) {
+    const ids = state.todayTaskDefs.map(t => t.id);
+    const subRes = await supabase.rpc('get_today_subs', { p_task_ids: ids });
+    todayTaskSubs = (subRes && subRes.data) || [];
+  }
+  state.todayTaskSubs = todayTaskSubs;
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+  await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: todayTaskSubs, cachedAt: Date.now() });
+  if (!state.roster.length) {
+    els.wallEmpty.hidden = false;
+    return;
+  }
+  els.wallLoading.hidden = true;
+  renderWall();   // 静默重绘为最新数据
+}
+
+function renderWall() {
+  const recs = state.records;
+  // v128(RSK-08)：今日判定以服务端日期为准（提交后校正），设备日期错误不导致错日
+  const today = state.serverToday || todayStr();
+
+  // 全班汇总（未打星的记录不计入平均星级）
+  const classRated = recs.filter(r => Number(r.self_evaluation) > 0);
+  const classAvg = classRated.length
+    ? (classRated.reduce((s, r) => s + Number(r.self_evaluation), 0) / classRated.length).toFixed(1)
+    : null;
+  const classToday = recs.filter(r => r.record_date === today).length;
+
+  // 班级整体经验 = 全班学生经验总和；v142(RSK-14)：班级等级上限提升至 Lv.10 —— 400/1000/2000/3000/4500/6500/9000/12000/16000 升级
+  const classXp = state.roster.reduce((s, x) => s + (Number(x.xp) || 0), 0);
+  const CLASS_LEVELS = [0, 400, 1000, 2000, 3000, 4500, 6500, 9000, 12000, 16000];
+  let classLv = 1;
+  CLASS_LEVELS.forEach((th, i) => { if (classXp >= th) classLv = i + 1; });
+  const nextNeed = CLASS_LEVELS[classLv] || null;
+  const classLvText = nextNeed ? `Lv${classLv} · 再${nextNeed - classXp}升Lv${classLv+1}` : `Lv${classLv} · 满级`;
+
+  let html = '';
+
+  // 全班汇总卡放到标题栏左侧
+  const classCard = `<button class="mate mate-class-all" data-detail="__all__" style="width:100%;margin:0;">
+      <span class="mate-avatar">🌈</span>
+      <span class="mate-badge xp-badge">🧡 ${classXp} 经验</span>
+      <span class="mate-name">全班 ${classLvText}</span>
+    </button>`;
+  const slot = document.getElementById('wallClassCard');
+  if (slot) slot.innerHTML = classCard;
+
+  // 按座位编排：空位保留，按 seat_row*6+col 定位
+  // v128(RSK-07)：槽位数动态计算（默认 42 格；学生/座位超 42 时按 6 列向上扩展），超员不错位
+  // 注意：seatMap 为 { 学生名: 槽位索引 }，取槽位索引必须用 Object.values()（key 是姓名，Number(姓名)=NaN）
+  const useSeat = state.seatMap && Object.keys(state.seatMap).length;
+  const slotOf = {};
+  if (useSeat) Object.entries(state.seatMap).forEach(([n,i]) => slotOf[i] = n);
+  const seatSlots = useSeat ? Object.values(state.seatMap).map(Number) : [];
+  const maxSeatSlot = seatSlots.length ? Math.max.apply(null, seatSlots) : -1;
+  const slotCount = Math.max(42, Math.ceil(Math.max(state.roster.length, maxSeatSlot + 1) / 6) * 6);
+  const ordered = [];
+  if (useSeat) {
+    for (let i=0;i<slotCount;i++) {
+      const n = slotOf[i];
+      if (n) ordered.push(state.roster.find(s=>s.student_name===n));
+      else ordered.push(null); // 空位占位
+    }
+    state.roster.forEach(s => {
+      const placed = Object.values(state.seatMap).some(v => v === state.seatMap[s.student_name]);
+      if (!placed) ordered.push(s);
+    });
+  } else {
+    state.roster.forEach(s=>ordered.push(s));
+  }
+  ordered.forEach((s) => {
+    if (!s) { html += `<div class="mate seat-empty"></div>`; return; }
+    const mine = recs.filter(r => r.student_name === s.student_name);
+    const mineRated = mine.filter(r => Number(r.self_evaluation) > 0);
+    const avg = mineRated.length
+      ? (mineRated.reduce((sum, r) => sum + Number(r.self_evaluation), 0) / mineRated.length).toFixed(1)
+      : null;
+    const todayRecs = mine.filter(r => r.record_date === today);
+    const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
+    const todayMood = todayRec ? MOOD_MAP[todayRec.mood || (todayRec.behavior && todayRec.behavior.mood)] : null;
+    // 今日任务完成情况
+    const totalTasks = (state.todayTaskDefs || []).length;
+    const subMap = {};
+    (state.todayTaskSubs || []).forEach(x => { if (x.student_name === s.student_name && x.grade && x.grade !== 'none') subMap[x.task_id] = x.grade; });
+    const doneTasks = Object.keys(subMap).length;
+    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">📋 ${doneTasks}/${totalTasks}</span>` : '';
+    const todayLevel = todayMood
+      ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
+      : 0;
+
+    const av = avatarForName(s.student_name, s.avatar, true);   // v146：墙上用 256 小图（加载快，详情/预览仍用原图）
+    const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
+    const frameCls = s.frame ? ` framed frame-${s.frame}` : '';
+    const lvBadge = (Number(s.level) || 1) > 1
+      ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
+    // v134(RSK-11)：表情移到姓名前、等级移到姓名后，头像框不再被遮挡
+    const moodInline = todayMood
+      ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
+
+    html += `<button class="mate" data-detail="${esc(s.student_name)}">
+        <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
+        <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
+        ${taskBadge}
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}</span>
+      </button>`;
+  });
+
+  els.matesGrid.classList.toggle('seat-mode', !!useSeat);
+  els.matesGrid.innerHTML = html;
+  els.matesGrid.hidden = false;
+
+  // 班级经验进度 + 今日完成进度
+  const doneToday = state.roster.filter(s => recs.some(r => r.student_name === s.student_name && r.record_date === today)).length;
+  const total = state.roster.length || 1;
+  const cp = id => document.getElementById(id);
+  if (cp('cpXp')) {
+    cp('cpXp').textContent = classXp;
+    const prevXp = CLASS_LEVELS[classLv - 1] || 0;
+    const nextXp = CLASS_LEVELS[classLv] || null;
+    cp('cpNext').textContent = nextXp ? `Lv${classLv} → 再${nextXp - classXp} 升 Lv${classLv+1}` : `Lv${classLv} 满级`;
+    const pct = nextXp ? Math.min(100, (classXp - prevXp) / (nextXp - prevXp) * 100) : 100;
+    cp('cpFill').style.width = pct + '%';
+    cp('cpDone').textContent = doneToday;
+    cp('cpTotal').textContent = state.roster.length;
+    const p2 = Math.round(doneToday / total * 100);
+    cp('cpPct').textContent = p2 + '%';
+    cp('cpFillGreen').style.width = p2 + '%';
+  }
+
+  $$('.mate', els.matesGrid).forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfx.tap();
+      const key = btn.dataset.detail;
+      if (key === '__all__') openClassDetail(classAvg, classToday);
+      else openStudentDetail(key);
+    });
+  });
+}
+
+function openStudentDetail(name) {
+  const rows = state.records
+    .filter(r => r.student_name === name)
+    .sort((a, b) => (a.record_date < b.record_date ? 1 : a.record_date > b.record_date ? -1 :
+                      (a.create_at < b.create_at ? 1 : -1)));
+  const rosterRow = state.roster.find(s => s.student_name === name);
+  const av = avatarForName(name, rosterRow && rosterRow.avatar);
+  paintAvatar(els.detailAvatar, av);
+  applyFrameTo(els.detailAvatar, rosterRow && rosterRow.frame);
+  els.detailName.textContent = name;
+  const rated = rows.filter(r => Number(r.self_evaluation) > 0);
+  const avg = rated.length
+    ? (rated.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated.length).toFixed(1)
+    : null;
+  els.detailSub.textContent = rows.length
+    ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
+    : '还没有提交过表现记录';
+  // v146(RSK-16)：墙 records 已瘦身（不含 items/teacher_comment），明细点开详情时按需拉取
+  els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载详细记录…</div>';
+  state.detailName = name;
+  els.detailFoot.hidden = false;
+  els.detailModal.classList.add('show');
+  Nav.push('detail');   // RSK-10：打开详情弹窗
+  fetchDetailRecords(name).then(full => {
+    if (state.detailName !== name) return;   // 已切换到其他详情/关闭
+    const rows2 = (full || []).filter(r => r.student_name === name)
+      .sort((a, b) => (a.record_date < b.record_date ? 1 : a.record_date > b.record_date ? -1 :
+                        (a.create_at < b.create_at ? 1 : -1)));
+    const rated2 = rows2.filter(r => Number(r.self_evaluation) > 0);
+    const avg2 = rated2.length
+      ? (rated2.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated2.length).toFixed(1)
+      : null;
+    els.detailSub.textContent = rows2.length
+      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ⭐' + avg2 : ''}`
+      : '还没有提交过表现记录';
+    els.detailBody.innerHTML = renderRecordTimeline(rows2);
+  });
+}
+
+function openClassDetail(avg, todayCount) {
+  els.detailAvatar.textContent = '🌈';
+  els.detailAvatar.style.background = 'linear-gradient(135deg,#ffe6c9,#d8f0e2)';
+  els.detailName.textContent = state.currentClass + ' · 全班';
+  els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条`;
+  // v146(RSK-16)：全班明细同样按需拉取（墙瘦身记录不含明细）
+  els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载全班详细记录…</div>';
+  state.detailName = '';
+  els.detailFoot.hidden = true;
+  els.detailModal.classList.add('show');
+  Nav.push('detail');   // RSK-10：打开班级详情弹窗
+  fetchDetailRecords(null).then(full => {
+    if (els.detailName.textContent !== state.currentClass + ' · 全班') return;
+    const rows2 = full || [];
+    const today2 = state.serverToday || todayStr();
+    const todayCount2 = rows2.filter(r => r.record_date === today2).length;
+    els.detailSub.textContent = `共 ${rows2.length} 条记录 · 今日 ${todayCount2} 条`;
+    els.detailBody.innerHTML = renderRecordTimeline(rows2);
+  });
+}
+
+// v146(RSK-16)：详情弹窗按需拉取完整记录（含 behavior 明细 items / 教师评语）
+// 优先网络单查（30 天窗口，单人或全班）；失败回退本地墙精简记录（明细缺失但界面正常）
+async function fetchDetailRecords(name) {
+  const cls = state.currentClass;
+  if (!cls) return name ? [] : state.records;
+  const since = new Date(); since.setDate(since.getDate() - 30);
+  const p2 = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p2(since.getMonth()+1)}-${p2(since.getDate())}`;
+  try {
+    let q = supabase.from('daily_record')
+      .select('id, student_name, class, record_date, self_evaluation, behavior, teacher_comment, create_at')
+      .eq('class', cls)
+      .gte('record_date', sinceStr)
+      .order('record_date', { ascending: false })
+      .order('create_at', { ascending: false })
+      .limit(500);
+    if (name) q = q.eq('student_name', name);
+    const r = await q;
+    if (r && !r.error && Array.isArray(r.data)) return r.data;
+  } catch (e) {}
+  return name ? state.records.filter(x => x.student_name === name) : state.records;
+}
+
+function renderClassRanking() {
+  const byName = new Map();
+  state.records.forEach(r => {
+    if (!(Number(r.self_evaluation) > 0)) return;
+    if (!byName.has(r.student_name)) byName.set(r.student_name, { name: r.student_name, sum: 0, n: 0 });
+    const x = byName.get(r.student_name);
+    x.sum += Number(r.self_evaluation);
+    x.n += 1;
+  });
+  const list = Array.from(byName.values())
+    .map(x => ({ name: x.name, avg: x.sum / x.n, n: x.n }))
+    .sort((a, b) => b.avg - a.avg || b.n - a.n)
+    .slice(0, 10);
+  if (!list.length) return '';
+  const medals = ['🥇', '🥈', '🥉'];
+  return `<div class="detail-day-head"><span>⭐ 平均星级榜（前10名）</span></div>
+    <div class="detail-rec">${list.map((x, i) =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13.5px;">
+        <span style="width:26px;text-align:center;">${medals[i] || (i + 1)}</span>
+        <b style="flex:1;">${esc(x.name)}</b>
+        <span style="color:#b5791b;font-weight:700;">⭐${x.avg.toFixed(1)}</span>
+        <span class="text-muted" style="font-size:12px;">${x.n}条</span>
+      </div>`).join('')}</div>`;
+}
+
+function renderRecordTimeline(rows) {
+  if (!rows.length) {
+    return '<div class="empty" style="padding:24px 10px;">还没有表现记录，快去提交今天的第一条吧！</div>';
+  }
+  // 按日期分组（入参已按日期、时间倒序）
+  const groups = [];
+  const map = new Map();
+  rows.forEach(r => {
+    if (!map.has(r.record_date)) {
+      const g = { date: r.record_date, rows: [] };
+      map.set(r.record_date, g);
+      groups.push(g);
+    }
+    map.get(r.record_date).rows.push(r);
+  });
+
+  let html = '';
+  groups.forEach(g => {
+    html += `<div class="detail-day-head"><span>${formatDate(g.date)}</span><span>${g.rows.length} 条</span></div>`;
+    g.rows.forEach(r => {
+      const starCount = Number(r.self_evaluation) || 0;
+      const stars = starCount
+        ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+        : '<span class="text-muted" style="letter-spacing:0;">本次未打星</span>';
+      const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
+
+      let itemsHtml = '';
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      if (items.length) {
+        itemsHtml = '<ul class="detail-items">';
+        items.forEach(it => {
+          const neg = it.category === 'negative';
+          const liCls = neg ? ' class="is-neg"' : '';
+          const tick = neg
+            ? '<span class="neg-tick">!</span>'
+            : '<span class="tick">✓</span>';
+          if (it.type === 'text') {
+            itemsHtml += `<li${liCls}><b>${esc(it.label || '')}：</b>${esc(it.value || '')}</li>`;
+          } else if (it.value) {
+            itemsHtml += `<li${liCls}>${tick}${esc(it.label || '')} <span class="sub-val">· ${esc(it.value)}</span></li>`;
+          } else {
+            itemsHtml += `<li${liCls}>${tick}${esc(it.label || '')}</li>`;
+          }
+        });
+        itemsHtml += '</ul>';
+      }
+
+      const comment = (r.teacher_comment || '').trim();
+      const commentHtml = comment
+        ? `<div class="detail-comment"><b>老师评语：</b>${esc(comment)}</div>`
+        : '';
+
+      html += `<div class="detail-rec">
+          <div class="detail-rec-line">
+            <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
+            <span class="rec-time">${formatTime(r.create_at)}</span>
+          </div>
+          <div class="detail-stars">${stars}</div>
+          ${itemsHtml}
+          ${commentHtml}
+        </div>`;
+    });
+  });
+  return html;
+}
+
+/* =====================================================================
+ * 自评表单（原有逻辑）
+ * ===================================================================== */
+
+function renderStars() {
+  if (!els.starsRow) return; // 打星模块已移除
+  els.starsRow.innerHTML = '';
+}
+
+/* ---------- 头像（emoji 或校园图片；按姓名稳定取卡通动物 + 底色兜底） ---------- */
+function avatarForName(name, saved, sm) {
+  const h = hashCode(String(name || ''));
+  const mod = n => ((h % n) + n) % n;
+  let key = saved && String(saved).trim() ? String(saved).trim() : '';
+  key = migrateLegacyAvatar(key);   // v140：旧 Q 版头像 key 自动迁移到新写实款
+  if (isImgKey(key)) {
+    return { kind: 'img', key, src: AVATAR_BASE + avatarFile(key, sm), bg: '#ffffff' };
+  }
+  // 未保存过头像：按姓名稳定分配一个小动物
+  const animal = AVATARS[mod(AVATARS.length)];
+  return { kind: 'img', key: animal, src: AVATAR_BASE + animal + '.webp', bg: '#ffffff' };
+}
+function avatarInner(av) {
+  return av.kind === 'img'
+    ? `<img class="avatar-img" src="${av.src}" alt="" loading="lazy">`
+    : av.emoji;
+}
+function paintAvatar(el, av) {
+  if (!el) return;
+  el.innerHTML = avatarInner(av);
+  el.style.background = av.bg;
+  attachAvatarFx(el, av.key);
+}
+
+// 当前表单里"这个学生"的头像：优先本次选择，其次名单里已保存的，最后按姓名分配
+function currentAvatar() {
+  const name = (els.inpName && els.inpName.value || '').trim();
+  if (state.myAvatar) return avatarForName(name || '我', state.myAvatar);
+  const row = state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  return avatarForName(name || '我', row && row.avatar);
+}
+
+// 当前学生的等级/经验（名单行）
+function currentRosterRow() {
+  const name = (els.inpName && els.inpName.value || '').trim();
+  return state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass)) || null;
+}
+
+/* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */
+function calcMoodLevel() {
+  let delta = 0;
+  for (const t of state.tags) {
+    const score = Number(t.score) || (t.category === 'negative' ? -1 : 1);
+    if (t.tag_type === 'check') {
+      if (state.checkChosen[t.id]) delta += score;
+    } else if ((state.textValues[t.id] || '').trim()) {
+      delta += score;
+    }
+  }
+  return Math.min(5, Math.max(1, 3 + delta));
+}
+
+function updateMood() {
+  state.moodLevel = calcMoodLevel();
+  renderStars();
+  renderMoodPreview();
+}
+
+function renderMoodPreview() {
+  const level = state.moodLevel || 3;
+  const m = MOOD_BY_LEVEL(level);
+  const av = currentAvatar();
+  els.mpAvatar.innerHTML = `${avatarInner(av)}<span class="mp-badge">${m.emoji}</span>`;
+  els.mpAvatar.style.background = av.bg;
+  attachAvatarFx(els.mpAvatar, av.key);
+  paintAvatar(els.identityAvatarEmoji, av);
+  paintAvatar(els.avatarModalEmoji, av);
+  els.mpLevel.textContent = `${m.emoji} ${m.label}`;
+  renderIdentityLevel();
+  const card = document.getElementById('moodPreviewCard');
+  if (card) {
+    card.classList.remove('lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5');
+    card.classList.add('lvl' + level);
+  }
+  if (els.moodMeter) {
+    els.moodMeter.querySelectorAll('span').forEach(s =>
+      s.classList.toggle('on', Number(s.dataset.l) <= level));
+  }
+}
+
+// 身份卡上的等级徽章 + 经验进度条（外层 frame 槽位为后续头像框预留）
+function renderIdentityLevel() {
+  const row = currentRosterRow();
+  const lv = row ? (Number(row.level) || 1) : 1;
+  const xp = row ? (Number(row.xp) || 0) : 0;
+  const p = xpProgress(xp, lv);
+  if (els.identityLevel) els.identityLevel.textContent = 'Lv.' + lv;
+  if (els.identityXpFill) els.identityXpFill.style.width = p.pct + '%';
+  if (els.identityXpText) {
+    els.identityXpText.textContent = p.maxed
+      ? `经验 ${xp} · 已满级 🏆`
+      : `经验 ${xp} · 再得 ${p.left} 点升到 Lv.${lv + 1}`;
+  }
+  const wrap = document.querySelector('.identity-avatar');
+  if (wrap) {
+    wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
+    if (!row || !row.frame) {
+      if (lv >= 3) wrap.classList.add('frame-l' + Math.min(5, lv));
+    }
+  }
+  applyFrameTo(els.identityAvatarEmoji, row && row.frame);
+}
+
+async function loadTags() {
+  let data = null, error = null;
+  if (!window.Offline || !window.Offline.online) {
+    const v = await window.Offline.get('tags');
+    data = (v && v.data) || null;
+  } else {
+    const res = await supabase
+      .from('behavior_tags')
+      .select('id, label, tag_type, options, category, score, sort_order, history_unique')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    data = res.data; error = res.error;
+    if (!error && data) await window.Offline.set('tags', { data });
+    if (error || !data) { const v = await window.Offline.get('tags'); data = (v && v.data) || null; }
+  }
+
+  els.tagsLoading.hidden = true;
+  if (!data) {
+    try { data = JSON.parse(localStorage.getItem('sp_tags') || 'null'); } catch(e) {}
+    if (!data) { els.tagsFailed.hidden = false; return; }
+  } else {
+    try { localStorage.setItem('sp_tags', JSON.stringify(data)); } catch(e) {}
+  }
+  // 兼容旧数据
+  data.forEach(t => {
+    if (!Array.isArray(t.options)) t.options = [];
+    if (t.category !== 'negative') t.category = 'positive';
+    if (typeof t.score !== 'number') t.score = t.category === 'negative' ? -1 : 1;
+  });
+  state.tags = data;
+  await loadDoneItems();
+  renderTagGrid();
+  updateMood();
+}
+
+// 方案A：只重渲染标签区（数据已在 state，不重查网络）
+function renderTagGrid() {
+  if (!state.tags) return;
+  els.posGrid.innerHTML = '';
+  els.negGrid.innerHTML = '';
+  els.textTagsBox.innerHTML = '';
+  let hasNeg = false;
+  state.tags.forEach(t => {
+    if (t.tag_type === 'check') {
+      const node = buildCheckTag(t);
+      if (t.category === 'negative') { els.negGrid.appendChild(node); hasNeg = true; }
+      else els.posGrid.appendChild(node);
+    } else {
+      els.textTagsBox.appendChild(buildTextTag(t));
+    }
+  });
+  els.negGroup.hidden = !hasNeg;
+  if (!state.tags.length) {
+    els.posGrid.innerHTML = '<span class="text-muted">老师还没有设置表现标签。</span>';
+  }
+  els.tagsBox.hidden = false;
+}
+
+// 方案A：本地合并当天记录（与服务端"按人按天合并"同口径，不新增重复行）
+function mergeLocalRecord(cls, name, items, mood, serverToday) {
+  // v128(RSK-08)：优先用服务端返回的 record_date（服务器日期为准），避免设备日期错误时错日
+  const today = serverToday || todayStr();
+  const existing = state.records.find(r =>
+    r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
+  if (existing) {
+    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items : [];
+    const seen = new Set(oldItems.map(it => it.id + '|' + (it.value || '')));
+    const fresh = items.filter(it => !seen.has(it.id + '|' + (it.value || '')));
+    existing.behavior = { mood: mood || (existing.behavior && existing.behavior.mood) || 'normal', items: oldItems.concat(fresh) };
+    existing.create_at = new Date().toISOString();
+  } else {
+    state.records.unshift({
+      id: 'local_' + Date.now(),
+      student_name: name, class: cls, record_date: today,
+      self_evaluation: 0,
+      behavior: { mood: mood || 'normal', items },
+      teacher_comment: null, create_at: new Date().toISOString()
+    });
+  }
+}
+
+// v123：离线/兜底入队后统一做本地反馈——记录合并、标签即时置灰、墙缓存持久化（刷新后保持）
+function applyLocalSubmitFeedback(cls, name, items) {
+  mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key);
+  items.forEach(it => {
+    const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
+    if (tg && tg.history_unique !== false) {
+      if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
+      state.doneItems[tg.id].add(it.value || null);
+    }
+  });
+  renderTagGrid();
+  const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap)); } catch (e) {}
+  window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+}
+
+// 加载已提交过的二级项，历史唯一的标签置灰不可重复得分
+async function loadDoneItems() {
+  state.doneItems = {};
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return;
+  let rows = null;
+  if (!window.Offline || !window.Offline.online) {
+    // v124(Bug-10/11)：离线优先学生端最近的墙缓存（在线加载时实时刷新，最接近数据库），
+    // 教师端预缓存快照仅作兜底，且超过 7 天视为过期（防止清理后残留测试项导致离线多置灰）
+    const w = await window.Offline.get('wall_' + cls);
+    rows = (w && w.records) || [];
+    if (!rows.length) {
+      let v = await window.Offline.get('records_all_' + cls);
+      if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+      rows = (v && v.data) || [];
+    }
+  } else {
+    try {
+      const { data } = await supabase.from('daily_record')
+        .select('behavior, student_name')
+        .eq('class', cls).eq('student_name', name)
+        .order('create_at', { ascending: false })
+        .limit(500);
+      rows = data || [];
+      if (!rows.length) {
+        const w = await window.Offline.get('wall_' + cls);
+        rows = (w && w.records) || [];
+        if (!rows.length) {
+          let v = await window.Offline.get('records_all_' + cls);
+          if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+          rows = (v && v.data) || [];
+        }
+      }
+    } catch (e) {
+      const w = await window.Offline.get('wall_' + cls);
+      rows = (w && w.records) || [];
+      if (!rows.length) {
+        let v = await window.Offline.get('records_all_' + cls);
+        if (v && v.ts && Date.now() - v.ts > 7 * 86400 * 1000) v = null;
+        rows = (v && v.data) || [];
+      }
+    }
+  }
+  (rows || []).forEach(r => {
+    if (r.student_name !== name) return;
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    items.forEach(it => {
+      const tid = it.id;
+      if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
+      // 不可重复标签：只要出现过即记录；value 为空（教师批量评价/一级标签）用 null 标记"整标签已评"
+      state.doneItems[tid].add(it.value || null);
+    });
+  });
+}
+
+function buildCheckTag(t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'opt-tag' + (t.category === 'negative' ? ' is-neg' : '');
+  // 不可重复标签置灰：doneSet 含 null 标记 → 整标签已评（教师批量/一级标签）；含具体值 → 该二级项已评
+  const doneSet = state.doneItems[t.id];
+  const wholeDone = t.history_unique !== false && doneSet && doneSet.has(null);
+
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip' + (t.category === 'negative' ? ' chip-neg' : '') + (wholeDone ? ' done' : '');
+  chip.textContent = wholeDone ? t.label + ' ✓' : t.label;
+  if (wholeDone) {
+    chip.disabled = true;
+  } else {
+    chip.addEventListener('click', () => toggleCheckTag(t, chip, wrap));
+  }
+  wrap.appendChild(chip);
+
+  if (t.options.length) {
+    const sub = document.createElement('div');
+    sub.className = 'sub-options';
+    sub.hidden = true;
+    const hint = document.createElement('div');
+    hint.className = 'sub-hint';
+    hint.textContent = '再选一个具体的 👇';
+    sub.appendChild(hint);
+    t.options.forEach(opt => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sub-chip';
+      b.textContent = opt;
+      // 历史唯一标签：整标签已评或该具体二级项已评 → 置灰
+      const optDone = wholeDone || (doneSet && doneSet.has(opt));
+      if (t.history_unique !== false && optDone) {
+        b.classList.add('done');
+        b.disabled = true;
+        b.textContent = opt + ' ✓';
+      }
+      b.addEventListener('click', () => {
+        sfx.sub();
+        if (!Array.isArray(state.checkOption[t.id])) state.checkOption[t.id] = [];
+        const arr = state.checkOption[t.id];
+        const ix = arr.indexOf(opt);
+        if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); b.textContent = opt; }
+        else { arr.push(opt); b.classList.add('active'); b.textContent = '✓ ' + opt; }
+        // 一级标签显示已选数量
+        chip.textContent = arr.length ? `${t.label}（已选${arr.length}）` : t.label;
+      });
+      sub.appendChild(b);
+    });
+    wrap.appendChild(sub);
+  }
+  return wrap;
+}
+
+function buildTextTag(t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'text-tag';
+  const label = document.createElement('label');
+  label.textContent = t.label;
+  const input = document.createElement('textarea');
+  input.className = 'input';
+  input.rows = 3;
+  input.maxLength = 600;
+  input.placeholder = '填写今天的内容（选填，最多 600 字）';
+  input.addEventListener('input', () => { state.textValues[t.id] = input.value; updateMood(); });
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+// 勾选 / 取消勾选；带二级选项的联动展开/收起；随后重算心情并播放音效
+function toggleCheckTag(tag, chip, wrap) {
+  const sub = wrap.querySelector('.sub-options');
+  const wasLevel = state.moodLevel;
+  const turningOn = !state.checkChosen[tag.id];
+  if (!turningOn) {
+    delete state.checkChosen[tag.id];
+    delete state.checkOption[tag.id];
+    chip.classList.remove('active');
+    if (sub) {
+      sub.hidden = true;
+      sub.querySelectorAll('.sub-chip.active').forEach(x => x.classList.remove('active'));
+    }
+    sfx.tagOff();
+  } else {
+    state.checkChosen[tag.id] = true;
+    chip.classList.add('active');
+    if (sub) sub.hidden = false;
+    sfx.tagOn(tag.category !== 'negative');
+  }
+  updateMood();
+  if (state.moodLevel > wasLevel) sfx.moodUp();
+  else if (state.moodLevel < wasLevel) sfx.moodDown();
+}
+
+function bindEvents() {
+  // 墙 ↔ 表单
+  if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); Nav.push('form'); showForm(); });
+  els.btnBackWall.addEventListener('click', () => { sfx.back(); Nav.push('wall'); showWall(); });
+  els.wallClass.addEventListener('change', () => {
+    state.currentClass = els.wallClass.value;
+    try {
+      const saved = JSON.parse(localStorage.getItem('sp_identity') || '{}');
+      saved.class = state.currentClass;
+      localStorage.setItem('sp_identity', JSON.stringify(saved));
+    } catch (e) {}
+    loadWall();
+  });
+  els.wallSemester?.addEventListener('change', () => {
+    try { localStorage.setItem('sp_semester', els.wallSemester.value); } catch(e){}
+    loadWall();
+  });
+  // 详情弹窗
+  els.btnDetailClose.addEventListener('click', () => { sfx.back(); closeDetail(); });
+  els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) { sfx.back(); closeDetail(); } });
+  els.btnDetailWrite.addEventListener('click', () => {
+    if (!state.detailName) return;
+    const name = state.detailName;
+    sfx.tap();
+    closeDetail();
+    Nav.push('form');   // RSK-10：详情 → 表单
+    showForm(name);
+  });
+  // 姓名变化时回到该姓名已保存的头像（手动改名场景）
+  let taskTimer = null;
+  els.inpName.addEventListener('input', () => {
+    state.myAvatar = null; renderMoodPreview();
+    clearTimeout(taskTimer);
+    taskTimer = setTimeout(loadStudentTask, 400);
+  });
+
+  // 头像选择
+  els.btnPickAvatar.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
+  els.btnAvatarClose.addEventListener('click', () => { sfx.back(); els.avatarModal.classList.remove('show'); });
+  els.avatarModal.addEventListener('click', e => {
+    if (e.target === els.avatarModal) { sfx.back(); els.avatarModal.classList.remove('show'); }
+  });
+
+  // 音效开关
+  updateSoundButton();
+  els.btnSound.addEventListener('click', () => {
+    const next = !sfx.muted;
+    sfx.setMuted(next);
+    updateSoundButton();
+    if (!next) sfx.pick();
+  });
+
+  // 提交
+  els.btnSubmit.addEventListener('click', onSubmit);
+  els.btnAgain.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); });
+  els.btnWallFromSuccess.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); showWall(); });
+}
+
+function updateSoundButton() {
+  if (!els.btnSound) return;
+  els.btnSound.textContent = sfx.muted ? '🔇' : '🔊';
+  els.btnSound.classList.toggle('is-off', !!sfx.muted);
+}
+
+/* ---------------- 头像选择 ---------------- */
+
+async function openAvatarPicker() {
+  const cur = currentAvatar();
+  const row = currentRosterRow();
+  let lv = row ? (Number(row.level) || 1) : 1;
+  // v146：打开弹窗时并发拉一次该生最新等级，避免墙缓存(60s新鲜期)
+  // 或页面停留导致"已升级却显示未解锁"（如升到 Lv4 仍提示要升到四级）
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (cls && name) {
+    try {
+      const r = await supabase.from('student_directory').select('level,xp').eq('class', cls).eq('student_name', name).limit(1);
+      if (r && !r.error && r.data && r.data[0] && Number(r.data[0].level)) {
+        lv = Number(r.data[0].level);
+        if (row) { row.level = lv; if (r.data[0].xp != null) row.xp = r.data[0].xp; }
+      }
+    } catch (e) {}
+  }
+  els.avatarPicker.innerHTML = '';
+
+  // —— 小动物头像（免费，每天限换 2 次）——
+  const emojiSec = document.createElement('div');
+  emojiSec.className = 'avatar-sec';
+  emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 小动物头像<span class="avatar-sec-tip">每天可换 ${EMOJI_CHANGE_LIMIT} 次</span></div>`;
+  const emojiGrid = document.createElement('div');
+  emojiGrid.className = 'avatar-grid avatar-grid-img';
+  AVATARS.forEach(key => {
+    emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0));
+  });
+  emojiSec.appendChild(emojiGrid);
+  els.avatarPicker.appendChild(emojiSec);
+
+  // —— 校园头像（3 级解锁）——
+  const campusUnlocked = lv >= CAMPUS_UNLOCK_LEVEL;
+  const campusSec = document.createElement('div');
+  campusSec.className = 'avatar-sec campus';
+  campusSec.innerHTML = campusUnlocked
+    ? `<div class="avatar-sec-title">🏫 校园头像<span class="avatar-sec-tip ok">已解锁，可随意更换</span></div>`
+    : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（多记录积极表现赚经验吧）</span></div>`;
+  const campusGrid = document.createElement('div');
+  campusGrid.className = 'avatar-grid avatar-grid-img';
+  CAMPUS_GROUPS.forEach(g => {
+    for (let i = 1; i <= g.count; i++) {
+      campusGrid.appendChild(buildImgChoice(g.prefix + i, cur.key, campusUnlocked, CAMPUS_UNLOCK_LEVEL));
+    }
+  });
+  campusSec.appendChild(campusGrid);
+  els.avatarPicker.appendChild(campusSec);
+
+  // —— v2.0：新头像四档（Lv4-7 按图片质量解锁）——
+  NEW_GROUPS.forEach(g => {
+    const unlocked = lv >= g.level;
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
+    sec.innerHTML = unlocked
+      ? `<div class="avatar-sec-title">${g.emoji} ${g.name}<span class="avatar-sec-tip ok">Lv.${g.level} 已解锁，可随意更换</span></div>`
+      : `<div class="avatar-sec-title">🔒 ${g.emoji} ${g.name}<span class="avatar-sec-tip">升到 Lv.${g.level} 解锁（品质更高的头像）</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    for (let i = 1; i <= g.count; i++) {
+      grid.appendChild(buildImgChoice(g.prefix + i, cur.key, unlocked, g.level));
+    }
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  });
+
+  // —— 头像框（v105）——
+  buildFrameSection();
+
+  renderMoodPreview();
+  els.avatarModal.classList.add('show');
+  Nav.push('avatar');   // RSK-10：打开换头像弹窗
+}
+
+function buildEmojiChoice(emoji, selectedKey) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'avatar-choice' + (emoji === selectedKey ? ' selected' : '');
+  b.textContent = emoji;
+  b.addEventListener('click', () => onChooseAvatar(emoji, b));
+  return b;
+}
+
+function buildImgChoice(key, selectedKey, unlocked, lockLevel) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'avatar-choice avatar-choice-img'
+    + (key === selectedKey ? ' selected' : '')
+    + (unlocked ? '' : ' locked');
+  b.innerHTML = unlocked
+    ? `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy">`
+    : `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy"><span class="avatar-lock">🔒<em>Lv${lockLevel}</em></span>`;
+  b.addEventListener('click', () => {
+    if (!unlocked) {
+      sfx.oops();
+      toast(`这款头像要升到 Lv.${lockLevel} 才能用哦，继续加油～`);
+      return;
+    }
+    onChooseAvatar(key, b);
+  });
+  return b;
+}
+
+async function onChooseAvatar(key, btn) {
+  sfx.pick();
+  const res = await persistAvatar(key);
+  if (!res || res.ok === false) {
+    const reason = res && res.reason;
+    sfx.oops();
+    if (reason === 'locked') {
+      toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
+    } else if (reason === 'locked_tier' || isNewKey(key)) {
+      const need = NEW_LEVEL_MAP[key] || 4;
+      toast(`这款${need >= 6 ? '高' : '精'}品质头像要升到 Lv.${need} 才能用哦，继续加油～`);
+    } else if (reason === 'limit') {
+      toast(isAnimalKey(key)
+        ? `小动物头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`
+        : `表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
+    } else if (reason === 'no_student') {
+      toast('请先在下面填好班级和姓名，再换头像');
+    } else {
+      toast('头像没有保存成功，请稍后再试');
+    }
+    return; // 服务端拒绝：不更新本地选择
+  }
+
+  state.myAvatar = key;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  const row = state.roster.find(s => s.class === cls && s.student_name === name);
+  if (row) row.avatar = key;
+
+  els.avatarPicker.querySelectorAll('.avatar-choice').forEach(x =>
+    x.classList.toggle('selected', x === btn));
+  renderMoodPreview();
+
+  if (typeof res.changes_left === 'number' && res.changes_left >= 0 && !isImgKey(key)) {
+    toast(res.changes_left > 0 ? `换好啦！今天还能换 ${res.changes_left} 次` : '换好啦！今天的更换次数用完了');
+  }
+  // 稍作停留让孩子看到"选中"反馈，再关闭
+  setTimeout(() => els.avatarModal.classList.remove('show'), 260);
+}
+
+// 经 RPC 保存头像；返回服务端 jsonb 判定结果（含 ok / reason / level / xp / changes_left）
+async function persistAvatar(key) {
+  if (!ready) return { ok: false, reason: 'not_ready' };
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) return { ok: false, reason: 'no_identity' };
+  const wr = await runWrite({ name: 'set_student_avatar', params: { p_class: cls, p_student: name, p_avatar: key } });
+  if (!wr.ok) return { ok: false, reason: 'error' };
+  if (wr.queued) return { ok: true, queued: true, changes_left: -1 };
+  return wr.res || { ok: false, reason: 'error' };
+}
+
+/* ---------------- v105：头像框 ---------------- */
+function applyFrameTo(el, frameKey) {
+  if (!el) return;
+  FRAMES.forEach(f => el.classList.remove('frame-' + f.key));
+  el.classList.remove('framed');
+  const k = (frameKey && FRAME_CLASS[frameKey]) ? frameKey : 'none';
+  if (k !== 'none') el.classList.add('framed', 'frame-' + k);
+  /* v137(RSK-13)：头像框粒子动效——换框时同步换粒子 */
+  attachParticles(el, k);
+}
+
+const FRAME_CLASS = {
+  none:'', bronze:'frame-bronze', silver:'frame-silver', gold:'frame-gold',
+  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown',
+  tac:'frame-tac', gun:'frame-gun', dragon:'frame-dragon', mecha:'frame-mecha', wolf:'frame-wolf',
+  sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
+  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie'
+};
+
+/* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
+   配置见文件顶部 FRAME_PARTICLES/FP_SHAPE_CLS/FP_ANIM_CLS */
+
+/* ---------------- v139：写实少年头像粒子 + 呼吸光效 ----------------
+   配置见文件顶部 AVATAR_PARTICLES；ap-layer 相对头像容器 130%，粒子环带贴合头像圆形外缘 */
+
+/* 生成一个头像粒子（相对 .ap-layer，宽=头像容器×1.3） */
+function apOne(cfg, i) {
+  const ang = Math.random() * Math.PI * 2;
+  const rad = 34 + Math.random() * 10;            // 相对 ap-layer 宽度的环带：落在头像圆边缘内外
+  const cx = 50 + Math.cos(ang) * rad;
+  const cy = 50 + Math.sin(ang) * rad;
+  const s  = 1.0 + Math.random() * 1.7;           // 粒子大小
+  const c  = cfg.colors[i % cfg.colors.length];
+  const shape = cfg.shapes[i % cfg.shapes.length];
+  const dur = 2.6 + Math.random() * 2.6;
+  const delay = -Math.random() * 5.5;
+  const cls = 'fp-p ' + (FP_SHAPE_CLS[shape] || '') + ' ' + (FP_ANIM_CLS[cfg.anim] || 'fp-a-float');
+  const glow = shape === 'star' || shape === 'ember' ? `box-shadow:0 0 ${s * 1.8}px ${c};` : `box-shadow:0 0 ${s * 1.1}px ${c};`;
+  return `<i class="${cls}" style="left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;width:${s.toFixed(2)}%;height:${s.toFixed(2)}%;background:${c};${glow}animation-duration:${dur.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s;"></i>`;
+}
+
+/* 字符串版：班级墙卡片头像（renderWall 拼接用） */
+function avatarParticlesHTML(key) {
+  const cfg = AVATAR_PARTICLES[key];
+  if (!cfg) return '';
+  let h = `<span class="ap-layer">`;
+  for (let i = 0; i < cfg.n; i++) h += apOne(cfg, i);
+  return h + '</span>';
+}
+
+/* DOM 版：为头像容器挂粒子层 + 呼吸光效（身份头像/详情头像/选择器预览） */
+function attachAvatarFx(el, key) {
+  if (!el) return;
+  el.classList.remove('ap-breathe');
+  el.style.setProperty('--glow', '0,0,0');
+  el.querySelectorAll(':scope > .ap-layer').forEach(x => x.remove());
+  const cfg = AVATAR_PARTICLES[key];
+  if (!cfg) return;
+  el.classList.add('ap-breathe');
+  el.style.setProperty('--glow', cfg.glow);
+  let h = '<span class="ap-layer">';
+  for (let i = 0; i < cfg.n; i++) h += apOne(cfg, i);
+  el.insertAdjacentHTML('beforeend', h + '</span>');
+}
+
+/* 生成一个粒子的内联样式（相对 .fp-layer，宽=元素直径×1.76） */
+function fpOne(cfg, i, W) {
+  const ang = Math.random() * Math.PI * 2;
+  const rad = 26 + Math.random() * 8;            // 相对 fp-layer 宽度的百分比环带
+  const cx = 50 + Math.cos(ang) * rad;
+  const cy = 50 + Math.sin(ang) * rad;
+  const s  = 1.2 + Math.random() * 1.9;          // 相对 fp-layer 宽度的百分比大小
+  const c  = cfg.colors[i % cfg.colors.length];
+  const shape = cfg.shapes[i % cfg.shapes.length];
+  const dur = 2.8 + Math.random() * 2.8;
+  const delay = -Math.random() * 5.5;
+  const cls = 'fp-p ' + (FP_SHAPE_CLS[shape] || '') + ' ' + (FP_ANIM_CLS[cfg.anim] || 'fp-a-float');
+  const glow = shape === 'star' || shape === 'ember' ? `box-shadow:0 0 ${s * 1.8}px ${c};` : `box-shadow:0 0 ${s * 1.1}px ${c};`;
+  return `<i class="${cls}" style="left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;width:${s.toFixed(2)}%;height:${s.toFixed(2)}%;background:${c};${glow}animation-duration:${dur.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s;"></i>`;
+}
+
+/* 字符串版：班级墙卡片头像（renderWall 拼接用） */
+function frameParticlesHTML(key) {
+  const cfg = FRAME_PARTICLES[key];
+  if (!cfg) return '';
+  let h = `<span class="fp-layer fp-${key}">`;
+  for (let i = 0; i < cfg.n; i++) h += fpOne(cfg, i, 0);
+  return h + '</span>';
+}
+
+/* DOM 版：applyFrameTo 后为元素挂粒子层（身份头像/详情头像） */
+function attachParticles(el, key) {
+  if (!el) return;
+  el.querySelectorAll(':scope > .fp-layer').forEach(x => x.remove());
+  const cfg = FRAME_PARTICLES[key];
+  if (!cfg) return;
+  const layer = document.createElement('span');
+  layer.className = 'fp-layer fp-' + key;
+  layer.innerHTML = frameParticlesHTML(key);
+  el.appendChild(layer);
+}
+
+function buildFrameSection() {
+  const sec = document.createElement('div');
+  sec.className = 'avatar-sec';
+  sec.innerHTML = `<div class="avatar-sec-title">✨ 头像框<span class="avatar-sec-tip">达成成就自动解锁，点一下佩戴</span></div>`;
+  const grid = document.createElement('div');
+  grid.className = 'frame-grid';
+  const row = currentRosterRow();
+  const curFrame = state.myFrame || (row && row.frame) || 'none';
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  FRAMES.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
+    const unlocked = f.key === 'none' || unlockedSet.has(f.key);
+    b.innerHTML = `<span class="fc-ring"></span>` +
+      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+    b.addEventListener('click', () => {
+      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      onChooseFrame(f.key, b);
+    });
+    grid.appendChild(b);
+  });
+  sec.appendChild(grid);
+  els.avatarPicker.appendChild(sec);
+}
+
+async function onChooseFrame(key, btn) {
+  sfx.pick();
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { toast('请先填好班级和姓名'); return; }
+  const wr = await runWrite({ name: 'set_student_frame', params: { p_class: cls, p_student: name, p_frame: key } });
+  if (!wr.ok) { toast('保存失败，请重试'); return; }
+  if (wr.queued) {
+    state.myFrame = key;
+    const row = currentRosterRow();
+    if (row) row.frame = key;
+    els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
+    applyFrameTo(els.identityAvatarEmoji, key);
+    toast('已离线选好，联网后自动同步 ✅');
+    setTimeout(() => els.avatarModal.classList.remove('show'), 260);
+    return;
+  }
+  if (!wr.res || wr.res.ok === false) {
+    toast(wr.res && wr.res.reason === 'locked' ? '这个头像框还没解锁哦，继续加油～' : '保存失败，请重试');
+    return;
+  }
+  state.myFrame = key;
+  const row = currentRosterRow();
+  if (row) row.frame = key;
+  els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
+  applyFrameTo(els.identityAvatarEmoji, key);
+  toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
+  setTimeout(() => els.avatarModal.classList.remove('show'), 260);
+}
+
+/* ---------------- v105：成就 ---------------- */
+async function loadProfile() {
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!ready || !cls || !name) { if (els.achCard) els.achCard.hidden = true; return; }
+  let data;
+  try {
+    const r = await supabase.rpc('get_student_profile', { p_class: cls, p_student: name });
+    if (r.error) throw r.error;
+    data = r.data;
+    if (data) await window.Offline.set('profile_' + cls + '_' + name, { data });
+  } catch (e) {
+    const v = await window.Offline.get('profile_' + cls + '_' + name);
+    data = (v && v.data) || null;
+    if (!data) { if (els.achCard) els.achCard.hidden = true; return; }
+  }
+  if (!data || data.ok === false) { if (els.achCard) els.achCard.hidden = true; return; }
+
+  state.profile = data;
+  state.myFrame = data.frame || 'none';
+
+  // 已解锁头像框集合（与服务端 set_student_frame 同口径，v135(RSK-12)：bronze/silver 改为累计天数）
+  const achs = data.achievements || [];
+  const un = new Set(['none']);
+  const has = k => achs.some(a => a.key === k && a.unlocked);
+  if (has('days10')) un.add('bronze');
+  if (has('days30')) un.add('silver');
+  if (Number(data.level) >= 5) un.add('gold');
+  if (Number(data.level) >= 7) un.add('rainbow');
+  if (has('active20')) un.add('star');
+  if (has('perfect5')) un.add('heart');
+  if (has('top3')) un.add('crown');
+  /* v130(RSK-11)：12 款游戏风头像框，按等级解锁（与服务端 43 号 SQL 同口径） */
+  if (Number(data.level) >= 2) { un.add('tac'); un.add('sakura'); }
+  if (Number(data.level) >= 3) { un.add('gun'); un.add('pixie'); }
+  if (Number(data.level) >= 4) { un.add('mecha'); un.add('magic'); }
+  if (Number(data.level) >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
+  if (Number(data.level) >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
+  data.unlocked_frames = Array.from(un);
+
+  renderAchievements(achs);
+  applyFrameTo(els.identityAvatarEmoji, state.myFrame);
+
+  // 新解锁成就：对比本机已见列表，逐个弹提示
+  const seenKey = 'sp_seen_ach_' + cls + '_' + name;
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch (e) {}
+  const seenSet = new Set(seen);
+  const fresh = achs.filter(a => a.unlocked && !seenSet.has(a.key));
+  if (fresh.length) fresh.forEach(a => toast(`🏅 解锁成就「${a.name}」${a.icon}`));
+  if (fresh.length) sfx.success();
+  try { localStorage.setItem(seenKey, JSON.stringify(achs.filter(a => a.unlocked).map(a => a.key))); } catch (e) {}
+}
+
+function renderAchievements(achs) {
+  if (!els.achGrid) return;
+  els.achCard.hidden = false;
+  const done = achs.filter(a => a.unlocked).length;
+  els.achCount.textContent = `${done}/${achs.length}`;
+  els.achGrid.innerHTML = achs.map(a => `
+    <div class="ach-item ${a.unlocked ? 'unlocked' : 'locked'}">
+      <div class="ach-ic">${a.unlocked ? a.icon : '🔒'}</div>
+      <div class="ach-n">${esc(a.name)}</div>
+      <div class="ach-p">${a.unlocked ? esc(a.desc) : `${a.cur}/${a.target}`}</div>
+    </div>`).join('');
+}
+
+function showForm(presetName) {
+  if (!state.currentClass) { toast('请先选择班级'); return; }
+  els.inpClass.value = state.currentClass;
+  if (presetName) {
+    els.inpName.value = presetName;
+    try {
+      localStorage.setItem('sp_identity',
+        JSON.stringify({ class: state.currentClass, studentName: presetName }));
+    } catch (e) {}
+  }
+  state.myAvatar = null;   // 进入表单先显示该学生已保存的头像
+  els.wallView.hidden = true;
+  els.formView.hidden = false;
+  loadProfile();           // v105：拉取成就与已解锁头像框
+  window.scrollTo({ top: 0 });
+  updateMood();
+  if (!els.inpName.value) els.inpName.focus();
+  resetSelections();
+  loadTags();
+  loadStudentTask();
+  loadPastTasks();
+  updateSubmitStatus();
+}
+
+// v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
+async function updateSubmitStatus() {
+  const el = els.submitStatus;
+  if (!el) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { el.hidden = true; return; }
+  const today = todayStr();
+  let myToday = [];
+  if (!window.Offline || !window.Offline.online) {
+    const v = await window.Offline.get('wall_' + cls);
+    myToday = ((v && v.records) || []).filter(r => r.student_name === name && r.record_date === today);
+    if (!myToday.length) {
+      const v2 = await window.Offline.get('records_all_' + cls);
+      myToday = ((v2 && v2.data) || []).filter(r => r.student_name === name && r.record_date === today);
+    }
+  } else {
+    myToday = (state.records || []).filter(r => r.student_name === name && r.record_date === today);
+  }
+  if (myToday.length) {
+    el.hidden = false;
+    el.textContent = `✅ 今天已提交 ${myToday.length} 次，可继续补充表现（不会重复加分）`;
+    el.className = 'submit-status submit-status-ok';
+  } else {
+    el.hidden = true;
+    el.className = 'submit-status';
+  }
+}
+
+async function loadPastTasks() {
+  if (!els.pastTaskCard) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { els.pastTaskCard.hidden = true; return; }
+  els.pastTaskCard.hidden = false;
+  const since = new Date(); since.setDate(since.getDate() - 6);
+  const p = n => String(n).padStart(2, '0');
+  const sinceStr = `${since.getFullYear()}-${p(since.getMonth()+1)}-${p(since.getDate())}`;
+  try {
+    // 往日任务列表：离线/失败时用最近缓存（sp_past_<cls>）
+    let tasks = null;
+    try {
+      const r = await supabase.from('daily_task')
+        .select('id,title,detail,task_date,task_type,due_time')
+        .eq('class', cls).gte('task_date', sinceStr).lt('task_date', todayStr())
+        .order('task_date', { ascending: false });
+      tasks = r.data;
+      if (!r.error && tasks) { try { localStorage.setItem('sp_past_' + cls, JSON.stringify(tasks)); } catch(e) {} }
+    } catch (e) { tasks = null; }
+    if (!tasks) { try { tasks = JSON.parse(localStorage.getItem('sp_past_' + cls) || '[]'); } catch(e2) { tasks = []; } }
+    const taskIds = tasks.map(t => t.id);
+    // 提交记录：走专用 RPC get_my_task_subs（security definer，绕过 RLS，只返回该生自己的提交）
+    // v129：此前直查 task_submission 被 RLS 过滤为空 → 往日任务永远显示"已截止"（RSK-09）
+    let subs = null;
+    try {
+      const r = await supabase.rpc('get_my_task_subs', { p_student: name });
+      subs = r && r.data;
+      if (!r || r.error || !subs) {
+        try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
+      } else {
+        try { localStorage.setItem('sp_past_subs_' + cls + '_' + name, JSON.stringify(subs)); } catch(e) {}
+      }
+    } catch(e) {
+      try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
+    }
+    const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
+    const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
+    if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
+    const now = new Date(); now.setHours(0,0,0,0);
+    // 截止日期按本地时区解析（'YYYY-MM-DD' 字符串若用 new Date 会被当 UTC，导致当天任务上午就"已截止"）
+    const parseLocalDate = dStr => {
+      const m = String(dStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(dStr);
+    };
+    const fmtLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    els.pastTaskBody.innerHTML = (tasks||[]).map(t => {
+      const cur = gradeMap[t.id];
+      // 截止判断：有 due_time 用它；没有则默认任务发布后一周
+      let dueDate = t.due_time ? parseLocalDate(t.due_time) : null;
+      if (!dueDate && t.task_date) { dueDate = parseLocalDate(t.task_date); dueDate.setDate(dueDate.getDate() + 7); }
+      const active = dueDate ? dueDate >= now : false;
+      const dueStr = t.due_time ? ` 截止${String(t.due_time).slice(0,10)}`
+                  : (t.task_date ? ` 截止${(()=>{const d=parseLocalDate(t.task_date);d.setDate(d.getDate()+7);return fmtLocal(d);})()}` : '');
+      const head = `<div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
+      if (!active) {
+        return `<div class="past-row">${head}<div class="past-grade">${gLabel[cur] || '已截止'}</div></div>`;
+      }
+      const btns = TASK_GRADES.map(g =>
+        `<button type="button" class="stu-task-grade sm ${g.key === cur ? 'on' : ''}" data-grade="${g.key}" data-task="${t.id}">${g.icon} ${g.label}</button>`
+      ).join('');
+      return `<div class="past-row active stack">${head}<div class="past-grade">${btns}</div><div class="stu-task-result" data-result="past-${t.id}"></div></div>`;
+    }).join('');
+    els.pastTaskBody.querySelectorAll('.stu-task-grade').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+        const grade = btn.dataset.grade, taskId = btn.dataset.task;
+        const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
+        if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
+        const d = wr.res || {};
+        sfx.pick();
+        const xpGain = (d.xp_delta || 0) > 0 ? ` 经验+${d.xp_delta}` : '';
+        toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : (grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存'));
+        const pastResult = document.querySelector(`[data-result="past-${taskId}"]`);
+        if (pastResult) pastResult.textContent = wr.queued ? '已离线保存，联网后自动同步 ✅' : '';
+        // 离线：同步更新本地往日任务缓存，重渲染时按钮/状态即时反映
+        if (wr.queued) {
+          try {
+            const key = 'sp_past_subs_' + cls + '_' + name;
+            const subs = JSON.parse(localStorage.getItem(key) || '[]');
+            const i = subs.findIndex(x => x.task_id === taskId);
+            if (i >= 0) subs[i].grade = grade; else subs.push({ task_id: taskId, grade });
+            localStorage.setItem(key, JSON.stringify(subs));
+          } catch (e) {}
+        }
+        const row = state.roster.find(s => s.class === cls && s.student_name === name);
+        if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+        renderIdentityLevel();
+        loadPastTasks();
+        loadWall();
+      });
+    });
+  } catch(e) { els.pastTaskBody.innerHTML = ''; }
+}
+function showWall() {
+  els.formView.hidden = true;
+  els.wallView.hidden = false;
+  window.scrollTo({ top: 0 });
+  loadWall();
+}
+function closeDetail() { els.detailModal.classList.remove('show'); }
+
+async function onSubmit() {
+  if (!ready) return toast('系统尚未配置完成，请联系老师');
+  if (state.readonly) { sfx.oops(); return toast('老师预览模式下不能提交记录哦～'); }
+  const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
+  const cls = norm(els.inpClass.value);
+  const name = norm(els.inpName.value);
+  if (!cls) { sfx.oops(); return toast('请先填写班级'); }
+  if (!name) { sfx.oops(); return toast('请先填写姓名'); }
+  updateMood();
+
+  const items = [];
+  const tagXpOf = t => {
+    const v = Number(t.xp_value);
+    if (Number.isFinite(v)) return v;
+    return t.category === 'negative' ? 0 : 2;
+  };
+  for (const t of state.tags) {
+    if (t.tag_type === 'check') {
+      if (state.checkChosen[t.id]) {
+        const opts = state.checkOption[t.id];
+        const subArr = Array.isArray(opts) ? opts : (opts ? [opts] : []);
+        if (Array.isArray(t.options) && t.options.length && !subArr.length) {
+          sfx.oops();
+          return toast(`请为「${t.label}」再选一个具体项目`);
+        }
+        const subVal = subArr.join('、');
+        if (Array.isArray(t.options) && t.options.length) {
+          // 有二级选项：一级标题本身不加经验，按选中的二级数量逐个加
+          subArr.forEach(opt => {
+            items.push({ id: t.id, label: t.label, type: 'check', value: opt, category: t.category || 'positive', xp: tagXpOf(t) });
+          });
+        } else {
+          items.push({ id: t.id, label: t.label, type: 'check', value: subVal || null, category: t.category || 'positive', xp: tagXpOf(t) });
+        }
+      }
+    } else {
+      const v = (state.textValues[t.id] || '').trim();
+      if (v) items.push({ id: t.id, label: t.label, type: 'text', value: v.slice(0, 600), category: t.category || 'positive', xp: tagXpOf(t) });
+    }
+  }
+
+  // 不允许提交空白表现（星级可以不打，但至少要选一个小表现）
+  if (!items.length) {
+    sfx.oops();
+    return toast('还没有选择任何表现哦，先选一个今天的小表现吧～');
+  }
+
+  els.btnSubmit.disabled = true;
+  els.btnSubmit.textContent = '正在提交…';
+  try {
+    // v107：离线时直接入队，联网后自动同步（按人按天合并，不会重复加经验）
+    if (!window.Offline || !window.Offline.online) {
+      const q = await window.Offline.enqueue({
+        name: 'submit_today',
+        params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items }
+      });
+      if (q) {
+        sfx.success();
+        toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢');
+        applyLocalSubmitFeedback(cls, name, items);   // v123：记录合并+即时置灰+缓存持久化
+        resetSelections();
+        renderMoodPreview();
+        updateSubmitStatus();   // v114：本地立即标记"今天已提交"（合并后记录已包含本次）
+        celebrate(0, false);    // v114：离线提交也显示成功浮层，学生明确知道已填报
+      } else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
+      return;
+    }
+    const { data: valid, error: rpcError } = await supabase.rpc('is_valid_student', {
+      p_class: cls,
+      p_student: name
+    });
+    if (rpcError) throw rpcError;
+    if (!valid) {
+      sfx.oops();
+      toast('没有找到你的名字哦，请检查班级和姓名，或请老师确认名单');
+      return;
+    }
+
+    const { data: subRes, error: insertError } = await supabase.rpc('submit_today', {
+      p_class: cls,
+      p_student: name,
+      p_mood: MOOD_BY_LEVEL(state.moodLevel).key,
+      p_items: items
+    });
+    if (insertError) {
+      if (isNetErr(insertError)) {
+        const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
+        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+      }
+      sfx.oops();
+      if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
+        toast('名单中没有找到对应班级和姓名，请请老师确认');
+      } else {
+        throw insertError;
+      }
+      return;
+    }
+    if (!subRes || subRes.ok === false) {
+      sfx.oops();
+      toast(subRes && subRes.reason === 'no_student'
+        ? '没有找到你的名字，请检查班级和姓名'
+        : '提交失败，请重试');
+      return;
+    }
+    // 合并模式下提示
+    if (subRes.merged) {
+      // 当天已有记录，本次为补充合并
+    }
+
+    // 以服务端返回的差额经验为准（合并场景只加新增部分）
+    const gainedXp = Number(subRes.xp_delta || 0);
+    let leveledUp = false;
+    if (gainedXp > 0) {
+      const row = state.roster.find(s => s.class === cls && s.student_name === name);
+      if (row) {
+        const beforeLv = Number(row.level) || 1;
+        row.xp = Number(subRes.xp != null ? subRes.xp : (Number(row.xp) || 0) + gainedXp);
+        row.level = subRes.level || levelFromXp(row.xp);
+        leveledUp = row.level > beforeLv;
+      }
+    }
+
+    try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
+    sfx.success();
+    celebrate(gainedXp, leveledUp);
+    resetSelections();
+    renderMoodPreview();
+    // 方案A：本地增量更新，不再全量重拉（提交秒级完成）
+    // v128(RSK-08)：以服务端 record_date 为"今日"基准，墙的今日判定与服务端一致
+    if (subRes.record_date) state.serverToday = String(subRes.record_date).slice(0, 10);
+    mergeLocalRecord(cls, name, items, MOOD_BY_LEVEL(state.moodLevel).key, state.serverToday);
+    // 置灰：本次提交的不可重复项直接加入 doneItems（本地），标签区就地重渲染
+    items.forEach(it => {
+      const tg = (state.tags || []).find(x => String(x.id) === String(it.id));
+      if (tg && tg.history_unique !== false) {
+        if (!state.doneItems[tg.id]) state.doneItems[tg.id] = new Set();
+        state.doneItems[tg.id].add(it.value || null);
+      }
+    });
+    renderTagGrid();
+    renderWall();  // 本地重绘头像墙（经验/条数/评语即时更新）
+    // v145(RSK-15)：提交成功即同步本地墙缓存（带 cachedAt，刷新不丢本次记录）
+    try {
+      const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
+      localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap));
+      window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+    } catch (eCache) {}
+    loadProfile();// 成就/头像框（单请求，轻量）
+    // 后台静默全量同步一次（多设备/教师评语一致性，不阻塞界面）
+    if (window.Offline && window.Offline.online) {
+      setTimeout(() => { try { loadWall(); } catch (e3) {} }, 2500);
+    }
+  } catch (e) {
+    // 断网/网络错误：先入队，联网自动补传（按人按天合并，不会重复加经验）
+    const offline = isNetErr(e);
+    if (offline) {
+      const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
+      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
+    } else {
+      sfx.oops();
+      toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+    }
+  } finally {
+    els.btnSubmit.disabled = false;
+    els.btnSubmit.textContent = '提交今天的表现 🎈';
+  }
+}
+
+// 启动时 + 联网时，把本机待上传的操作补传（统一队列）
+async function flushPending() {
+  await flushOfflineQueue();
+}
+window.addEventListener('online', flushPending);
+
+function resetSelections() {
+  state.stars = 0;
+  state.checkChosen = {};
+  state.checkOption = {};
+  state.textValues = {};
+  renderStars();
+  if (els.starCaption) els.starCaption.textContent = '';
+  [els.posGrid, els.negGrid].forEach(grid => {
+    grid.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+    grid.querySelectorAll('.sub-chip.active').forEach(c => c.classList.remove('active'));
+    grid.querySelectorAll('.sub-options').forEach(s => { s.hidden = true; });
+  });
+  els.textTagsBox.querySelectorAll('input').forEach(i => { i.value = ''; });
+  updateMood();
+}
+
+function prefillIdentity() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sp_identity') || 'null');
+    if (saved) {
+      els.inpClass.value = saved.class || '';
+      els.inpName.value = saved.studentName || '';
+    }
+  } catch (e) {}
+}
+
+/* ---------- 鼓励动画 ---------- */
+
+function celebrate(gainedXp, leveledUp) {
+  const emojis = ['⭐', '🌟', '✨', '🎉', '💛', '🌈', '👏', '🚌', '📚'];
+  els.confettiBox.innerHTML = '';
+  for (let i = 0; i < 42; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'confetti-piece';
+    piece.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    piece.style.left = (Math.random() * 100) + '%';
+    piece.style.fontSize = (16 + Math.random() * 20) + 'px';
+    piece.style.animationDuration = (2.4 + Math.random() * 2) + 's';
+    piece.style.animationDelay = (Math.random() * 0.7) + 's';
+    els.confettiBox.appendChild(piece);
+  }
+  let msg;
+  if (leveledUp) {
+    const row = currentRosterRow();
+    msg = `🎉 升级啦！你现在是 Lv.${row ? row.level : ''}，新头像已经解锁，快去挑一个吧！`;
+  } else if (gainedXp > 0) {
+    msg = `太棒啦！本次获得 ${gainedXp} 点经验 🌟`;
+  } else {
+    const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
+    msg = pool[Math.floor(Math.random() * pool.length)];
+  }
+  els.successMsg.textContent = msg;
+  els.successOverlay.classList.add('show');
+  Nav.push('success');   // RSK-10：提交成功浮层
+  // 点任意处跳过庆祝
+  const dismiss = () => {
+    els.successOverlay.classList.remove('show');
+    els.confettiBox.innerHTML = '';
+    els.successOverlay.removeEventListener('click', dismiss);
+  };
+  els.successOverlay.addEventListener('click', dismiss);
+  setTimeout(dismiss, 5200);
+}
+
+/* ---------- 工具 ---------- */
+
+function hashCode(str) {
+  let h = 0;
+  for (let i = 0; i < String(str).length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+function todayStr() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function todayLabel() {
+  const d = new Date();
+  const w = ['日', '一', '二', '三', '四', '五', '六'];
+  return `${d.getMonth() + 1}月${d.getDate()}日 星期${w[d.getDay()]}`;
+}
+function formatDate(ymd) {
+  const [y, m, d] = String(ymd).split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  const isToday = y === today.getFullYear() && m === today.getMonth() + 1 && d === today.getDate();
+  return `${m}月${d}日 星期${['日','一','二','三','四','五','六'][date.getDay()]}${isToday ? '（今天）' : ''}`;
+}
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ================= 今日学习任务 ================= */
+const TASK_GRADES = [
+  { key: 'none',    label: '还没做',   icon: '⏳' },
+  { key: 'done',    label: '完成了',   icon: '✅' },
+  { key: 'good',    label: '优秀 A',   icon: '👍' },
+  { key: 'perfect', label: '完美 A+',  icon: '🏆' }
+];
+
+async function loadStudentTask() {
+  if (!els.taskCard) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { els.taskCard.hidden = true; return; }
+  els.taskCard.hidden = false;
+  els.taskBody.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载今日任务…</div>';
+  let data;
+  try {
+    // SDK 网络失败返回 {data:null,error} 而不抛异常：必须显式检查 error，否则离线不回退缓存
+    const r = await supabase.rpc('get_today_task', { p_class: cls, p_student: name });
+    if (r && !r.error && r.data) {
+      data = r.data;
+      await window.Offline.set('task_' + cls + '_' + name, { data });
+      try { localStorage.setItem('sp_task_' + cls + '_' + name, JSON.stringify(data)); } catch(e) {}
+    } else { data = null; }
+  } catch (e) { data = null; }
+  if (!data) {
+    // v111：任务缓存按 班级+姓名 隔离，避免离线时 A 的完成状态显示给 B
+    const v = await window.Offline.get('task_' + cls + '_' + name);
+    data = (v && v.data) || null;
+    if (!data) { try { data = JSON.parse(localStorage.getItem('sp_task_' + cls + '_' + name) || 'null'); } catch(e2) { data = null; } }
+  }
+  if (!data) {
+    // v114 兜底：个人任务缓存缺失时（如预缓存未完成），用班级墙里的今日任务定义，状态显示"还没做"
+    const w = await window.Offline.get('wall_' + cls);
+    const wt = (w && w.tasks) || [];
+    if (wt.length) {
+      data = { tasks: wt.map(t => ({ id: t.id, title: t.title, detail: t.detail, task_type: t.task_type, my_grade: 'none' })) };
+    }
+  }
+  const tasks = (data && data.tasks) || [];
+  const normal = tasks.filter(t => t.task_type !== 'recite' && t.task_type !== 'dictation');
+  const recite = tasks.filter(t => t.task_type === 'recite');
+  const dict = tasks.filter(t => t.task_type === 'dictation');
+
+  function cardHtml(list, short) {
+    if (!list.length) return null;
+    return list.map(t => {
+      const my = t.my_grade || 'none';
+      const grades = short
+        ? [['none','⏳ 未完成'],['done','✅ 完成']]
+        : [['none','⏳ 还没做'],['done','✅ 完成了'],['good','👍 优秀 A'],['perfect','🏆 完美 A+']];
+      const done = my && my !== 'none';
+      return `<div class="stu-task${done ? ' done' : ''}">
+        <div class="stu-task-title">${escapeHtml(t.title)}</div>
+        ${t.detail ? `<div class="stu-task-detail">${escapeHtml(t.detail)}</div>` : ''}
+        <div class="stu-task-grades">` +
+        grades.map(([k,label]) => `<button type="button" class="stu-task-grade ${k===my?'on':''}" data-grade="${k}" data-task="${t.id}">${label}</button>`).join('') +
+        `</div><div class="stu-task-result" data-result="${t.id}"></div></div>`;
+    }).join('');
+  }
+
+  els.taskCard.hidden = !normal.length;
+  els.taskBody.innerHTML = normal.length ? cardHtml(normal, false) : '';
+  els.reciteTaskCard.hidden = !recite.length;
+  els.reciteTaskBody.innerHTML = recite.length ? cardHtml(recite, true) : '';
+  els.dictationTaskCard.hidden = !dict.length;
+  els.dictationTaskBody.innerHTML = dict.length ? cardHtml(dict, true) : '';
+
+  document.querySelectorAll('.stu-task-grade').forEach(btn => {
+    btn.addEventListener('click', () => onPickTaskGrade(btn.dataset.grade, btn.dataset.task, btn));
+  });
+}
+
+async function onPickTaskGrade(grade, taskId, btn) {
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+  // "还没做"也提交：用于撤销之前的评分、回退经验
+  const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
+  if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
+  const d = wr.res || {};
+  sfx.pick();
+  // 已评(非"还没做")任务卡片置灰；撤销评分则恢复
+  const cardEl = btn.closest('.stu-task');
+  if (cardEl) cardEl.classList.toggle('done', grade !== 'none');
+  const resultEl = document.querySelector(`[data-result="${taskId}"]`);
+  if (resultEl) {
+    if (grade === 'none') {
+      resultEl.textContent = '好的，继续加油把任务完成吧！';
+    } else if (wr.queued) {
+      resultEl.textContent = '已离线保存，联网后自动同步 ✅';
+      // 离线：本地即时反映状态（按钮高亮 + 缓存），联网后以服务端为准
+      document.querySelectorAll(`.stu-task-grade[data-task="${taskId}"]`).forEach(b => b.classList.toggle('on', b.dataset.grade === grade));
+      try {
+        const v = await window.Offline.get('task_' + cls + '_' + name);
+        if (v && v.data && Array.isArray(v.data.tasks)) {
+          v.data.tasks.forEach(t => { if (t.id === taskId) t.my_grade = grade; });
+          await window.Offline.set('task_' + cls + '_' + name, v);
+          try { localStorage.setItem('sp_task_' + cls + '_' + name, JSON.stringify(v.data)); } catch (e2) {}
+        }
+      } catch (e3) {}
+    } else {
+      const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
+      resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
+                          : grade === 'good'    ? `真不错，继续保持！${xpGain}`
+                          :                       `完成啦，辛苦啦！${xpGain}`;
+      if (d.mood_awarded) resultEl.textContent += ' 心情+1 😊';
+    }
+  }
+  const row = state.roster.find(s => s.class === cls && s.student_name === name);
+  if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+  renderIdentityLevel();
+  loadProfile();
+  loadStudentTask();
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ 天气联动主题（v21：自动读洞口县实时天气，可手动切换兜底） ============ */
+(function () {
+  var THEMES = ['sunny', 'cloudy', 'rainy', 'snowy'];
+  var LABELS = { sunny: '晴', cloudy: '多云', rainy: '雨', snowy: '雪' };
+  var root = document.documentElement;
+  var deco = document.getElementById('skyDeco');
+  var btn = document.getElementById('weatherSwitch');
+  var flowerL = document.getElementById('flowerLeft');
+  var flowerR = document.getElementById('flowerRight');
+  if (!deco || !btn) return;
+  var AUTO_KEY = 'sp_weather_auto';
+
+  function codeToTheme(c) {
+    c = Number(c);
+    if (c === 0 || c === 1) return 'sunny';
+    if (c === 2 || c === 3 || c === 45 || c === 48) return 'cloudy';
+    if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95) return 'rainy';
+    if ((c >= 71 && c <= 77) || (c >= 85 && c <= 86)) return 'snowy';
+    return 'sunny';
+  }
+
+  // 分层均匀分布：n 个粒子把区域均匀分层，每层内随机抖动（近似均匀）
+  function layerPos(i, n, jitter) {
+    var seg = 100 / n;
+    return seg * i + (Math.random() - 0.5) * seg * (jitter || 1);
+  }
+
+  /* ============ v3.0：雨/雪 Canvas 粒子引擎 ============
+     参考雪花粒子系统：球面随机发射 · 左右摆动飘落 · additive 叠加发光 ·
+     淡入淡出 · 密度按面积自适应 · DPR≤2 · reduced-motion 停用 */
+  var wxCanvas = document.getElementById('wxCanvas');
+  var wxCtx = wxCanvas ? wxCanvas.getContext('2d') : null;
+  var wxParticles = [];
+  var wxMode = '';            // '' | 'rain' | 'snow'
+  var wxRunning = false;
+  var wxRafId = 0, wxLastT = 0, wxAcc = 0;
+  var wxDPR = Math.min(window.devicePixelRatio || 1, 2);
+  var wxW = 0, wxH = 0, wxMax = 400;
+  var wxReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var WX_CFG = {
+    rain: { rate: 160, lifeMin: 1.0, lifeMax: 2.2, sizeMin: 3.0, sizeMax: 5.5,
+            vyMin: 520, vyMax: 840, vxMin: -30, vxMax: 30, swayAmp: 10, swayFreq: 1.4,
+            areaPer: 1200, lenK: 4 },
+    snow: { rate: 40, lifeMin: 8, lifeMax: 20, sizeMin: 2, sizeMax: 30,
+            vyMin: 40, vyMax: 75, vxMin: -25, vxMax: -8, swayAmp: 27, swayFreq: 0.9,
+            areaPer: 4800, lenK: 2.1 }
+  };
+
+  function wxResize() {
+    if (!wxCanvas || !wxCtx) return;
+    wxW = window.innerWidth; wxH = window.innerHeight;
+    wxCanvas.width = Math.round(wxW * wxDPR);
+    wxCanvas.height = Math.round(wxH * wxDPR);
+    wxCanvas.style.width = wxW + 'px';
+    wxCanvas.style.height = wxH + 'px';
+    wxCtx.setTransform(wxDPR, 0, 0, wxDPR, 0, 0);
+    var cfg = WX_CFG[wxMode];
+    wxMax = cfg ? Math.max(120, Math.min(900, Math.round((wxW * wxH) / cfg.areaPer))) : 400;
+  }
+
+  function wxSpawn(force) {
+    var cfg = WX_CFG[wxMode];
+    if (!cfg || wxParticles.length >= wxMax) return;
+    var p = {
+      x: Math.random() * wxW * 1.12 - wxW * 0.06,
+      y: force ? Math.random() * wxH * 0.5 : -20 - Math.random() * wxH * 0.06,
+      life: 0,
+      maxLife: (cfg.lifeMin + Math.random() * (cfg.lifeMax - cfg.lifeMin)) * 60,
+      size: cfg.sizeMin + Math.random() * (cfg.sizeMax - cfg.sizeMin),
+      vx: cfg.vxMin + Math.random() * (cfg.vxMax - cfg.vxMin),
+      vy: cfg.vyMin + Math.random() * (cfg.vyMax - cfg.vyMin),
+      swayAmp: cfg.swayAmp * (0.6 + Math.random() * 0.8),
+      swayFreq: cfg.swayFreq + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2,
+      alpha: 0.7 + Math.random() * 0.3,
+      shade: Math.random()
+    };
+    wxParticles.push(p);
+  }
+
+  function wxDraw(p, t) {
+    var cfg = WX_CFG[wxMode];
+    if (!cfg) return;
+    var fadeIn = Math.min(p.life / (0.1 * 60), 1);          // 0.1s 淡入
+    var fadeOut = Math.min((p.maxLife - p.life) / (0.12 * 60), 1);
+    var a = p.alpha * fadeIn * fadeOut;
+    if (a <= 0.01) return;
+    var sway = Math.sin(t * p.swayFreq + p.phase) * p.swayAmp;
+    var x = p.x + sway, y = p.y;
+    var r = p.size * (wxW / 1920);                          // 按视口缩放
+    if (r < 0.8) r = 0.8;
+    if (r > 26) r = 26;
+    if (wxMode === 'rain') {
+      // 雨点：发光光点 + 短雨痕（参考发光点风格，浅色底上保证可见）
+      var len = r * cfg.lenK;
+      var g = wxCtx.createLinearGradient(x, y - len, x, y);
+      g.addColorStop(0, 'rgba(196,226,248,0)');
+      g.addColorStop(1, 'rgba(216,238,252,' + (a * 0.8) + ')');
+      wxCtx.strokeStyle = g;
+      wxCtx.lineWidth = Math.max(1.2, r * 0.5);
+      wxCtx.lineCap = 'round';
+      wxCtx.beginPath();
+      wxCtx.moveTo(x, y - len); wxCtx.lineTo(x, y);
+      wxCtx.stroke();
+      var gg = wxCtx.createRadialGradient(x, y, 0, x, y, r * 4.2);
+      gg.addColorStop(0, 'rgba(234,246,254,' + a + ')');
+      gg.addColorStop(0.55, 'rgba(206,232,250,' + (a * 0.55) + ')');
+      gg.addColorStop(1, 'rgba(206,232,250,0)');
+      wxCtx.fillStyle = gg;
+      wxCtx.beginPath(); wxCtx.arc(x, y, r * 4.2, 0, Math.PI * 2); wxCtx.fill();
+    } else {
+      // 雪花：柔和发光光点（白→淡灰蓝，chromaticdot 风格）
+      var gg2 = wxCtx.createRadialGradient(x, y, 0, x, y, r * 2.1);
+      var t0 = 0.85 + p.shade * 0.15;
+      if (p.shade > 0.72) {
+        gg2.addColorStop(0, 'rgba(' + Math.round(232 + (1 - t0) * 23) + ',' + Math.round(247 + (1 - t0) * 8) + ',255,' + a + ')');
+        gg2.addColorStop(0.45, 'rgba(216,240,255,' + (a * 0.55) + ')');
+      } else {
+        gg2.addColorStop(0, 'rgba(255,255,255,' + a + ')');
+        gg2.addColorStop(0.45, 'rgba(236,246,252,' + (a * 0.5) + ')');
+      }
+      gg2.addColorStop(1, 'rgba(230,244,252,0)');
+      wxCtx.fillStyle = gg2;
+      wxCtx.beginPath(); wxCtx.arc(x, y, r * 2.1, 0, Math.PI * 2); wxCtx.fill();
+    }
+  }
+
+  function wxFrame(now) {
+    if (!wxRunning) return;              // 停止后不再自续 raf（避免双循环）
+    wxRafId = requestAnimationFrame(wxFrame);
+    var dt = Math.min((now - wxLastT) / 1000, 0.05);
+    wxLastT = now;
+    var cfg = WX_CFG[wxMode];
+    if (!cfg) return;
+    wxAcc += cfg.rate * dt;
+    while (wxAcc >= 1) { wxSpawn(false); wxAcc -= 1; }
+    if (wxParticles.length < wxMax * 0.5 && Math.random() < 0.3) wxSpawn(false);
+    wxCtx.clearRect(0, 0, wxW, wxH);
+    wxCtx.globalCompositeOperation = 'lighter';            // additive 叠加
+    var t = now / 1000;
+    var i = wxParticles.length;
+    while (i--) {
+      var p = wxParticles[i];
+      p.life += dt * 60;                       // 帧单位寿命
+      p.x += p.vx * dt;                        // vx/vy 为 px/秒
+      p.y += p.vy * dt;
+      if (p.life >= p.maxLife || p.y > wxH + 60 || p.x < -160 || p.x > wxW + 160) {
+        wxParticles.splice(i, 1); continue;
+      }
+      wxDraw(p, t);
+    }
+    wxCtx.globalCompositeOperation = 'source-over';
+  }
+
+  function wxStart(mode) {
+    if (!wxCanvas || !wxCtx || wxReduced) return;
+    if (wxMode === mode && wxRunning) return;
+    wxMode = mode;
+    wxParticles = [];
+    wxAcc = 0;
+    wxResize();
+    for (var k = 0; k < Math.min(90, wxMax); k++) wxSpawn(true);
+    if (!wxRunning) {
+      wxRunning = true;
+      wxLastT = performance.now();
+      wxRafId = requestAnimationFrame(wxFrame);
+    }
+  }
+
+  function wxStop() {
+    if (wxMode === '' && !wxRunning) return;
+    wxMode = '';
+    wxRunning = false;
+    wxParticles = [];
+    if (wxCtx) wxCtx.clearRect(0, 0, wxW, wxH);
+  }
+
+  window.addEventListener('resize', wxResize);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { wxRunning = false; }
+    else if (wxMode) { wxRunning = true; wxLastT = performance.now(); }
+  });
+
+  function renderDeco(w) {
+    deco.innerHTML = '';
+    var narrow = window.innerWidth <= 900;
+    var i, el;
+    if (w === 'sunny') {
+      var n = narrow ? 16 : 30;
+      for (i = 0; i < n; i++) {
+        el = document.createElement('span');
+        el.className = 'star' + (i % 3 === 0 ? ' tw' : '');
+        el.style.left = Math.max(0, Math.min(100, layerPos(i, n, 1.4))) + '%';
+        el.style.top = Math.max(0, Math.min(100, layerPos((i * 7) % n, n, 1.4))) + '%';
+        el.style.width = el.style.height = (2 + Math.random() * 3.5) + 'px';
+        el.style.animationDuration = (6 + Math.random() * 8) + 's';
+        el.style.animationDelay = (Math.random() * 8) + 's';
+        deco.appendChild(el);
+      }
+      /* 太阳光斑：大号柔和金色光晕，均匀分布于页面（卡片后方） */
+      var gn = narrow ? 2 : 4;
+      var glowLeft = narrow ? [15, 85] : [6, 32, 68, 94];
+      for (i = 0; i < gn; i++) {
+        el = document.createElement('span');
+        el.className = 'sun-glow';
+        el.style.left = glowLeft[i] + '%';
+        el.style.top = (8 + i * 22 + Math.random() * 8) + '%';
+        el.style.width = el.style.height = (narrow ? 90 : 150 + i * 40) + 'px';
+        el.style.animationDelay = (Math.random() * 4) + 's';
+        deco.appendChild(el);
+      }
+    }
+    if (w === 'rainy') {
+      wxStart('rain');     // v3.0：Canvas 雨滴粒子（发光雨丝）
+      return;
+    }
+    if (w === 'snowy') {
+      wxStart('snow');     // v3.0：Canvas 雪花粒子（发光光点）
+      return;
+    }
+    wxStop();
+  }
+
+  function setTheme(w, manual) {
+    if (THEMES.indexOf(w) < 0) w = 'sunny';
+    root.setAttribute('data-weather', w);
+    if (flowerL) flowerL.src = 'assets/flowers/flower-' + w + '.png';
+    if (flowerR) flowerR.src = 'assets/flowers/flower-' + w + '.png';
+    renderDeco(w);
+    btn.title = '天气主题：' + (LABELS[w] || w) + '（自动跟随洞口县天气，点按可切换）';
+    if (manual) {
+      try { localStorage.setItem(AUTO_KEY, w + ':' + Date.now()); } catch (e) {}
+    }
+  }
+
+  // 手动切换（演示/离线兜底；点击后 30 分钟内保持手动，之后恢复自动）
+  var manualUntil = 0;
+  var savedTheme = 'sunny';
+  try {
+    var mv = localStorage.getItem(AUTO_KEY);
+    if (mv && mv.indexOf(':') > 0) {
+      var parts = mv.split(':');
+      manualUntil = Number(parts[1]) || 0;
+      if (manualUntil > Date.now()) savedTheme = parts[0];
+    }
+  } catch (e) {}
+  // 初始立即应用（默认/记忆主题），避免等待天气接口期间页面保持裸状态
+  setTheme(savedTheme, false);
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-weather') || 'sunny';
+    var next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+    manualUntil = Date.now() + 30 * 60 * 1000;
+    setTheme(next, true);
+  });
+
+  // 自动获取湖南省洞口县实时天气（Open-Meteo，免 key、支持跨域）
+  var done = false;
+  function fetchWeather() {
+    if (done) return;
+    done = true;
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 7000) : null;
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=27.0572&longitude=110.5759&current_weather=true', ctrl ? { signal: ctrl.signal } : {})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var code = d && d.current_weather && d.current_weather.weathercode;
+        if (code !== undefined) setTheme(codeToTheme(code), false);
+      })
+      .catch(function () {
+        if (Date.now() >= manualUntil) setTheme('sunny', false);  // 获取失败且未手动指定 → 默认晴天
+      })
+      .finally(function () { if (timer) clearTimeout(timer); });
+  }
+  fetchWeather();
+})();
