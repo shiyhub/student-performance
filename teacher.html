@@ -55,6 +55,7 @@
       <button class="tab-btn active" data-tab="records">📒 表现记录</button>
       <button class="tab-btn" data-tab="students">👥 学生名单</button>
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
+      <button class="tab-btn" data-tab="auto">🤖 自动化任务</button>
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
       <button class="tab-btn" data-tab="task">📋 每日任务</button>
       <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
@@ -161,13 +162,23 @@
       <div class="card">
         <div class="card-title">➕ 新增表现标签</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，经验值可自定义。
+          标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，经验值可自定义。<b>「维度」决定加分归属：德/智/体/美/劳，经验值会加进对应维度。</b>
         </p>
         <form id="addTagForm">
           <div class="add-form-grid">
             <div class="field">
               <label for="addTagLabel">标签文字（最长600字）</label>
               <input class="input" id="addTagLabel" type="text" placeholder="例如：优秀数学作业" maxlength="600">
+            </div>
+            <div class="field">
+              <label for="addTagDim">维度（加分归属）</label>
+              <select class="input" id="addTagDim">
+                <option value="de">❤️ 德（品行守纪）</option>
+                <option value="zhi" selected>🧠 智（学习学业）</option>
+                <option value="ti">💪 体（运动健康）</option>
+                <option value="mei">🎨 美（艺术审美）</option>
+                <option value="lao">🧹 劳（劳动实践）</option>
+              </select>
             </div>
             <div class="field">
               <label for="addTagCategory">心情分类</label>
@@ -201,6 +212,79 @@
       <div id="tagBox"></div>
       <p class="text-muted" style="margin-top:6px;">
         标签均可设置"二级标签"（如「欠作业」下再分语文作业/数学作业），学生勾选后要再选一项。停用或删除标签不影响历史记录（历史中保存了文字快照）。
+      </p>
+    </section>
+
+    <!-- ===== 自动化任务（五维经验自动加分） ===== -->
+    <section id="tabAuto" hidden>
+      <div class="card">
+        <div class="card-title">🤖 新增自动化任务</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          每天自动结算：满足条件的规则会给<b>全班每个学生</b>在该维度自动加分（纯奖励制，只加分不扣分）。
+          「当天没有某标签」＝ 该生当天没有任何一条该标签的记录时加分；
+          「当天有某标签」＝ 该生当天有该标签记录时加分。
+          可限定<b>生效日期范围</b>与<b>执行星期</b>（默认周一至周五，周末不执行）。
+        </p>
+        <form id="autoRuleForm">
+          <div class="add-form-grid">
+            <div class="field">
+              <label for="autoRuleName">规则名称</label>
+              <input class="input" id="autoRuleName" type="text" maxlength="60" placeholder="例如：守纪之星 / 作业全勤奖">
+            </div>
+            <div class="field">
+              <label for="autoRuleType">触发条件</label>
+              <select class="input" id="autoRuleType">
+                <option value="no_tag" selected>🚫 当天没有某标签</option>
+                <option value="has_tag">✅ 当天有某标签</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="autoRuleTag">目标标签</label>
+              <select class="input" id="autoRuleTag"><option value="">加载中…</option></select>
+            </div>
+            <div class="field">
+              <label for="autoRuleDim">加分维度</label>
+              <select class="input" id="autoRuleDim">
+                <option value="de">❤️ 德</option>
+                <option value="zhi">🧠 智</option>
+                <option value="ti">💪 体</option>
+                <option value="mei">🎨 美</option>
+                <option value="lao">🧹 劳</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="autoRuleXp">加分分值</label>
+              <input class="input" id="autoRuleXp" type="number" min="1" max="100" value="1">
+            </div>
+            <div class="field">
+              <label for="autoRuleStart">生效起始（留空=不限）</label>
+              <input class="input" id="autoRuleStart" type="date">
+            </div>
+            <div class="field">
+              <label for="autoRuleEnd">生效截止（留空=不限）</label>
+              <input class="input" id="autoRuleEnd" type="date">
+            </div>
+            <div class="field full">
+              <label>执行星期（不勾选 = 该天不执行）</label>
+              <div class="weekday-picks" id="autoRuleWeek">
+                <label><input type="checkbox" value="1" checked> 周一</label>
+                <label><input type="checkbox" value="2" checked> 周二</label>
+                <label><input type="checkbox" value="3" checked> 周三</label>
+                <label><input type="checkbox" value="4" checked> 周四</label>
+                <label><input type="checkbox" value="5" checked> 周五</label>
+                <label><input type="checkbox" value="6"> 周六</label>
+                <label><input type="checkbox" value="7"> 周日</label>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">创建规则</button>
+        </form>
+      </div>
+
+      <div class="sec-label">已有自动化任务（每天自动结算）</div>
+      <div id="autoBox"></div>
+      <p class="text-muted" style="margin-top:6px;">
+        规则按「班级 + 日期 + 学生」幂等结算：同一天同一规则不会重复加分；自动加分会生成系统记录，可在表现记录里查看与修改。停用规则后当天不再结算。
       </p>
     </section>
 
