@@ -496,7 +496,7 @@ const PANE_DYNAMIC = {
   tags: ['tagBox'],
   auto: ['autoBox'],
   exam: [],
-  task: ['taskReportBox'],
+  task: ['taskReportBox', 'tagReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
   stats: ['statsOut'],
   tools: [],
@@ -2208,6 +2208,7 @@ function todayStr() {
 async function activateTaskTab() {
   const taskClass = document.getElementById('taskClass');
   const reportClass = document.getElementById('reportClass');
+  const tagReportClass = document.getElementById('tagReportClass');
   if (!loadedTask.list) {
     // 班级下拉：离线/失败时回退最近缓存（与记录页同口径 classes_all）
     let students = null;
@@ -2220,16 +2221,19 @@ async function activateTaskTab() {
       try { const v = await window.Offline.get('classes_all'); students = (v && v.data) || []; } catch (e2) { students = []; }
     }
     const classes = Array.from(new Set((students || []).map(s => s.class))).sort();
-    [taskClass, reportClass].forEach(sel => {
+    [taskClass, reportClass, tagReportClass].forEach(sel => {
       sel.innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
     });
     loadedTask.list = true;
   }
   const taskDate = document.getElementById('taskDate');
   const reportDate = document.getElementById('reportDate');
+  const tagReportDate = document.getElementById('tagReportDate');
   if (!taskDate.value) taskDate.value = todayStr();
   if (!reportDate.value) reportDate.value = todayStr();
+  if (!tagReportDate.value) tagReportDate.value = todayStr();
   loadTaskReport();
+  loadTagReport();
 }
 
 document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
@@ -2474,6 +2478,129 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
 function gradeBtn(grade, cur, label) {
   return `<button type="button" class="task-grade-btn ${grade === cur ? 'on' : ''}" data-grade="${grade}">${label}</button>`;
 }
+
+/* ================= 标签填写情况（每日打卡查询） ================= */
+/* 五维色：德红 / 智蓝 / 体绿 / 美紫 / 劳橙（与标签管理页同口径） */
+const DIM_META = {
+  de:  { label: '德', color: '#e74c3c' },
+  zhi: { label: '智', color: '#2e86de' },
+  ti:  { label: '体', color: '#27ae60' },
+  mei: { label: '美', color: '#9b59b6' },
+  lao: { label: '劳', color: '#e67e22' }
+};
+
+async function loadTagReport() {
+  const cls = document.getElementById('tagReportClass').value;
+  const date = document.getElementById('tagReportDate').value || todayStr();
+  const box = document.getElementById('tagReportBox');
+  if (!cls) { box.innerHTML = '<p class="text-muted">请先选班级</p>'; return; }
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+
+  let recs = [], tags = [], seatMap = {}, roster = [], offlineFailed = false;
+  try {
+    const [rRec, rTag, rSeat, rRoster] = await Promise.all([
+      supabase.from('daily_record').select('student_name,behavior').eq('class', cls).eq('record_date', date),
+      supabase.from('behavior_tags').select('id,label,xp_value,dim'),
+      supabase.from('seat_grid').select('student_name, seat_row, seat_col').eq('class', cls),
+      supabase.from('student_info').select('student_name').eq('class', cls)
+    ]);
+    recs = rRec.data || []; tags = rTag.data || [];
+    (rSeat.data || []).forEach(s => { seatMap[s.student_name] = { r: s.seat_row, c: s.seat_col }; });
+    roster = (rRoster.data || []).map(s => s.student_name);
+  } catch (e) { offlineFailed = true; }
+
+  if (offlineFailed || (!recs.length && !roster.length)) {
+    // 离线回退：打卡缓存 tagreport_<cls>_<date>
+    try {
+      const v = await window.Offline.get('tagreport_' + cls + '_' + date);
+      if (v && (v.recs || v.roster)) {
+        recs = v.recs || []; roster = v.roster || [];
+        tags = v.tags || []; seatMap = v.seatMap || {};
+      }
+    } catch (e2) {}
+    if (!roster.length) {
+      box.innerHTML = offlineFailed
+        ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
+        : '<p class="text-muted">该日期全班还没有打卡记录。</p>';
+      return;
+    }
+  }
+
+  // 按座位表排序（有座位排前，其余按姓名）
+  const allStudents = roster.slice().sort((a, b) => {
+    const sa = seatMap[a], sb = seatMap[b];
+    if (sa && sb) return (sa.r - sb.r) || (sa.c - sb.c);
+    if (sa) return -1; if (sb) return 1;
+    return a.localeCompare(b, 'zh');
+  });
+
+  const tagMap = {}; (tags || []).forEach(t => { tagMap[t.id] = t; });
+  renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date);
+  try { await window.Offline.set('tagreport_' + cls + '_' + date, { recs, tags, roster, seatMap }); } catch (e3) {}
+}
+
+function renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date) {
+  const box = document.getElementById('tagReportBox');
+  const byStu = {};
+  (recs || []).forEach(r => { byStu[r.student_name] = r; });
+
+  // 统计
+  let filled = 0, posN = 0, negN = 0, totalN = 0, dimN = {};
+  allStudents.forEach(name => {
+    const items = (byStu[name] && byStu[name].behavior && byStu[name].behavior.items);
+    if (items && items.length) {
+      filled++;
+      (items || []).forEach(it => {
+        const tag = tagMap[it.id] || {};
+        const dim = tag.dim || 'zhi';
+        dimN[dim] = (dimN[dim] || 0) + 1;
+        if (it.category === 'negative') negN++; else posN++;
+        totalN++;
+      });
+    }
+  });
+  const notFilled = allStudents.filter(n => !byStu[n] || !((byStu[n].behavior && byStu[n].behavior.items) || []).length);
+
+  const dimChips = Object.keys(dimN).map(d =>
+    `<span class="tag-dim-chip" style="border-color:${(DIM_META[d]||{}).color||'#888'};color:${(DIM_META[d]||{}).color||'#888'};">${(DIM_META[d]||{label:d}).label}×${dimN[d]}</span>`).join('');
+
+  box.innerHTML = `
+    <div class="grid" style="gap:10px;margin-bottom:14px;">
+      <div class="stat-box"><div class="stat-num">${filled}</div><div class="text-muted">已填写人数 / ${allStudents.length}</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#27ae60;">${posN}</div><div class="text-muted">积极表现</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#c0392b;">${negN}</div><div class="text-muted">需要加油</div></div>
+      <div class="stat-box"><div class="stat-num">${totalN}</div><div class="text-muted">标签总次数</div></div>
+    </div>
+    <div style="margin-bottom:10px;">${dimChips || '<span class="text-muted">暂无标签</span>'}</div>
+    <div class="task-stu-grid">` +
+    allStudents.map(name => {
+      const r = byStu[name];
+      const items = (r && r.behavior && r.behavior.items) || [];
+      const st = seatMap[name];
+      const seatTag = st ? `<span class="task-stu-seat">${st.r + 1}排${st.c + 1}座</span>` : '';
+      const mood = r && r.behavior && r.behavior.mood ? MOOD_MAP[r.behavior.mood] : null;
+      const moodTag = mood ? `<span class="tag-mood">${mood.emoji}</span>` : '';
+      if (!items.length) {
+        return `<div class="task-stu" style="border-left:3px solid #ddd;">
+          <div class="task-stu-name">${esc(name)}${seatTag}</div>
+          <div class="text-muted" style="font-size:12px;padding:6px 0;">未填写</div></div>`;
+      }
+      const chips = items.map(it => {
+        const tag = tagMap[it.id] || {};
+        const dim = tag.dim || 'zhi';
+        const dm = DIM_META[dim] || { label: '智', color: '#2e86de' };
+        const val = it.xp != null ? it.xp : (tag.xp_value != null ? tag.xp_value : 2);
+        const neg = it.category === 'negative';
+        return `<span class="batch-chip" style="${neg ? 'background:#fde3e3;color:#c0392b;' : ''}">${esc(it.label || tag.label || '(未命名)')}<span class="tag-dim" style="color:${dm.color};">${dm.label}</span><span class="tag-val">+${val}</span></span>`;
+      }).join(' ');
+      return `<div class="task-stu">
+        <div class="task-stu-name">${esc(name)}${seatTag}${moodTag}</div>
+        <div style="padding:6px 0;">${chips || '<span class="text-muted">未填写</span>'}</div></div>`;
+    }).join('') + `</div>
+    <div style="margin-top:12px;color:#c0392b;">❌ 未填写（${notFilled.length}）：${notFilled.map(n => `<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ') || '全部填写🎉'}</div>`;
+}
+
+document.getElementById('btnLoadTagReport')?.addEventListener('click', loadTagReport);
 
 /* ================= 批量评价 ================= */
 const batchState = { dates: [], students: [], loaded: false, tagList: [] };
