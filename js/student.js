@@ -768,6 +768,10 @@ function renderWall() {
   } else {
     state.roster.forEach(s=>ordered.push(s));
   }
+  // v150：经验榜 TOP5 角花装饰（按总经验降序）
+  const rankMap = {};
+  state.roster.slice().sort((a,b) => (Number(b.xp)||0) - (Number(a.xp)||0))
+    .slice(0,5).forEach((s,idx) => { rankMap[s.student_name] = idx + 1; });
   ordered.forEach((s) => {
     if (!s) { html += `<div class="mate seat-empty"></div>`; return; }
     const mine = recs.filter(r => r.student_name === s.student_name);
@@ -797,7 +801,9 @@ function renderWall() {
     const moodInline = todayMood
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
-    html += `<button class="mate" data-detail="${esc(s.student_name)}">
+    const rank = rankMap[s.student_name] || 0;   // v150：经验榜名次（1-5）
+    html += `<button class="mate${rank ? ` rank-${rank}` : ''}" data-detail="${esc(s.student_name)}">
+        ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
