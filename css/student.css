@@ -1249,3 +1249,7 @@ html[data-weather] .wall-view{background:transparent}
 .today-task-label { font-weight:700; font-size:14px; }
 .today-task-state { font-size:12px; color:#b8860b; }
 .today-task-state.ok { color:#2e8b57; }
+
+/* v149：个人任务（教师自定义内容） */
+.today-task-sub { font-size:12px; color:#8a7a6a; margin-top:2px; }
+.today-task-row { flex-wrap:wrap; }
