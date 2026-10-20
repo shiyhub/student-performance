@@ -123,7 +123,8 @@ const AVATAR_SM_KEYS = new Set([
   'fantasy1','fantasy3','fantasy5','fantasy6','fantasy7',
   'game1','game2','game3','game4','game5','game6','game7','game8',
   'mecha1','mecha2','mecha4','nature1','nature2','nature3',
-  'sweet1','sweet2','sweet5','sweet6','sweet7','sweet8','sweet9','sweet10'
+  'sweet1','sweet2','sweet5','sweet6','sweet7','sweet8','sweet9','sweet10',
+  'game16','game17','nature5','nature6','nature7','nature8'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
@@ -143,8 +144,8 @@ const CAMPUS_UNLOCK_LEVEL = 3;
    v2.1 追加：game1~8 硬核游戏风并入 Lv4（与甜美少女并存） */
 const NEW_GROUPS = [
   { name: '甜美少女', prefix: 'sweet',   count: 18, level: 4, emoji: '🎀' },
-  { name: '游戏风',   prefix: 'game',    count: 15, level: 4, emoji: '🎮' },
-  { name: '森系田园', prefix: 'nature',  count: 4,  level: 5, emoji: '🌿' },
+  { name: '游戏风',   prefix: 'game',    count: 17, level: 4, emoji: '🎮' },
+  { name: '森系田园', prefix: 'nature',  count: 8,  level: 5, emoji: '🌿' },
   { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
   { name: '奇幻神域', prefix: 'fantasy', count: 7,  level: 7, emoji: '✨' }
 ];
@@ -184,10 +185,10 @@ const FRAMES = [
   { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
 ];
 const XP_PER_POSITIVE = 2;
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-8])|game([1-9]|1[0-5])|nature[1-4]|mecha[1-4]|fantasy[1-7])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-8])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|fantasy[1-7])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-8])|game([1-9]|1[0-5])|nature[1-4]|mecha[1-4]|fantasy[1-7])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-8])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|fantasy[1-7])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
