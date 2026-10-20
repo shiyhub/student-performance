@@ -227,6 +227,8 @@ function showForm(presetName) {
   loadStudentTask();
   loadPastTasks();
   updateSubmitStatus();
+  loadTodayTasks();
+  loadPersonalTasks();
 }
 
 // v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
