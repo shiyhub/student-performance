@@ -325,6 +325,59 @@
         <div class="card-title">📋 已分配任务</div>
         <div id="manualTaskBox"></div>
       </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">🎯 发布个人任务</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          教师自定义任务内容（如"今天给绿植浇水""课间提醒大家喝水"），只发给选定的学生，
+          学生端<b>个人任务栏</b>专属可见，确认完成后按你定的分值+维度加经验。
+        </p>
+        <div class="add-form-grid">
+          <div class="field full">
+            <label for="personalTaskContent">任务内容</label>
+            <textarea class="input" id="personalTaskContent" rows="2" maxlength="200" placeholder="例如：今天负责给班级绿植浇水"></textarea>
+          </div>
+          <div class="field">
+            <label for="personalTaskClass">班级</label>
+            <select class="input" id="personalTaskClass"><option value="">加载中…</option></select>
+          </div>
+          <div class="field">
+            <label for="personalTaskDim">加分维度</label>
+            <select class="input" id="personalTaskDim">
+              <option value="de">❤️ 德</option>
+              <option value="zhi">🧠 智</option>
+              <option value="ti">💪 体</option>
+              <option value="mei">🎨 美</option>
+              <option value="lao" selected>🧹 劳</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="personalTaskXp">经验分值（1-100）</label>
+            <input class="input" id="personalTaskXp" type="number" min="1" max="100" value="2">
+          </div>
+          <div class="field">
+            <label for="personalTaskDate">任务日期</label>
+            <input class="input" id="personalTaskDate" type="date">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnPersonalAll">全选</button>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnPersonalNone">清空</button>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>选择学生（默认全班）</label>
+          <div id="personalStudentBox"></div>
+        </div>
+        <button class="btn btn-primary" type="button" id="btnPersonalAssign" style="margin-top:10px;">发布任务</button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">🗂️ 已发布个人任务</div>
+        <div id="personalTaskBox"></div>
+      </div>
     </section>
 
     <!-- ===== 试卷拍照（仅家长端可见，学生端不显示） ===== -->
