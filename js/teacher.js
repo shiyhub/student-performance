@@ -131,6 +131,14 @@ const els = {
   manualTaskDate: $('#manualTaskDate'),
   manualStudentBox: $('#manualStudentBox'),
   manualTaskBox: $('#manualTaskBox'),
+  // 个人任务（教师自定义内容）
+  personalTaskContent: $('#personalTaskContent'),
+  personalTaskClass: $('#personalTaskClass'),
+  personalTaskDim: $('#personalTaskDim'),
+  personalTaskXp: $('#personalTaskXp'),
+  personalTaskDate: $('#personalTaskDate'),
+  personalStudentBox: $('#personalStudentBox'),
+  personalTaskBox: $('#personalTaskBox'),
   // 测试工具
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
@@ -180,6 +188,8 @@ async function syncRunner(op) {
     if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'delete_manual_task') { const r = await supabase.rpc('delete_manual_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'create_manual_tasks') { const r = await supabase.rpc('create_manual_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'create_personal_tasks') { const r = await supabase.rpc('create_personal_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'delete_personal_task') { const r = await supabase.rpc('delete_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -502,7 +512,7 @@ const PANE_DYNAMIC = {
   records: ['recordBox'],
   students: ['studentBox', 'batchResult'],
   tags: ['tagBox'],
-  auto: ['autoBox', 'manualTaskBox', 'manualStudentBox'],
+  auto: ['autoBox', 'manualTaskBox', 'manualStudentBox', 'personalTaskBox', 'personalStudentBox'],
   exam: [],
   task: ['taskReportBox', 'tagReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
@@ -2026,6 +2036,7 @@ async function loadAutoTab() {
     }
   } catch (e) { /* 下拉加载失败不阻塞规则列表 */ }
   await initManualTaskForm();
+  await initPersonalTaskForm();
   await loadAutoRules();
 }
 
@@ -2153,6 +2164,135 @@ async function loadManualTasks() {
     if (!wr.ok) { toast('取消失败，请重试'); return; }
     toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
     loadManualTasks();
+  }));
+}
+
+/* ================= 个人任务（教师自定义内容） ================= */
+const personalState = { students: [], allStudents: [], loaded: false };
+
+async function initPersonalTaskForm() {
+  let classes = [];
+  try {
+    const r = await supabase.from('student_info').select('class').order('class');
+    if (!r.error && r.data) classes = Array.from(new Set(r.data.map(s => s.class))).sort();
+  } catch (e) {}
+  els.personalTaskClass.innerHTML = classes.length
+    ? classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    : '<option value="">（暂无班级）</option>';
+  if (!els.personalTaskDate.value) els.personalTaskDate.value = todayStr();
+  els.personalTaskClass.addEventListener('change', loadPersonalStudents);
+  if (classes.length) await loadPersonalStudents();
+  await loadPersonalTasks();
+}
+
+async function loadPersonalStudents() {
+  const cls = els.personalTaskClass.value;
+  if (!cls) { els.personalStudentBox.innerHTML = ''; personalState.allStudents = []; personalState.students = []; return; }
+  let names = [];
+  try {
+    const r = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    if (!r.error && r.data) names = r.data.map(s => s.student_name);
+  } catch (e) {}
+  personalState.allStudents = names;
+  personalState.students = names.slice();   // 默认全班
+  renderPersonalStudents();
+}
+
+function renderPersonalStudents() {
+  const box = els.personalStudentBox;
+  const all = personalState.allStudents || [];
+  box.innerHTML = all.length
+    ? all.map(n => {
+        const on = personalState.students.includes(n);
+        return `<label class="batch-pill ${on ? 'on' : ''}"><input type="checkbox" value="${esc(n)}" ${on ? 'checked' : ''} style="display:none">${esc(n)}</label>`;
+      }).join('')
+    : '<span class="text-muted">请先选择班级</span>';
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    const v = cb.value;
+    if (cb.checked && !personalState.students.includes(v)) personalState.students.push(v);
+    if (!cb.checked) personalState.students = personalState.students.filter(x => x !== v);
+    cb.closest('.batch-pill').classList.toggle('on', cb.checked);
+  }));
+}
+
+document.getElementById('btnPersonalAll')?.addEventListener('click', () => {
+  personalState.students = personalState.allStudents.slice();
+  renderPersonalStudents();
+});
+document.getElementById('btnPersonalNone')?.addEventListener('click', () => {
+  personalState.students = [];
+  renderPersonalStudents();
+});
+document.getElementById('btnPersonalAssign')?.addEventListener('click', async () => {
+  const cls = els.personalTaskClass.value;
+  const content = els.personalTaskContent.value.trim();
+  const dim = els.personalTaskDim.value;
+  const xp = parseInt(els.personalTaskXp.value, 10);
+  const date = els.personalTaskDate.value;
+  if (!cls) { toast('请先选班级'); return; }
+  if (!content) { toast('请填写任务内容'); return; }
+  if (!date) { toast('请选择任务日期'); return; }
+  if (!(xp >= 1 && xp <= 100)) { toast('经验分值需在 1-100 之间'); return; }
+  if (!personalState.students.length) { toast('请至少选择一名学生'); return; }
+  const btn = document.getElementById('btnPersonalAssign');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'create_personal_tasks', params: {
+      p_class: cls, p_content: content, p_dim: dim, p_xp_value: xp, p_date: date,
+      p_students: personalState.students.map(n => ({ value: n }))
+    }});
+    if (!wr.ok) { toast('发布失败，请重试'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动发布 ✅'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
+    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    els.personalTaskContent.value = '';
+    await loadPersonalTasks();
+  } catch (e) { toast('发布失败，请重试'); }
+  finally { btn.disabled = false; }
+});
+
+async function loadPersonalTasks() {
+  const box = els.personalTaskBox;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+  let rows;
+  try {
+    const r = await supabase
+      .from('personal_task')
+      .select('*')
+      .order('task_date', { ascending: false })
+      .order('create_at', { ascending: false });
+    if (r.error) throw r.error;
+    rows = r.data || [];
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 69 号 SQL（personal_task 表）')}</div>`;
+    return;
+  }
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">还没有发布个人任务。</div>';
+    return;
+  }
+  const today = todayStr();
+  box.innerHTML = rows.map(t => `
+    <div class="auto-rule-row">
+      <div class="rule-info">
+        <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
+          <span class="badge-dim">${esc(t.student_name)}</span>
+          <span class="badge-tag">${esc(t.content)}</span>
+          <span class="badge-dim" style="margin-left:4px;">${DIM_META[t.dim] ? DIM_META[t.dim].label : (DIM_LABEL[t.dim] || t.dim)}+${t.xp_value}</span>
+          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? '✅ 已完成' : '⏳ 待完成'}</span>
+        </div>
+      </div>
+      <div class="rule-actions">
+        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}">取消</button>` : ''}
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('取消这条个人任务？（未加分，学生端将不再显示）')) return;
+    const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
+    if (!wr.ok) { toast('取消失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    loadPersonalTasks();
   }));
 }
 

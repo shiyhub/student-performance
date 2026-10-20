@@ -349,6 +349,8 @@ const els = {
   submitStatus: $('#submitStatus'),
   todayTaskCard: $('#todayTaskCard'),
   todayTaskBox: $('#todayTaskBox'),
+  personalTaskCard: $('#personalTaskCard'),
+  personalTaskBox: $('#personalTaskBox'),
   successOverlay: $('#successOverlay'),
   successMsg: $('#successMsg'),
   btnAgain: $('#btnAgain'),
@@ -1844,6 +1846,7 @@ function showForm(presetName) {
   loadPastTasks();
   updateSubmitStatus();
   loadTodayTasks();
+  loadPersonalTasks();
 }
 
 // v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
@@ -1914,6 +1917,52 @@ async function loadTodayTasks() {
       sfx.success();
       toast(`完成啦！${Number(d.xp_delta) > 0 ? '经验+' + d.xp_delta : '已记录'}`);
       loadTodayTasks();
+      updateSubmitStatus();
+      if (window.loadWallData) loadWallData();
+    } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }
+  }));
+}
+
+// v149：个人任务（教师自定义内容，确认完成按教师定分值+维度加分）
+async function loadPersonalTasks() {
+  const card = els.personalTaskCard, box = els.personalTaskBox;
+  if (!card || !box) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { card.hidden = true; return; }
+  const today = todayStr();
+  let rows = [];
+  try {
+    const r = await supabase.from('personal_task')
+      .select('id,status,content,dim,xp_value')
+      .eq('class', cls).eq('student_name', name).eq('task_date', today);
+    if (!r.error) rows = r.data || [];
+  } catch (e) {}
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
+  box.innerHTML = rows.map(t => {
+    const done = t.status === 'done';
+    return `<div class="today-task-row${done ? ' done' : ''}">
+      <div class="today-task-info">
+        <span class="today-task-label">🎯 ${esc(t.content)}</span>
+        <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
+      </div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${t.xp_value}</div>
+      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm-ptask="${t.id}">✅ 我完成了</button>`}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-confirm-ptask]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.confirmPtask;
+    btn.disabled = true;
+    try {
+      const r = await supabase.rpc('confirm_personal_task', { p_task_id: id });
+      if (r.error) { toast('确认失败，请重试'); btn.disabled = false; return; }
+      const d = r.data || {};
+      if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
+      sfx.success();
+      toast(`完成啦！经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      loadPersonalTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
     } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }
