@@ -1546,7 +1546,9 @@ async function onChooseAvatar(key, btn) {
     sfx.oops();
     if (reason === 'locked') {
       toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
-    } else if (reason === 'locked_tier' || isNewKey(key)) {
+    } else if (reason === 'locked_tier') {
+      // v147：仅服务端明确返回等级不足才提示"升到Lv.X"；
+      // 不再用 isNewKey 兜底——否则保存失败(网络等)会被误报成等级不够
       const need = NEW_LEVEL_MAP[key] || 4;
       toast(`这款${need >= 6 ? '高' : '精'}品质头像要升到 Lv.${need} 才能用哦，继续加油～`);
     } else if (reason === 'limit') {
@@ -1555,6 +1557,8 @@ async function onChooseAvatar(key, btn) {
         : `表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
     } else if (reason === 'no_student') {
       toast('请先在下面填好班级和姓名，再换头像');
+    } else if (reason === 'error') {
+      toast('头像没有保存成功，请检查网络后重试');
     } else {
       toast('头像没有保存成功，请稍后再试');
     }
