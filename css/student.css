@@ -1253,3 +1253,26 @@ html[data-weather] .wall-view{background:transparent}
 /* v149：个人任务（教师自定义内容） */
 .today-task-sub { font-size:12px; color:#8a7a6a; margin-top:2px; }
 .today-task-row { flex-wrap:wrap; }
+
+
+/* ================= v150：班级墙经验榜 TOP5 角花装饰 v4（AI精致角花） ================= */
+.mate.rank-1, .mate.rank-2, .mate.rank-3, .mate.rank-4, .mate.rank-5 { overflow: visible; }
+.mate .rank-corner { position:absolute; top:-8px; left:-8px; width:92px; height:92px; pointer-events:none; z-index:3; }
+.mate .rank-corner::before { content:''; position:absolute; inset:0; background-image:url('../assets/frames/corner-gold.webp'); background-repeat:no-repeat; background-position:top left; background-size:contain; }
+.mate .rank-corner i { position:absolute; left:12px; top:12px; width:27px; height:27px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-style:normal; font-weight:900; font-size:15px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4); box-shadow:0 1px 3px rgba(0,0,0,.35); border:1.5px solid rgba(255,255,255,.55); }
+.mate .rank-corner-br { top:auto; left:auto; right:-8px; bottom:-8px; transform:rotate(180deg); }
+.mate.rank-1 .rank-corner::before { filter:none; }
+.mate.rank-2 .rank-corner::before { filter:grayscale(.72) brightness(1.1); }
+.mate.rank-3 .rank-corner::before { filter:sepia(.5) saturate(1.2); }
+.mate.rank-4 .rank-corner::before { filter:opacity(.85) saturate(.9); }
+.mate.rank-5 .rank-corner::before { filter:opacity(.6) saturate(.8); }
+.mate.rank-1 .rank-corner i { background:linear-gradient(135deg,#F0C94E,#8A5A12); }
+.mate.rank-2 .rank-corner i { background:linear-gradient(135deg,#E6EAEF,#6E747B); }
+.mate.rank-3 .rank-corner i { background:linear-gradient(135deg,#DFA467,#7C4A1F); }
+.mate.rank-4 .rank-corner i { background:linear-gradient(135deg,#E4C97E,#7E6A1F); }
+.mate.rank-5 .rank-corner i { background:linear-gradient(135deg,#D8C49A,#6E5A33); }
+.mate.rank-1 { border:2px solid #E8C15A; box-shadow:0 0 10px rgba(232,193,90,.45); }
+.mate.rank-2 { border:1.5px solid #C9CDD2; }
+.mate.rank-3 { border:1.5px solid #C98A5C; }
+.mate.rank-4 { border:1.5px solid #E3C684; }
+.mate.rank-5 { border:1.5px solid #C9B28C; }
