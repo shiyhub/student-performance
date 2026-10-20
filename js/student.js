@@ -347,6 +347,8 @@ const els = {
   textTagsBox: $('#textTagsBox'),
   btnSubmit: $('#btnSubmit'),
   submitStatus: $('#submitStatus'),
+  todayTaskCard: $('#todayTaskCard'),
+  todayTaskBox: $('#todayTaskBox'),
   successOverlay: $('#successOverlay'),
   successMsg: $('#successMsg'),
   btnAgain: $('#btnAgain'),
@@ -1841,6 +1843,7 @@ function showForm(presetName) {
   loadStudentTask();
   loadPastTasks();
   updateSubmitStatus();
+  loadTodayTasks();
 }
 
 // v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
@@ -1870,6 +1873,51 @@ async function updateSubmitStatus() {
     el.hidden = true;
     el.className = 'submit-status';
   }
+}
+
+// v148：今日任务（教师手动分配，学生确认完成才加分）
+async function loadTodayTasks() {
+  const card = els.todayTaskCard, box = els.todayTaskBox;
+  if (!card || !box) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { card.hidden = true; return; }
+  const today = todayStr();
+  let rows = [];
+  try {
+    const r = await supabase.from('manual_task')
+      .select('id,status,behavior_tags(label, xp_value, category)')
+      .eq('class', cls).eq('student_name', name).eq('task_date', today);
+    if (!r.error) rows = r.data || [];
+  } catch (e) {}
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  box.innerHTML = rows.map(t => {
+    const tag = t.behavior_tags || {};
+    const done = t.status === 'done';
+    return `<div class="today-task-row${done ? ' done' : ''}">
+      <div class="today-task-info">
+        <span class="today-task-label">${esc(tag.label || '(任务)')}</span>
+        <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
+      </div>
+      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm="${t.id}">✅ 我完成了</button>`}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-confirm]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.confirm;
+    btn.disabled = true;
+    try {
+      const r = await supabase.rpc('confirm_manual_task', { p_task_id: id });
+      if (r.error) { toast('确认失败，请重试'); btn.disabled = false; return; }
+      const d = r.data || {};
+      if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
+      sfx.success();
+      toast(`完成啦！${Number(d.xp_delta) > 0 ? '经验+' + d.xp_delta : '已记录'}`);
+      loadTodayTasks();
+      updateSubmitStatus();
+      if (window.loadWallData) loadWallData();
+    } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }
+  }));
 }
 
 async function loadPastTasks() {

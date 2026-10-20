@@ -125,6 +125,12 @@ const els = {
   autoRuleEnd: $('#autoRuleEnd'),
   autoRuleWeek: $('#autoRuleWeek'),
   autoBox: $('#autoBox'),
+  // 手动分配任务（值班/分工）
+  manualTaskClass: $('#manualTaskClass'),
+  manualTaskTag: $('#manualTaskTag'),
+  manualTaskDate: $('#manualTaskDate'),
+  manualStudentBox: $('#manualStudentBox'),
+  manualTaskBox: $('#manualTaskBox'),
   // 测试工具
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
@@ -172,6 +178,8 @@ async function syncRunner(op) {
     if (op.name === 'task_insert') { const r = await supabase.from('daily_task').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'task_update') { const r = await supabase.from('daily_task').update(p.data).eq('id', p.id); return { ok: !r.error, error: r.error }; }
     if (op.name === 'task_delete') { const r = await supabase.rpc('delete_daily_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'delete_manual_task') { const r = await supabase.rpc('delete_manual_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'create_manual_tasks') { const r = await supabase.rpc('create_manual_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -494,7 +502,7 @@ const PANE_DYNAMIC = {
   records: ['recordBox'],
   students: ['studentBox', 'batchResult'],
   tags: ['tagBox'],
-  auto: ['autoBox'],
+  auto: ['autoBox', 'manualTaskBox', 'manualStudentBox'],
   exam: [],
   task: ['taskReportBox', 'tagReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
@@ -2010,12 +2018,142 @@ async function loadAutoTab() {
       .eq('is_active', true)
       .order('sort_order').order('created_at');
     if (!error && data) {
-      els.autoRuleTag.innerHTML = data.length
+      const opts = data.length
         ? data.map(t => `<option value="${t.id}">${esc(t.label)}（${DIM_LABEL[t.dim] || '智'}）</option>`).join('')
         : '<option value="">（请先在标签页创建标签）</option>';
+      els.autoRuleTag.innerHTML = opts;
+      els.manualTaskTag.innerHTML = opts;
     }
   } catch (e) { /* 下拉加载失败不阻塞规则列表 */ }
+  await initManualTaskForm();
   await loadAutoRules();
+}
+
+/* ================= 手动分配任务（值班/分工） ================= */
+const manualState = { students: [], allStudents: [], loaded: false };
+
+async function initManualTaskForm() {
+  // 班级下拉
+  let classes = [];
+  try {
+    const r = await supabase.from('student_info').select('class').order('class');
+    if (!r.error && r.data) classes = Array.from(new Set(r.data.map(s => s.class))).sort();
+  } catch (e) {}
+  els.manualTaskClass.innerHTML = classes.length
+    ? classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    : '<option value="">（暂无班级）</option>';
+  if (!els.manualTaskDate.value) els.manualTaskDate.value = todayStr();
+  els.manualTaskClass.addEventListener('change', loadManualStudents);
+  if (classes.length) {
+    await loadManualStudents();
+  }
+  await loadManualTasks();
+}
+
+async function loadManualStudents() {
+  const cls = els.manualTaskClass.value;
+  if (!cls) { els.manualStudentBox.innerHTML = ''; manualState.allStudents = []; manualState.students = []; return; }
+  let names = [];
+  try {
+    const r = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    if (!r.error && r.data) names = r.data.map(s => s.student_name);
+  } catch (e) {}
+  manualState.allStudents = names;
+  manualState.students = names.slice();   // 默认全班
+  renderManualStudents();
+}
+
+function renderManualStudents() {
+  const box = els.manualStudentBox;
+  const all = manualState.allStudents || [];
+  box.innerHTML = all.length
+    ? all.map(n => {
+        const on = manualState.students.includes(n);
+        return `<label class="batch-pill ${on ? 'on' : ''}"><input type="checkbox" value="${esc(n)}" ${on ? 'checked' : ''} style="display:none">${esc(n)}</label>`;
+      }).join('')
+    : '<span class="text-muted">请先选择班级</span>';
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    const v = cb.value;
+    if (cb.checked && !manualState.students.includes(v)) manualState.students.push(v);
+    if (!cb.checked) manualState.students = manualState.students.filter(x => x !== v);
+    cb.closest('.batch-pill').classList.toggle('on', cb.checked);
+  }));
+}
+
+document.getElementById('btnManualAll')?.addEventListener('click', () => {
+  manualState.students = manualState.allStudents.slice();
+  renderManualStudents();
+});
+document.getElementById('btnManualNone')?.addEventListener('click', () => {
+  manualState.students = [];
+  renderManualStudents();
+});
+document.getElementById('btnManualAssign')?.addEventListener('click', async () => {
+  const cls = els.manualTaskClass.value;
+  const tagId = els.manualTaskTag.value;
+  const date = els.manualTaskDate.value;
+  if (!cls) { toast('请先选班级'); return; }
+  if (!tagId) { toast('请先选任务标签（如卫生委员，可在标签页创建）'); return; }
+  if (!date) { toast('请选择任务日期'); return; }
+  if (!manualState.students.length) { toast('请至少选择一名学生'); return; }
+  const btn = document.getElementById('btnManualAssign');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'create_manual_tasks', params: {
+      p_class: cls, p_tag_id: tagId, p_date: date,
+      p_students: manualState.students.map(n => ({ value: n }))
+    }});
+    if (!wr.ok) { toast('分配失败，请重试'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动分配 ✅'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('分配失败：' + (d.reason || '')); return; }
+    toast(`已分配 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    await loadManualTasks();
+  } catch (e) { toast('分配失败，请重试'); }
+  finally { btn.disabled = false; }
+});
+
+async function loadManualTasks() {
+  const box = els.manualTaskBox;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+  let rows;
+  try {
+    const r = await supabase
+      .from('manual_task')
+      .select('*, behavior_tags(label)')
+      .order('task_date', { ascending: false })
+      .order('create_at', { ascending: false });
+    if (r.error) throw r.error;
+    rows = r.data || [];
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 68 号 SQL（manual_task 表）')}</div>`;
+    return;
+  }
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">还没有手动分配的任务。</div>';
+    return;
+  }
+  const today = todayStr();
+  box.innerHTML = rows.map(t => `
+    <div class="auto-rule-row">
+      <div class="rule-info">
+        <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
+          <span class="badge-dim">${esc(t.student_name)}</span>
+          <span class="badge-tag">${esc(t.behavior_tags && t.behavior_tags.label || '(标签已删)')}</span>
+          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? '✅ 已完成' : '⏳ 待完成'}</span>
+        </div>
+      </div>
+      <div class="rule-actions">
+        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-task="${t.id}">取消</button>` : ''}
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('[data-del-task]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('取消这条任务分配？（未加分，学生端将不再显示）')) return;
+    const wr = await runWrite({ name: 'delete_manual_task', params: { p_task_id: btn.dataset.delTask } });
+    if (!wr.ok) { toast('取消失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    loadManualTasks();
+  }));
 }
 
 async function loadAutoRules() {
