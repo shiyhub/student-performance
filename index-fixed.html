@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>我们班的在校表现</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/student.css">
+</head>
+<body>
+
+<!-- 陌生设备：先选名字才能进墙 -->
+<div id="deviceGate" class="device-gate" hidden>
+  <div class="gate-card">
+    <h2>👋 你好呀，你是哪位同学？</h2>
+    <p class="text-muted">第一次在这台设备上使用，请选你的名字（这台设备会记住你，下次直接进）</p>
+    <div class="field">
+      <label>班级</label>
+      <select class="input" id="gateClass"></select>
+    </div>
+    <div class="field">
+      <label>你的姓名（必须和名单一致）</label>
+      <input class="input" id="gateName" type="text" maxlength="20" placeholder="输入你的真实姓名">
+    </div>
+    <button class="btn btn-primary" id="gateGo" style="margin-top:10px;">进班级墙</button>
+    <div id="gateError" class="text-muted" style="color:#c0392b;margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ================= 视图一：班级头像墙（默认主页） ================= -->
+<div class="container" id="wallView">
+
+  <header class="s-header">
+    <div class="s-mascot logo-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="46" height="46"><circle cx="24" cy="24" r="22" fill="#c9a08e"/><path d="M8 22l16-8 16 8-16 8z" fill="#f4f1ec"/><path d="M16 26v7c0 3 4 5 8 5s8-2 8-5v-7l-8 4z" fill="#9c6b5e"/><circle cx="34" cy="18" r="3" fill="#f4d98e"/></svg>
+    </div>
+    <h1 class="s-title">我们班的星光墙</h1>
+    <div class="s-date" id="wallDate"></div>
+  </header>
+
+  <div id="wallConfigBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能查看，请联系老师完成部署。
+  </div>
+
+  <div class="wall-top">
+    <div id="wallClassCard" class="wall-class-left"></div>
+    <section class="card wall-class-card">
+      <div class="wall-class-row">
+      <div class="wc-field">
+        <label for="wallClass">我的班级</label>
+        <select class="input" id="wallClass"></select>
+      </div>
+      <div class="wc-field">
+        <label for="wallSemester">学期</label>
+        <select class="input" id="wallSemester">
+          <option value="2026秋">2026秋</option>
+          <option value="2027春">2027春</option>
+          <option value="全部">全部学期</option>
+        </select>
+      </div>
+    </div>
+    <div class="class-progress" id="classProgress">
+      <div class="cp-row">
+        <span>🧡 班级经验 <b id="cpXp">0</b></span>
+        <span id="cpNext">距 Lv2 还需 400</span>
+      </div>
+      <div class="cp-bar"><div class="cp-fill" id="cpFill"></div></div>
+      <div class="cp-row">
+        <span>📅 今日已填写 <b id="cpDone">0</b>/<span id="cpTotal">0</span> 人</span>
+        <span id="cpPct">0%</span>
+      </div>
+      <div class="cp-bar green"><div class="cp-fill green" id="cpFillGreen"></div></div>
+    </div>
+    </section>
+  </div>
+
+  <div id="wallLoading" class="loading-row"><span class="spinner"></span>正在加载同学们…</div>
+  <div id="matesGrid" class="mates" hidden></div>
+  <div id="wallEmpty" class="empty" hidden>
+    这个班还没有同学名单，请让老师先在后台录入学生。
+  </div>
+
+</div>
+
+<!-- ================= 视图二：学生自评表单 ================= -->
+<div class="container student-view" id="formView" hidden>
+
+  <button class="wall-back" id="btnBackWall" aria-label="返回班级墙" title="返回班级墙"><span class="back-tri">‹</span></button>
+
+  <header class="s-header">
+    <div class="s-mascot">🪄</div>
+    <h1 class="s-title">我的在校小日记</h1>
+    <div class="s-date" id="todayLabel"></div>
+  </header>
+
+  <div id="configBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能提交，请联系老师完成部署。
+  </div>
+
+  <!-- 三栏布局 -->
+  <div class="diary3">
+  <div class="diary-col c1">
+  <!-- 身份（个人信息） -->
+  <section class="card red-card" id="identityCard">
+    <button type="button" class="identity-avatar" id="btnPickAvatar">
+      <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
+      <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
+      <span class="identity-avatar-hint">点我换头像 ✨</span>
+    </button>
+    <div class="identity-xp">
+      <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
+      <div class="identity-xp-text" id="identityXpText">经验 0 · 再得 20 点升到 Lv.2</div>
+    </div>
+    <div class="field">
+      <label for="inpClass">我的班级</label>
+      <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班"
+             autocomplete="off" maxlength="30">
+    </div>
+    <div class="field">
+      <label for="inpName">我的姓名</label>
+      <input class="input" id="inpName" type="text" placeholder="请写和名单上一样的名字"
+             autocomplete="off" maxlength="20">
+    </div>
+  </section>
+
+  <!-- 我的成就（徽章墙） -->
+  <section class="card red-card" id="achCard" hidden>
+    <div class="card-title red-title">🏅 我的成就 <span id="achCount" class="ach-count"></span></div>
+    <div class="ach-grid" id="achGrid"></div>
+  </section>
+
+  <!-- 今日心情（由勾选项自动算出，5 档）——填写页不显示，只在班级墙头像预览 -->
+  <section class="card mood-preview-card" id="moodPreviewCard" hidden>
+    <div class="mood-preview" id="moodPreview">
+      <span class="mp-avatar" id="mpAvatar">🐯<span class="mp-badge" id="mpBadge">😐</span></span>
+      <div class="mp-text">
+        <div class="mp-title">今日心情</div>
+        <div class="mp-level" id="mpLevel">😐 一般</div>
+      </div>
+    </div>
+    <div class="mood-meter" id="moodMeter" aria-hidden="true">
+      <span data-l="1">😢</span><span data-l="2">😟</span><span data-l="3">😐</span><span data-l="4">🙂</span><span data-l="5">😄</span>
+    </div>
+  </section>
+
+  </div><!-- /c1 -->
+
+  <div class="diary-col c2">
+  <!-- 往日任务（中间大卡） -->
+  <section class="card red-card" id="pastTaskCard" hidden>
+    <div class="card-title red-title">🗓️ 往日任务（近7天）</div>
+    <div id="pastTaskBody"></div>
+  </section>
+  <!-- 今日任务（放到往日任务下方，左栏变短，整页无需滚动） -->
+  <section class="card red-card task-card" id="taskCard" hidden>
+    <div class="card-title red-title">📋 今日任务</div>
+    <div id="taskBody"></div>
+  </section>
+  <div class="duo-row">
+    <section class="card red-card task-card" id="reciteTaskCard" hidden>
+      <div class="card-title red-title">🎤 背诵任务</div>
+      <div id="reciteTaskBody"></div>
+    </section>
+    <section class="card red-card task-card" id="dictationTaskCard" hidden>
+      <div class="card-title red-title">✏️ 默写任务</div>
+      <div id="dictationTaskBody"></div>
+    </section>
+  </div>
+  </div><!-- /c2 -->
+
+  <div class="diary-col c3">
+  <!-- 表现标签（第三栏） -->
+  <section class="card red-card" id="tagsCard">
+    <div class="card-title red-title">📝 今天的小表现</div>
+    <div id="tagsLoading" class="loading-row"><span class="spinner"></span>正在加载表现项目…</div>
+    <div id="tagsBox" hidden>
+      <div class="tag-group red-sub">
+        <div class="tag-group-title pos red-title">🌟 积极表现</div>
+        <div class="tag-grid" id="posGrid"></div>
+        <div id="textTagsBox"></div>
+      </div>
+      <div class="tag-group red-sub" id="negGroup">
+        <div class="tag-group-title neg red-title">💧 消极表现</div>
+        <div class="tag-grid" id="negGrid"></div>
+      </div>
+    </div>
+    <div id="tagsFailed" class="banner banner-info" hidden>表现项目暂时加载失败。</div>
+  </section>
+  </div><!-- /c3 -->
+  </div><!-- /diary3 -->
+
+  <div class="submit-wrap">
+    <div class="card" id="todayTaskCard" hidden>
+      <div class="card-title">📋 今日任务</div>
+      <div id="todayTaskBox"></div>
+    </div>
+    <div class="submit-status" id="submitStatus" hidden></div>
+    <button class="btn btn-warn" id="btnSubmit">提交今天的表现 🎈</button>
+  </div>
+</div>
+
+<!-- ================= 某位同学的表现详情弹窗 ================= -->
+<div class="modal-mask" id="detailModal">
+  <div class="modal detail-modal">
+    <div class="detail-head">
+      <div class="detail-avatar" id="detailAvatar">🐯</div>
+      <div class="detail-who">
+        <h3 id="detailName">同学</h3>
+        <div class="text-muted" id="detailSub">在校表现记录</div>
+      </div>
+      <button class="detail-close" id="btnDetailClose" aria-label="关闭">✕</button>
+    </div>
+    <div id="detailBody" class="detail-body"></div>
+    <div class="detail-foot" id="detailFoot" hidden>
+      <button class="btn btn-warn" id="btnDetailWrite">✏️ 这是我，记录今天的表现</button>
+    </div>
+  </div>
+</div>
+
+<!-- 提交成功鼓励层 -->
+<div class="success-overlay" id="successOverlay" aria-live="polite">
+  <div id="confettiBox"></div>
+  <div class="success-box">
+    <div class="success-emoji">🎉</div>
+    <h2>提交成功！</h2>
+    <p id="successMsg">你今天真棒，继续保持哦！</p>
+    <button class="btn btn-warn" id="btnWallFromSuccess">回到班级墙看看 🌈</button>
+    <button class="btn btn-ghost" id="btnAgain" style="margin-top:10px;">再记录一条 ✏️</button>
+  </div>
+</div>
+
+<!-- 头像选择弹窗 -->
+<div class="modal-mask" id="avatarModal">
+  <div class="modal avatar-modal">
+    <div class="detail-head">
+      <div class="detail-avatar" id="avatarModalEmoji">🐯</div>
+      <div class="detail-who">
+        <h3>选一个喜欢的头像</h3>
+        <div class="text-muted">点一下就保存好啦</div>
+      </div>
+      <button class="detail-close" id="btnAvatarClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="avatar-picker" id="avatarPicker"></div>
+  </div>
+</div>
+
+<!-- 音效开关 -->
+<button type="button" id="btnSound" class="sound-toggle" aria-label="开关声音">🔊</button>
+
+<div id="toast"></div>
+
+<!-- 天气联动装饰层（固定定位、低透明、不遮挡内容） -->
+<div class="sky-deco" id="skyDeco" aria-hidden="true"></div>
+<!-- v3.0：雨/雪 Canvas 粒子（独立于 skyDeco，避免 innerHTML 清空误删） -->
+<canvas id="wxCanvas" aria-hidden="true"></canvas>
+
+<div class="plant plant-left" aria-hidden="true">
+  <img id="flowerLeft" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
+  <img id="cloudLeft" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
+</div>
+
+<div class="plant plant-right" aria-hidden="true">
+  <img id="flowerRight" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
+  <img id="cloudRight" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
+</div>
+
+<!-- 天气主题切换（自动按洞口县天气，可手动演示兜底） -->
+<button type="button" id="weatherSwitch" class="weather-switch" aria-label="切换天气主题" title="切换天气主题">
+  <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4.5" fill="#f0b64e"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" stroke="#f0b64e" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
+
+<script src="js/config.js"></script>
+<script src="js/vendor/supabase.js"></script>
+<script src="js/offline.js"></script>
+<script src="js/precache.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/student.js"></script>
+<script src="js/student-b.js"></script>
+<script src="js/student-c.js"></script>
+<script src="js/student-d.js"></script>
+<script src="js/student-e.js"></script>
+<script>document.addEventListener("contextmenu",function(e){e.preventDefault();});</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}</script>
+</body>
+</html>

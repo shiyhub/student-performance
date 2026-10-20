@@ -286,6 +286,45 @@
       <p class="text-muted" style="margin-top:6px;">
         规则按「班级 + 日期 + 学生」幂等结算：同一天同一规则不会重复加分；自动加分会生成系统记录，可在表现记录里查看与修改。停用规则后当天不再结算。
       </p>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">🙋 手动分配任务</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          手动给单个/多个/全班学生分配某天的任务（如：某天某人做卫生委员、某人抬菜）。
+          学生端会看到自己的任务，<b>确认完成后才按标签加分</b>（走五维经验）。
+        </p>
+        <div class="add-form-grid">
+          <div class="field">
+            <label for="manualTaskClass">班级</label>
+            <select class="input" id="manualTaskClass"><option value="">加载中…</option></select>
+          </div>
+          <div class="field">
+            <label for="manualTaskTag">任务标签</label>
+            <select class="input" id="manualTaskTag"><option value="">加载中…</option></select>
+          </div>
+          <div class="field">
+            <label for="manualTaskDate">任务日期</label>
+            <input class="input" id="manualTaskDate" type="date">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnManualAll">全选</button>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnManualNone">清空</button>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>选择学生（默认全班）</label>
+          <div id="manualStudentBox"></div>
+        </div>
+        <button class="btn btn-primary" type="button" id="btnManualAssign" style="margin-top:10px;">分配任务</button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">📋 已分配任务</div>
+        <div id="manualTaskBox"></div>
+      </div>
     </section>
 
     <!-- ===== 试卷拍照（仅家长端可见，学生端不显示） ===== -->
