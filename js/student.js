@@ -199,6 +199,48 @@ const FRAMES = [
   { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' }
 ];
 const XP_PER_POSITIVE = 2;
+/* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
+const MOBILE_ACCESS_KEY = 'teacher2026';
+const MOBILE_UNLOCK_KEY = 'sp_mobile_unlocked';
+function isMobileDevice() {
+  try {
+    if (/Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MQQBrowser/i.test(navigator.userAgent || '')) return true;
+    if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) return true;
+  } catch (e) { /* 忽略检测异常 */ }
+  return false;
+}
+function ensureMobileGate() {
+  if (!isMobileDevice()) return;
+  try { if (localStorage.getItem(MOBILE_UNLOCK_KEY) === '1') return; } catch (e) { /* 忽略 */ }
+  if (document.getElementById('mobileLock')) return;
+  const ov = document.createElement('div');
+  ov.id = 'mobileLock';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:linear-gradient(160deg,#0b1526,#101d36);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;color:#fff;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;';
+  ov.innerHTML =
+    '<div style="font-size:30px">📵</div>' +
+    '<div style="font-size:20px;font-weight:700;letter-spacing:1px">学生端暂不支持手机查看</div>' +
+    '<div style="font-size:13px;color:#93a5c4;line-height:1.8">请使用电脑浏览器访问本页面。<br>教师如需在手机上查看效果，请输入解锁秘钥。</div>' +
+    '<input id="mKeyInput" type="password" placeholder="输入教师秘钥" autocomplete="off" style="width:220px;padding:10px 12px;border-radius:8px;border:1px solid #3b5b8a;background:#0e1a2c;color:#fff;font-size:15px;outline:none;text-align:center;margin-top:6px">' +
+    '<div id="mKeyErr" style="font-size:12px;color:#ff6b6b;height:16px"></div>' +
+    '<button id="mKeyBtn" style="padding:10px 34px;border-radius:8px;border:none;background:#2f6fed;color:#fff;font-size:15px;font-weight:600;cursor:pointer">解锁查看</button>';
+  document.body.appendChild(ov);
+  const input = document.getElementById('mKeyInput');
+  const err = document.getElementById('mKeyErr');
+  const doUnlock = () => {
+    const v = (input.value || '').trim();
+    if (v === MOBILE_ACCESS_KEY) {
+      try { localStorage.setItem(MOBILE_UNLOCK_KEY, '1'); } catch (e) { /* 忽略 */ }
+      ov.remove();
+    } else {
+      err.textContent = '秘钥错误，请重试';
+      input.value = '';
+      input.focus();
+    }
+  };
+  document.getElementById('mKeyBtn').addEventListener('click', doUnlock);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
+  input.focus();
+}
 const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
@@ -501,6 +543,8 @@ function enterWallFlow() {
   state.readonly = params.get('readonly') === '1';
   state.previewName = (params.get('student') || '').trim();
 
+  ensureMobileGate(); // v143：手机端未解锁一律先过秘钥门（含已保存身份与老师预览）
+
   els.wallClass.innerHTML = state.classes
     .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
     .join('');
@@ -523,6 +567,7 @@ function enterWallFlow() {
 }
 
 function showDeviceGate() {
+  ensureMobileGate();
   const gate = document.getElementById('deviceGate');
   const clsSel = document.getElementById('gateClass');
   const nameInput = document.getElementById('gateName');
