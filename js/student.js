@@ -1941,8 +1941,10 @@ async function loadPersonalTasks() {
   let rows = [];
   try {
     const r = await supabase.from('personal_task')
-      .select('id,status,content,dim,xp_value')
-      .eq('class', cls).eq('student_name', name).eq('task_date', today);
+      .select('id,status,content,dim,xp_value,deadline,task_date')
+      .eq('class', cls).eq('student_name', name)
+      .lte('task_date', today)
+      .or(`status.eq.done,deadline.is.null,deadline.gte.${today}`);
     if (!r.error) rows = r.data || [];
   } catch (e) {}
   if (!rows.length) { card.hidden = true; return; }
@@ -1950,12 +1952,13 @@ async function loadPersonalTasks() {
   const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
   box.innerHTML = rows.map(t => {
     const done = t.status === 'done';
+    const dl = t.deadline ? ` · 截止 ${String(t.deadline).slice(5)}` : '';
     return `<div class="today-task-row${done ? ' done' : ''}">
       <div class="today-task-info">
         <span class="today-task-label">🎯 ${esc(t.content)}</span>
         <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
       </div>
-      <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${t.xp_value}</div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${t.xp_value}${dl}</div>
       ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm-ptask="${t.id}">✅ 我完成了</button>`}
     </div>`;
   }).join('');

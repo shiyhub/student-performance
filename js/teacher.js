@@ -137,6 +137,7 @@ const els = {
   personalTaskDim: $('#personalTaskDim'),
   personalTaskXp: $('#personalTaskXp'),
   personalTaskDate: $('#personalTaskDate'),
+  personalTaskDeadline: $('#personalTaskDeadline'),
   personalStudentBox: $('#personalStudentBox'),
   personalTaskBox: $('#personalTaskBox'),
   // 测试工具
@@ -190,6 +191,7 @@ async function syncRunner(op) {
     if (op.name === 'create_manual_tasks') { const r = await supabase.rpc('create_manual_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'create_personal_tasks') { const r = await supabase.rpc('create_personal_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_personal_task') { const r = await supabase.rpc('delete_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'teacher_fill_personal_task') { const r = await supabase.rpc('teacher_fill_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -2180,6 +2182,12 @@ async function initPersonalTaskForm() {
     ? classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
     : '<option value="">（暂无班级）</option>';
   if (!els.personalTaskDate.value) els.personalTaskDate.value = todayStr();
+  if (!els.personalTaskDeadline.value) els.personalTaskDeadline.value = todayStr();
+  els.personalTaskDate.addEventListener('change', () => {
+    if (els.personalTaskDeadline.value && els.personalTaskDeadline.value < els.personalTaskDate.value) {
+      els.personalTaskDeadline.value = els.personalTaskDate.value;
+    }
+  });
   els.personalTaskClass.addEventListener('change', loadPersonalStudents);
   if (classes.length) await loadPersonalStudents();
   await loadPersonalTasks();
@@ -2229,16 +2237,18 @@ document.getElementById('btnPersonalAssign')?.addEventListener('click', async ()
   const dim = els.personalTaskDim.value;
   const xp = parseInt(els.personalTaskXp.value, 10);
   const date = els.personalTaskDate.value;
+  const deadline = els.personalTaskDeadline.value || date;
   if (!cls) { toast('请先选班级'); return; }
   if (!content) { toast('请填写任务内容'); return; }
   if (!date) { toast('请选择任务日期'); return; }
+  if (deadline < date) { toast('截止日期不能早于任务日期'); return; }
   if (!(xp >= 1 && xp <= 100)) { toast('经验分值需在 1-100 之间'); return; }
   if (!personalState.students.length) { toast('请至少选择一名学生'); return; }
   const btn = document.getElementById('btnPersonalAssign');
   btn.disabled = true;
   try {
     const wr = await runWrite({ name: 'create_personal_tasks', params: {
-      p_class: cls, p_content: content, p_dim: dim, p_xp_value: xp, p_date: date,
+      p_class: cls, p_content: content, p_dim: dim, p_xp_value: xp, p_date: date, p_deadline: deadline,
       p_students: personalState.students.map(n => ({ value: n }))
     }});
     if (!wr.ok) { toast('发布失败，请重试'); return; }
@@ -2277,16 +2287,29 @@ async function loadPersonalTasks() {
     <div class="auto-rule-row">
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
+          ${t.deadline ? `<span class="badge-dim" style="margin-left:6px;">截止 ${String(t.deadline).slice(5)}</span>` : ''}
           <span class="badge-dim">${esc(t.student_name)}</span>
           <span class="badge-tag">${esc(t.content)}</span>
           <span class="badge-dim" style="margin-left:4px;">${DIM_META[t.dim] ? DIM_META[t.dim].label : (DIM_LABEL[t.dim] || t.dim)}+${t.xp_value}</span>
-          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? '✅ 已完成' : '⏳ 待完成'}</span>
+          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? (t.filled_by === 'teacher' ? '✅ 教师代填' : '✅ 已完成') : '⏳ 待完成'}</span>
         </div>
       </div>
       <div class="rule-actions">
-        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}">取消</button>` : ''}
+        ${t.status === 'pending' ? `
+          <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>
+          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}">取消</button>` : ''}
       </div>
     </div>`).join('');
+  box.querySelectorAll('[data-fill-ptask]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.fillPtask;
+    if (!confirm('确认为该生代填此任务？将立即按分值加经验。')) return;
+    const wr = await runWrite({ name: 'teacher_fill_personal_task', params: { p_task_id: id } });
+    if (!wr.ok) { toast('代填失败，请重试'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('代填失败：' + (d.reason || '')); return; }
+    toast(`已代填，经验+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''} ✅`);
+    loadPersonalTasks();
+  }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
     if (!confirm('取消这条个人任务？（未加分，学生端将不再显示）')) return;
     const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
