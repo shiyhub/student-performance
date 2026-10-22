@@ -924,6 +924,28 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.png") center / contain no-repeat; }
 .frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.png") center / contain no-repeat; }
 .frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.png") center / contain no-repeat; }
+/* v142：七风格进阶头像框（素材 assets/frames/frame-*.png） */
+.frame-huadian.framed::after, .frame-blossom.framed::after, .frame-ink.framed::after,
+.frame-spring.framed::after, .frame-redlily.framed::after, .frame-mask.framed::after,
+.frame-neonwolf.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 50%;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-huadian.framed::after  { background-image: url("../assets/frames/frame-huadian.png"); }
+.frame-blossom.framed::after  { background-image: url("../assets/frames/frame-blossom.png"); }
+.frame-ink.framed::after      { background-image: url("../assets/frames/frame-ink.png"); }
+.frame-spring.framed::after   { background-image: url("../assets/frames/frame-spring.png"); }
+.frame-redlily.framed::after  { background-image: url("../assets/frames/frame-redlily.png"); }
+.frame-mask.framed::after     { background-image: url("../assets/frames/frame-mask.png"); }
+.frame-neonwolf.framed::after { background-image: url("../assets/frames/frame-neonwolf.png"); }
+.frame-choice.fc-huadian  .fc-ring { background: url("../assets/frames/frame-huadian.png") center / contain no-repeat; }
+.frame-choice.fc-blossom  .fc-ring { background: url("../assets/frames/frame-blossom.png") center / contain no-repeat; }
+.frame-choice.fc-ink      .fc-ring { background: url("../assets/frames/frame-ink.png") center / contain no-repeat; }
+.frame-choice.fc-spring   .fc-ring { background: url("../assets/frames/frame-spring.png") center / contain no-repeat; }
+.frame-choice.fc-redlily  .fc-ring { background: url("../assets/frames/frame-redlily.png") center / contain no-repeat; }
+.frame-choice.fc-mask     .fc-ring { background: url("../assets/frames/frame-mask.png") center / contain no-repeat; }
+.frame-choice.fc-neonwolf .fc-ring { background: url("../assets/frames/frame-neonwolf.png") center / contain no-repeat; }
 
 
 
