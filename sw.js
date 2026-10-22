@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v52';
+const CACHE = 'sp-cache-v53';
 const ASSETS = [
   './',
   './index.html',
@@ -156,6 +156,34 @@ const ASSETS = [
   './assets/avatars/fantasy6-s.webp',
   './assets/avatars/fantasy7.webp',
   './assets/avatars/fantasy7-s.webp',
+  './assets/avatars/fantasy8.webp',
+  './assets/avatars/fantasy8-s.webp',
+  './assets/avatars/fantasy9.webp',
+  './assets/avatars/fantasy9-s.webp',
+  './assets/avatars/fantasy10.webp',
+  './assets/avatars/fantasy10-s.webp',
+  './assets/avatars/fantasy11.webp',
+  './assets/avatars/fantasy11-s.webp',
+  './assets/avatars/warrior1.webp',
+  './assets/avatars/warrior1-s.webp',
+  './assets/avatars/warrior2.webp',
+  './assets/avatars/warrior2-s.webp',
+  './assets/avatars/warrior3.webp',
+  './assets/avatars/warrior3-s.webp',
+  './assets/avatars/warrior4.webp',
+  './assets/avatars/warrior4-s.webp',
+  './assets/avatars/warrior5.webp',
+  './assets/avatars/warrior5-s.webp',
+  './assets/avatars/xian1.webp',
+  './assets/avatars/xian1-s.webp',
+  './assets/avatars/xian2.webp',
+  './assets/avatars/xian2-s.webp',
+  './assets/avatars/xian3.webp',
+  './assets/avatars/xian3-s.webp',
+  './assets/avatars/xian4.webp',
+  './assets/avatars/xian4-s.webp',
+  './assets/avatars/xian5.webp',
+  './assets/avatars/xian5-s.webp',
   './assets/frames/frame-bronze.png',
   './assets/frames/frame-silver.png',
   './assets/frames/frame-gold.png',
