@@ -188,7 +188,15 @@ const FRAMES = [
   { key: 'fairy',   name: '花灵仙子', icon: '🌿', need: '升到 Lv.5' },
   { key: 'dragon',  name: '龙魂战甲', icon: '🐉', need: '升到 Lv.6' },
   { key: 'queen',   name: '星光女王', icon: '🌙', need: '升到 Lv.6' },
-  { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' }
+  { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' },
+  /* v142：七风格进阶头像框（Lv.7-10 开放） */
+  { key: 'huadian',  name: '鎏金蝶舞', icon: '🦋', need: '升到 Lv.7' },
+  { key: 'blossom',  name: '樱吹雪',   icon: '🗡️', need: '升到 Lv.7' },
+  { key: 'ink',      name: '水墨国韵', icon: '🖌️', need: '升到 Lv.8' },
+  { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '升到 Lv.8' },
+  { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '升到 Lv.9' },
+  { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '升到 Lv.9' },
+  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' }
 ];
 const XP_PER_POSITIVE = 2;
 const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
@@ -1807,6 +1815,11 @@ async function loadProfile() {
   if (Number(data.level) >= 4) { un.add('mecha'); un.add('magic'); }
   if (Number(data.level) >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
   if (Number(data.level) >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
+  /* v142：七风格进阶头像框（与 71 号 SQL set_student_frame 同口径） */
+  if (Number(data.level) >= 7) { un.add('huadian'); un.add('blossom'); }
+  if (Number(data.level) >= 8) { un.add('ink'); un.add('spring'); }
+  if (Number(data.level) >= 9) { un.add('redlily'); un.add('mask'); }
+  if (Number(data.level) >= 10) { un.add('neonwolf'); }
   data.unlocked_frames = Array.from(un);
 
   renderAchievements(achs);
