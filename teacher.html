@@ -56,6 +56,8 @@
       <button class="tab-btn" data-tab="students">👥 学生名单</button>
       <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
       <button class="tab-btn" data-tab="auto">🤖 自动化任务</button>
+      <button class="tab-btn" data-tab="personal">🎯 个人任务</button>
+      <button class="tab-btn" data-tab="challenge">🏆 挑战任务</button>
       <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
       <button class="tab-btn" data-tab="task">📋 每日任务</button>
       <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
@@ -325,7 +327,10 @@
         <div class="card-title">📋 已分配任务</div>
         <div id="manualTaskBox"></div>
       </div>
+    </section>
 
+    <!-- ===== 个人任务（教师自定义） ===== -->
+    <section id="tabPersonal" hidden>
       <div class="card" style="margin-top:14px;">
         <div class="card-title">🎯 发布个人任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
@@ -382,7 +387,10 @@
         <div class="card-title">🗂️ 已发布个人任务</div>
         <div id="personalTaskBox"></div>
       </div>
+    </section>
 
+    <!-- ===== 挑战任务（档位制） ===== -->
+    <section id="tabChallenge" hidden>
       <div class="card" style="margin-top:14px;">
         <div class="card-title">🏆 发布挑战任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
