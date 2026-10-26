@@ -1167,6 +1167,9 @@ html[data-weather] #formView{position:relative;z-index:2}
   .plant-right{right:max(6px,calc((100vw - 2200px)/2 - 150px))}
 }
 .wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
+.plant{cursor:pointer;z-index:6}
+.plant:hover .wx-flower{opacity:.95}
+.plant:active .wx-flower{transform:scale(.94)}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
 
 /* 花朵动画按主题：晴轻摇 / 多云稳摆 / 雨随风晃 / 雪抖雪 */
@@ -1310,3 +1313,23 @@ html[data-weather] .wall-view{background:transparent}
 .chg-chip.sel { background:#fdf3d7; border-color:#c9a96e; color:#a07d3e; font-weight:600; box-shadow:0 0 0 1px #c9a96e inset; }
 .chg-chip.on { background:#ece4d4; border-color:#d8c4a2; color:#b0a28a; text-decoration:line-through; opacity:.6; cursor:not-allowed; }
 .chg-chip:not(.on):hover { border-color:#c9a96e; color:#a07d3e; }
+
+
+/* ===== 榜单弹窗（左雏菊经验榜 / 右雏菊挑战榜） ===== */
+.leaderboard-modal{max-width:520px;padding:14px;max-height:82vh;display:flex;flex-direction:column}
+.leaderboard-body{flex:1;overflow-y:auto;margin-top:10px;min-height:200px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px dashed #e8dcc6;font-size:13px}
+.lb-row:last-child{border-bottom:none}
+.lb-row.me{background:#fdf3d7;border-radius:8px}
+.lb-rank{width:34px;text-align:center;font-weight:700;color:#8a7a66}
+.lb-rank.top1{color:#c8861a}
+.lb-rank.top2{color:#7a7a7a}
+.lb-rank.top3{color:#b07d3e}
+.lb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-val{color:#a07d3e;font-weight:600}
+.lb-challenge-item{padding:10px 12px;border:1px solid #e8dcc6;border-radius:10px;margin-bottom:8px;cursor:pointer;background:#fffdf8;transition:background .2s}
+.lb-challenge-item:hover{background:#fdf3d7}
+.lb-challenge-item .lb-c-title{font-weight:700;font-size:14px}
+.lb-challenge-item .lb-c-meta{font-size:12px;color:#8a7a66;margin-top:2px}
+.lb-back{display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;border:none;background:#f3e9d2;color:#8a6d3b;border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer}
+.lb-empty{padding:30px 10px;text-align:center;color:#b0a28a}
