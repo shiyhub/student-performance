@@ -1167,7 +1167,7 @@ html[data-weather] #formView{position:relative;z-index:2}
   .plant-right{right:max(6px,calc((100vw - 2200px)/2 - 150px))}
 }
 .wx-flower{transition:opacity .8s ease;transform-origin:50% 92%}
-.plant{cursor:pointer;z-index:6}
+.plant{cursor:pointer;z-index:6;pointer-events:auto}
 .plant:hover .wx-flower{opacity:.95}
 .plant:active .wx-flower{transform:scale(.94)}
 .wx-cloud{position:absolute;bottom:64%;width:100%;opacity:0;transition:opacity 1.2s ease}
