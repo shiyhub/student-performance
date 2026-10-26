@@ -408,6 +408,8 @@ const els = {
   todayTaskBox: $('#todayTaskBox'),
   personalTaskCard: $('#personalTaskCard'),
   personalTaskBox: $('#personalTaskBox'),
+  challengeTaskCard: $('#challengeTaskCard'),
+  challengeTaskBox: $('#challengeTaskBox'),
   successOverlay: $('#successOverlay'),
   successMsg: $('#successMsg'),
   btnAgain: $('#btnAgain'),
@@ -1918,6 +1920,7 @@ function showForm(presetName) {
   updateSubmitStatus();
   loadTodayTasks();
   loadPersonalTasks();
+  loadChallengeTasks();
 }
 
 // v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）
@@ -2037,6 +2040,69 @@ async function loadPersonalTasks() {
       sfx.success();
       toast(`完成啦！经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
       loadPersonalTasks();
+      updateSubmitStatus();
+      if (window.loadWallData) loadWallData();
+    } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }
+  }));
+}
+
+// v150：挑战任务（教师布置，学生自选达成档位 10~110 步5，经验=档位/5）
+const CHALLENGE_LEVELS = (() => { const a = []; for (let lv = 10; lv <= 110; lv += 5) a.push(lv); return a; })();
+async function loadChallengeTasks() {
+  const card = els.challengeTaskCard, box = els.challengeTaskBox;
+  if (!card || !box) return;
+  const cls = els.inpClass.value.trim();
+  const name = els.inpName.value.trim();
+  if (!cls || !name) { card.hidden = true; return; }
+  let rows = [];
+  try {
+    const r = await supabase.from('challenge_task')
+      .select('id,status,title,dim,max_level,task_date')
+      .eq('class', cls).eq('student_name', name)
+      .order('task_date', { ascending: false });
+    if (!r.error) rows = r.data || [];
+  } catch (e) {}
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
+  box.innerHTML = rows.map(t => {
+    const done = t.status === 'done';
+    if (done) {
+      const gain = Math.round((t.max_level || 0) / 5);
+      return `<div class="today-task-row done">
+        <div class="today-task-info">
+          <span class="today-task-label">🏆 ${esc(t.title)}</span>
+          <span class="today-task-state ok">✅ 达成 ${t.max_level} 档</span>
+        </div>
+        <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${gain}</div>
+      </div>`;
+    }
+    const opts = CHALLENGE_LEVELS.map(lv => `<option value="${lv}">${lv} 档 · 经验+${lv / 5}</option>`).join('');
+    return `<div class="today-task-row">
+      <div class="today-task-info">
+        <span class="today-task-label">🏆 ${esc(t.title)}</span>
+        <span class="today-task-state">⏳ 自选达成档位</span>
+      </div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 档位 10~110，经验=档位÷5</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+        <select data-lv-select="${t.id}" class="challenge-lv">${opts}</select>
+        <button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 我达成了</button>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-confirm-challenge]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.confirmChallenge;
+    const sel = box.querySelector(`[data-lv-select="${id}"]`);
+    const lv = parseInt(sel.value, 10);
+    btn.disabled = true;
+    try {
+      const r = await supabase.rpc('confirm_challenge_task', { p_task_id: id, p_level: lv });
+      if (r.error) { toast('确认失败，请重试'); btn.disabled = false; return; }
+      const d = r.data || {};
+      if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
+      sfx.success();
+      toast(`挑战达成！${lv} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      loadChallengeTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
     } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }

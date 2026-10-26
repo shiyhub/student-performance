@@ -140,6 +140,13 @@ const els = {
   personalTaskDeadline: $('#personalTaskDeadline'),
   personalStudentBox: $('#personalStudentBox'),
   personalTaskBox: $('#personalTaskBox'),
+  // 挑战任务（档位制）
+  challengeTitle: $('#challengeTitle'),
+  challengeClass: $('#challengeClass'),
+  challengeDim: $('#challengeDim'),
+  challengeDate: $('#challengeDate'),
+  challengeStudentBox: $('#challengeStudentBox'),
+  challengeTaskBox: $('#challengeTaskBox'),
   // 测试工具
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
@@ -192,6 +199,8 @@ async function syncRunner(op) {
     if (op.name === 'create_personal_tasks') { const r = await supabase.rpc('create_personal_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_personal_task') { const r = await supabase.rpc('delete_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'teacher_fill_personal_task') { const r = await supabase.rpc('teacher_fill_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'create_challenge_tasks') { const r = await supabase.rpc('create_challenge_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'delete_challenge_task') { const r = await supabase.rpc('delete_challenge_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -2039,6 +2048,7 @@ async function loadAutoTab() {
   } catch (e) { /* 下拉加载失败不阻塞规则列表 */ }
   await initManualTaskForm();
   await initPersonalTaskForm();
+  await initChallengeForm();
   await loadAutoRules();
 }
 
@@ -2316,6 +2326,137 @@ async function loadPersonalTasks() {
     if (!wr.ok) { toast('取消失败，请重试'); return; }
     toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
     loadPersonalTasks();
+  }));
+}
+
+/* ================= 挑战任务（档位制 10~110 步5，经验=档位/5） ================= */
+const challengeState = { students: [], allStudents: [] };
+
+async function initChallengeForm() {
+  let classes = [];
+  try {
+    const r = await supabase.from('student_info').select('class').order('class');
+    if (!r.error && r.data) classes = Array.from(new Set(r.data.map(s => s.class))).sort();
+  } catch (e) {}
+  els.challengeClass.innerHTML = classes.length
+    ? classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    : '<option value="">（暂无班级）</option>';
+  if (!els.challengeDate.value) els.challengeDate.value = todayStr();
+  els.challengeClass.addEventListener('change', loadChallengeStudents);
+  if (classes.length) await loadChallengeStudents();
+  await loadChallengeTasks();
+}
+
+async function loadChallengeStudents() {
+  const cls = els.challengeClass.value;
+  if (!cls) { els.challengeStudentBox.innerHTML = ''; challengeState.allStudents = []; challengeState.students = []; return; }
+  let names = [];
+  try {
+    const r = await supabase.from('student_info').select('student_name').eq('class', cls).order('student_name');
+    if (!r.error && r.data) names = r.data.map(s => s.student_name);
+  } catch (e) {}
+  challengeState.allStudents = names;
+  challengeState.students = names.slice();
+  renderChallengeStudents();
+}
+
+function renderChallengeStudents() {
+  const box = els.challengeStudentBox;
+  const all = challengeState.allStudents || [];
+  box.innerHTML = all.length
+    ? all.map(n => {
+        const on = challengeState.students.includes(n);
+        return `<label class="batch-pill ${on ? 'on' : ''}"><input type="checkbox" value="${esc(n)}" ${on ? 'checked' : ''} style="display:none">${esc(n)}</label>`;
+      }).join('')
+    : '<span class="text-muted">请先选择班级</span>';
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    const v = cb.value;
+    if (cb.checked && !challengeState.students.includes(v)) challengeState.students.push(v);
+    if (!cb.checked) challengeState.students = challengeState.students.filter(x => x !== v);
+    cb.closest('.batch-pill').classList.toggle('on', cb.checked);
+  }));
+}
+
+document.getElementById('btnChallengeAll')?.addEventListener('click', () => {
+  challengeState.students = challengeState.allStudents.slice();
+  renderChallengeStudents();
+});
+document.getElementById('btnChallengeNone')?.addEventListener('click', () => {
+  challengeState.students = [];
+  renderChallengeStudents();
+});
+document.getElementById('btnChallengeAssign')?.addEventListener('click', async () => {
+  const cls = els.challengeClass.value;
+  const title = els.challengeTitle.value.trim();
+  const dim = els.challengeDim.value;
+  const date = els.challengeDate.value;
+  if (!cls) { toast('请先选班级'); return; }
+  if (!title) { toast('请填写挑战名称'); return; }
+  if (!date) { toast('请选择任务日期'); return; }
+  if (!challengeState.students.length) { toast('请至少选择一名学生'); return; }
+  const btn = document.getElementById('btnChallengeAssign');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'create_challenge_tasks', params: {
+      p_class: cls, p_title: title, p_dim: dim, p_date: date,
+      p_students: challengeState.students.map(n => ({ value: n }))
+    }});
+    if (!wr.ok) { toast('发布失败，请重试'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动发布 ✅'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
+    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    els.challengeTitle.value = '';
+    await loadChallengeTasks();
+  } catch (e) { toast('发布失败，请重试'); }
+  finally { btn.disabled = false; }
+});
+
+async function loadChallengeTasks() {
+  const box = els.challengeTaskBox;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+  let rows;
+  try {
+    const r = await supabase
+      .from('challenge_task')
+      .select('*')
+      .order('task_date', { ascending: false })
+      .order('create_at', { ascending: false });
+    if (r.error) throw r.error;
+    rows = r.data || [];
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 80 号 SQL（challenge_task 表）')}</div>`;
+    return;
+  }
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">还没有发布挑战任务。</div>';
+    return;
+  }
+  const today = todayStr();
+  box.innerHTML = rows.map(t => {
+    const done = t.status === 'done';
+    const gain = done ? Math.round((t.max_level || 0) / 5) : 0;
+    return `
+    <div class="auto-rule-row">
+      <div class="rule-info">
+        <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0,10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
+          <span class="badge-dim">${esc(t.student_name)}</span>
+          <span class="badge-tag">🏆 ${esc(t.title)}</span>
+          <span class="badge-dim" style="margin-left:4px;">${DIM_LABEL[t.dim] || t.dim}</span>
+          <span class="badge-${done ? 'off' : 'dim'}" style="margin-left:6px;">${done ? `✅ ${t.max_level} 档 · +${gain}xp` : '⏳ 待学生选档'}</span>
+        </div>
+      </div>
+      <div class="rule-actions">
+        ${done ? '' : `<button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>`}
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('取消这条挑战？（未加分，学生端将不再显示）')) return;
+    const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
+    if (!wr.ok) { toast('取消失败，请重试'); return; }
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    loadChallengeTasks();
   }));
 }
 
