@@ -46,8 +46,10 @@ update public.challenge_task set done_levels = '[]'::jsonb where done_levels is 
 alter table public.challenge_task enable row level security;
 
 -- 学生端 / 教师端直查（前端按 class+student_name 过滤；教师端看全班）
+-- v152 修复：旧 80/81 号策略只授权 anon，教师端登录后是 authenticated 角色 → 教师端列表永远为空
 drop policy if exists "challenge_select_all" on public.challenge_task;
-create policy "challenge_select_all" on public.challenge_task for select to anon using (true);
+create policy "challenge_select_all" on public.challenge_task
+  for select to anon, authenticated using (true);
 
 -- ---------- 2) 教师批量布置挑战（可自定义档位方案） ----------
 -- 参数名与教师端 teacher.js 调用一致：p_class/p_title/p_dim/p_date/p_students/p_levels

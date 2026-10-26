@@ -18,7 +18,7 @@ declare
   v_subs    jsonb;
   v_today   date := (now() at time zone 'Asia/Shanghai')::date;  -- 与 22 号 SQL 同一"今天"口径
   v_since   date := v_today - 30;                                 -- 墙只需近 30 天状态；累计天数由 get_student_profile 单独算
-  v_task_ids bigint[];
+  v_task_ids uuid[];
 begin
   -- 1) 名单（student_directory 视图字段：id/class/student_name/avatar/frame/xp/level）
   --    v152：补充 id / class / frame —— class 供身份卡 currentRosterRow 按班匹配；
@@ -65,7 +65,7 @@ begin
    where btrim(s.class) = btrim(p_class);
 
   -- 5) 今日任务提交（task_submission 无 class/date 列，按当天任务 id 查）
-  v_task_ids := (select coalesce(array_agg(t.id), '{}'::bigint[])
+  v_task_ids := (select coalesce(array_agg(t.id), '{}'::uuid[])
                    from public.daily_task t
                   where btrim(t.class) = btrim(p_class) and t.task_date = v_today);
   if cardinality(v_task_ids) > 0 then
