@@ -510,6 +510,8 @@ function switchTab(name) {
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
   if (name === 'auto') loadAutoTab();
+  if (name === 'personal') { loadPersonalStudents(); loadPersonalTasks(); }
+  if (name === 'challenge') { loadChallengeStudents(); loadChallengeTasks(); }
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
   if (name === 'tools') fillPreviewClasses();
   if (name === 'task') activateTaskTab();
@@ -525,7 +527,9 @@ const PANE_DYNAMIC = {
   records: ['recordBox'],
   students: ['studentBox', 'batchResult'],
   tags: ['tagBox'],
-  auto: ['autoBox', 'manualTaskBox', 'manualStudentBox', 'personalTaskBox', 'personalStudentBox'],
+  auto: ['autoBox', 'manualTaskBox', 'manualStudentBox'],
+  personal: ['personalTaskBox', 'personalStudentBox'],
+  challenge: ['challengeTaskBox', 'challengeStudentBox'],
   exam: [],
   task: ['taskReportBox', 'tagReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
