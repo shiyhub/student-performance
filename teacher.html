@@ -382,6 +382,55 @@
         <div class="card-title">🗂️ 已发布个人任务</div>
         <div id="personalTaskBox"></div>
       </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">🏆 发布挑战任务</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          如"英语默写挑战"，学生端<b>挑战任务栏</b>可见；完成后学生自选达成档位
+          <b>10 / 15 / 20 … 110</b>（步长 5，共 21 档），对应经验 = 档位 ÷ 5（即 2 / 3 / 4 … 22）。
+        </p>
+        <div class="add-form-grid">
+          <div class="field full">
+            <label for="challengeTitle">挑战名称</label>
+            <input class="input" id="challengeTitle" maxlength="40" placeholder="例如：英语默写挑战">
+          </div>
+          <div class="field">
+            <label for="challengeClass">班级</label>
+            <select class="input" id="challengeClass"><option value="">加载中…</option></select>
+          </div>
+          <div class="field">
+            <label for="challengeDim">加分维度</label>
+            <select class="input" id="challengeDim">
+              <option value="de">❤️ 德</option>
+              <option value="zhi" selected>🧠 智</option>
+              <option value="ti">💪 体</option>
+              <option value="mei">🎨 美</option>
+              <option value="lao">🧹 劳</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="challengeDate">任务日期</label>
+            <input class="input" id="challengeDate" type="date">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeAll">全选</button>
+              <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeNone">清空</button>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>选择学生（默认全班）</label>
+          <div id="challengeStudentBox"></div>
+        </div>
+        <button class="btn btn-primary" type="button" id="btnChallengeAssign" style="margin-top:10px;">发布挑战</button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">🗂️ 已发布挑战任务</div>
+        <div id="challengeTaskBox"></div>
+      </div>
     </section>
 
     <!-- ===== 试卷拍照（仅家长端可见，学生端不显示） ===== -->
