@@ -2471,8 +2471,15 @@ async function loadChallengeTasks() {
   }
   const today = todayStr();
   box.innerHTML = rows.map(t => {
-    const done = t.status === 'done';
-    const gain = done ? Math.round((t.max_level || 0) / 5) : 0;
+    if (t.status === 'cancelled') return '';
+    const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : [];
+    const doneArr = Array.isArray(t.done_levels) ? t.done_levels : [];
+    const total = scheme.length || doneArr.length;
+    const allDone = total > 0 && doneArr.length >= total;
+    const gain = doneArr.reduce((s, lv) => {
+      const f = scheme.find(x => x[0] === lv);
+      return s + (f ? f[1] : 0);
+    }, 0);
     return `
     <div class="auto-rule-row">
       <div class="rule-info">
@@ -2480,14 +2487,14 @@ async function loadChallengeTasks() {
           <span class="badge-dim">${esc(t.student_name)}</span>
           <span class="badge-tag">🏆 ${esc(t.title)}</span>
           <span class="badge-dim" style="margin-left:4px;">${DIM_LABEL[t.dim] || t.dim}</span>
-          <span class="badge-${done ? 'off' : 'dim'}" style="margin-left:6px;">${done ? `✅ ${t.max_level} 档 · +${gain}xp` : '⏳ 待学生选档'}</span>
+          <span class="badge-${allDone ? 'off' : 'dim'}" style="margin-left:6px;">${allDone ? `🏆 全部达成 ${doneArr.length}/${total} · 共+${gain}xp` : `进行中 ${doneArr.length}/${total} 档 · 已+${gain}xp`}</span>
         </div>
       </div>
       <div class="rule-actions">
-        ${done ? '' : `<button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>`}
+        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
   box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
     if (!confirm('取消这条挑战？（未加分，学生端将不再显示）')) return;
     const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });

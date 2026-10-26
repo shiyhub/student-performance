@@ -2057,8 +2057,9 @@ async function loadChallengeTasks() {
   let rows = [];
   try {
     const r = await supabase.from('challenge_task')
-      .select('id,status,title,dim,max_level,levels,task_date')
+      .select('id,status,title,dim,levels,done_levels,task_date')
       .eq('class', cls).eq('student_name', name)
+      .neq('status', 'cancelled')
       .order('task_date', { ascending: false });
     if (!r.error) rows = r.data || [];
   } catch (e) {}
@@ -2068,47 +2069,43 @@ async function loadChallengeTasks() {
   const defaultLevels = CHALLENGE_LEVELS.map(lv => [lv, lv / 5]);
   box.innerHTML = rows.map(t => {
     const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : defaultLevels;
-    const done = t.status === 'done';
-    if (done) {
-      const found = scheme.find(x => x[0] === t.max_level);
-      const gain = found ? found[1] : Math.round((t.max_level || 0) / 5);
-      return `<div class="today-task-row done">
-        <div class="today-task-info">
-          <span class="today-task-label">🏆 ${esc(t.title)}</span>
-          <span class="today-task-state ok">✅ 达成 ${t.max_level} 档</span>
-        </div>
-        <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${gain}</div>
-      </div>`;
-    }
-    const opts = scheme.map(p => `<option value="${p[0]}">${p[0]} 档 · 经验+${p[1]}</option>`).join('');
-    return `<div class="today-task-row">
+    const doneArr = Array.isArray(t.done_levels) ? t.done_levels : [];
+    const doneSet = new Set(doneArr);
+    const allDone = doneArr.length >= scheme.length;
+    const chips = scheme.map(([lv, xp]) => {
+      const on = doneSet.has(lv);
+      return `<label class="chg-chip ${on ? 'on' : ''}">
+        <input type="checkbox" value="${lv}" ${on ? 'disabled checked' : ''} data-lv="${t.id}">
+        ${lv}档·+${xp}${on ? ' ✅' : ''}
+      </label>`;
+    }).join('');
+    return `<div class="today-task-row ${allDone ? 'done' : ''}">
       <div class="today-task-info">
         <span class="today-task-label">🏆 ${esc(t.title)}</span>
-        <span class="today-task-state">⏳ 自选达成档位</span>
+        <span class="today-task-state ${allDone ? 'ok' : ''}">${allDone ? '🏆 全部达成 ' + doneArr.length + '/' + scheme.length : '已达成 ' + doneArr.length + '/' + scheme.length + ' 档'}</span>
       </div>
-      <div class="today-task-sub">${dimName[t.dim] || ''} · 按达成档位领经验</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
-        <select data-lv-select="${t.id}" class="challenge-lv">${opts}</select>
-        <button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 我达成了</button>
-      </div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 勾选本次新达成的档位，可多选一次提交</div>
+      <div class="chg-chip-box">${chips}</div>
+      ${allDone ? '' : `<div style="margin-top:6px;"><button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 提交达成</button></div>`}
     </div>`;
   }).join('');
   box.querySelectorAll('[data-confirm-challenge]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.confirmChallenge;
-    const sel = box.querySelector(`[data-lv-select="${id}"]`);
-    const lv = parseInt(sel.value, 10);
+    const checks = box.querySelectorAll(`input[data-lv="${id}"]:not(:disabled):checked`);
+    const lvList = Array.from(checks).map(c => parseInt(c.value, 10));
+    if (!lvList.length) { toast('请先勾选本次达成的档位'); return; }
     btn.disabled = true;
     try {
-      const r = await supabase.rpc('confirm_challenge_task', { p_task_id: id, p_level: lv });
-      if (r.error) { toast('确认失败，请重试'); btn.disabled = false; return; }
+      const r = await supabase.rpc('confirm_challenge_levels', { p_task_id: id, p_levels: lvList });
+      if (r.error) { toast('提交失败，请重试'); btn.disabled = false; return; }
       const d = r.data || {};
-      if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
+      if (d.ok === false) { toast('提交失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
-      toast(`挑战达成！${lv} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      toast(`已达成 ${d.new_levels.length} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
       loadChallengeTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
-    } catch (e) { toast('确认失败，请检查网络'); btn.disabled = false; }
+    } catch (e) { toast('提交失败，请检查网络'); btn.disabled = false; }
   }));
 }
 
