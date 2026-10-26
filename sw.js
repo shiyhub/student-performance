@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v63';
+const CACHE = 'sp-cache-v64';
 const ASSETS = [
   './',
   './index.html',
@@ -256,13 +256,15 @@ self.addEventListener('fetch', e => {
           new Promise((_, rej) => setTimeout(() => rej(new Error('sw-api-timeout')), 8000))
         ]);
         if (res && res.ok) {
-          const copy = res.clone();
-          const headers = new Headers(copy.headers);
-          headers.set('x-sp-ts', String(Date.now()));
-          headers.delete('content-encoding');
-          headers.delete('content-length');
-          const body = await copy.arrayBuffer();
-          cache.put(e.request, new Response(body, { status: copy.status, statusText: copy.statusText, headers }));
+          try {
+            const copy = res.clone();
+            const headers = new Headers(copy.headers);
+            headers.set('x-sp-ts', String(Date.now()));
+            headers.delete('content-encoding');
+            headers.delete('content-length');
+            const body = await copy.arrayBuffer();
+            await cache.put(e.request, new Response(body, { status: copy.status, statusText: copy.statusText, headers }));
+          } catch (ce) { /* 缓存写入失败不影响返回网络数据 */ }
         }
         return res;
       } catch (err) {
