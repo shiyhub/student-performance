@@ -147,6 +147,7 @@ const els = {
   challengeDate: $('#challengeDate'),
   challengeStudentBox: $('#challengeStudentBox'),
   challengeTaskBox: $('#challengeTaskBox'),
+  challengeLevelBox: $('#challengeLevelBox'),
   // 测试工具
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
@@ -2329,8 +2330,32 @@ async function loadPersonalTasks() {
   }));
 }
 
-/* ================= 挑战任务（档位制 10~110 步5，经验=档位/5） ================= */
-const challengeState = { students: [], allStudents: [] };
+/* ================= 挑战任务（档位制，教师可自定义档位与经验） ================= */
+const DEFAULT_CHALLENGE_LEVELS = (() => { const a = []; for (let lv = 10; lv <= 110; lv += 5) a.push([lv, lv / 5]); return a; })();
+const challengeState = { students: [], allStudents: [], levels: DEFAULT_CHALLENGE_LEVELS.map(x => x.slice()) };
+
+function renderChallengeLevels() {
+  const box = els.challengeLevelBox;
+  box.innerHTML = challengeState.levels.map((lv, i) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:#f7f3ec;border:1px solid #e6d9c3;border-radius:8px;padding:4px 6px;">
+      <input type="number" data-lv-n="${i}" value="${lv[0]}" style="width:64px;padding:3px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;" title="档位数值">
+      <span style="font-size:12px;color:#8a7a66;">档</span>
+      <input type="number" data-lv-xp="${i}" value="${lv[1]}" style="width:56px;padding:3px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;" title="经验值">
+      <span style="font-size:12px;color:#8a7a66;">xp</span>
+      <button type="button" data-lv-del="${i}" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:14px;padding:0 2px;">×</button>
+    </span>`).join('');
+  box.querySelectorAll('[data-lv-n]').forEach(inp => inp.addEventListener('change', () => { challengeState.levels[+inp.dataset.lvN][0] = parseInt(inp.value, 10) || 0; }));
+  box.querySelectorAll('[data-lv-xp]').forEach(inp => inp.addEventListener('change', () => { challengeState.levels[+inp.dataset.lvXp][1] = parseInt(inp.value, 10) || 0; }));
+  box.querySelectorAll('[data-lv-del]').forEach(btn => btn.addEventListener('click', () => { challengeState.levels.splice(+btn.dataset.lvDel, 1); renderChallengeLevels(); }));
+}
+document.getElementById('btnChallengeLevelAdd')?.addEventListener('click', () => {
+  challengeState.levels.push([challengeState.levels.length ? challengeState.levels[challengeState.levels.length-1][0] + 5 : 10, 1]);
+  renderChallengeLevels();
+});
+document.getElementById('btnChallengeLevelReset')?.addEventListener('click', () => {
+  challengeState.levels = DEFAULT_CHALLENGE_LEVELS.map(x => x.slice());
+  renderChallengeLevels();
+});
 
 async function initChallengeForm() {
   let classes = [];
@@ -2342,6 +2367,7 @@ async function initChallengeForm() {
     ? classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
     : '<option value="">（暂无班级）</option>';
   if (!els.challengeDate.value) els.challengeDate.value = todayStr();
+  renderChallengeLevels();
   els.challengeClass.addEventListener('change', loadChallengeStudents);
   if (classes.length) await loadChallengeStudents();
   await loadChallengeTasks();
@@ -2393,12 +2419,14 @@ document.getElementById('btnChallengeAssign')?.addEventListener('click', async (
   if (!cls) { toast('请先选班级'); return; }
   if (!title) { toast('请填写挑战名称'); return; }
   if (!date) { toast('请选择任务日期'); return; }
+  if (!challengeState.levels.length) { toast('档位方案不能为空'); return; }
   if (!challengeState.students.length) { toast('请至少选择一名学生'); return; }
   const btn = document.getElementById('btnChallengeAssign');
   btn.disabled = true;
   try {
     const wr = await runWrite({ name: 'create_challenge_tasks', params: {
       p_class: cls, p_title: title, p_dim: dim, p_date: date,
+      p_levels: challengeState.levels,
       p_students: challengeState.students.map(n => ({ value: n }))
     }});
     if (!wr.ok) { toast('发布失败，请重试'); return; }

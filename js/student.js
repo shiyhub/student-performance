@@ -2057,7 +2057,7 @@ async function loadChallengeTasks() {
   let rows = [];
   try {
     const r = await supabase.from('challenge_task')
-      .select('id,status,title,dim,max_level,task_date')
+      .select('id,status,title,dim,max_level,levels,task_date')
       .eq('class', cls).eq('student_name', name)
       .order('task_date', { ascending: false });
     if (!r.error) rows = r.data || [];
@@ -2065,10 +2065,13 @@ async function loadChallengeTasks() {
   if (!rows.length) { card.hidden = true; return; }
   card.hidden = false;
   const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
+  const defaultLevels = CHALLENGE_LEVELS.map(lv => [lv, lv / 5]);
   box.innerHTML = rows.map(t => {
+    const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : defaultLevels;
     const done = t.status === 'done';
     if (done) {
-      const gain = Math.round((t.max_level || 0) / 5);
+      const found = scheme.find(x => x[0] === t.max_level);
+      const gain = found ? found[1] : Math.round((t.max_level || 0) / 5);
       return `<div class="today-task-row done">
         <div class="today-task-info">
           <span class="today-task-label">🏆 ${esc(t.title)}</span>
@@ -2077,13 +2080,13 @@ async function loadChallengeTasks() {
         <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${gain}</div>
       </div>`;
     }
-    const opts = CHALLENGE_LEVELS.map(lv => `<option value="${lv}">${lv} 档 · 经验+${lv / 5}</option>`).join('');
+    const opts = scheme.map(p => `<option value="${p[0]}">${p[0]} 档 · 经验+${p[1]}</option>`).join('');
     return `<div class="today-task-row">
       <div class="today-task-info">
         <span class="today-task-label">🏆 ${esc(t.title)}</span>
         <span class="today-task-state">⏳ 自选达成档位</span>
       </div>
-      <div class="today-task-sub">${dimName[t.dim] || ''} · 档位 10~110，经验=档位÷5</div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 按达成档位领经验</div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
         <select data-lv-select="${t.id}" class="challenge-lv">${opts}</select>
         <button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 我达成了</button>
