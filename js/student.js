@@ -2103,6 +2103,11 @@ async function loadChallengeTasks() {
       ${allDone ? '' : `<div style="margin-top:6px;"><button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 提交达成</button></div>`}
     </div>`;
   }).join('');
+  // v152.2：勾选档位高亮（未达成档位勾选时点亮，提交后由 .on 置灰覆盖）
+  box.querySelectorAll('.chg-chip input:not(:disabled)').forEach(cb => cb.addEventListener('change', () => {
+    const chip = cb.closest('.chg-chip');
+    if (chip) chip.classList.toggle('sel', cb.checked);
+  }));
   box.querySelectorAll('[data-confirm-challenge]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.confirmChallenge;
     const checks = box.querySelectorAll(`input[data-lv="${id}"]:not(:disabled):checked`);

@@ -204,6 +204,7 @@ async function syncRunner(op) {
     if (op.name === 'create_challenge_tasks') { const r = await supabase.rpc('create_challenge_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_challenge_task') { const r = await supabase.rpc('delete_challenge_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
     if (op.name === 'delete_challenge_tasks') { const r = await supabase.rpc('delete_challenge_tasks', { p_task_ids: p.p_task_ids }); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'cancel_challenge_submission') { const r = await supabase.rpc('cancel_challenge_submission', { p_submission_id: p.p_submission_id }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -2478,6 +2479,21 @@ async function loadChallengeTasks() {
     box.innerHTML = '<div class="empty">还没有发布挑战任务。</div>';
     return;
   }
+  // v152.2：查询填报记录（单次可取消），按挑战分组
+  let subsMap = new Map();
+  try {
+    const s = await supabase
+      .from('challenge_submission')
+      .select('id,challenge_id,student_name,levels,xp,submitted_at,status')
+      .eq('status', 'active');
+    if (!s.error && s.data) {
+      (s.data || []).forEach(sub => {
+        const arr = subsMap.get(sub.challenge_id) || [];
+        arr.push(sub);
+        subsMap.set(sub.challenge_id, arr);
+      });
+    }
+  } catch (e) {}
   const today = todayStr();
   box.innerHTML = rows.map(t => {
     if (t.status === 'cancelled') return '';
@@ -2507,10 +2523,34 @@ async function loadChallengeTasks() {
         </div>
       </div>
       <div class="rule-actions">
+        ${(subsMap.get(t.id) || []).length ? `<button class="btn btn-ghost btn-sm" data-sub-toggle="${t.id}">填报记录 ${(subsMap.get(t.id) || []).length} 次</button>` : ''}
         <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}" style="${allDone ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${allDone ? '删除（回退经验）' : '取消'}</button>
       </div>
+      ${(subsMap.get(t.id) || []).length ? `<div class="sub-list" data-sub-box="${t.id}" style="display:none;margin:6px 0 0 44px;padding:6px 10px;background:#faf6ef;border:1px solid #e8dcc6;border-radius:8px;font-size:12px;">
+        ${(subsMap.get(t.id) || []).map(sub => `
+          <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px dashed #e8dcc6;">
+            <span style="color:#8a7a66;">${esc(String(sub.submitted_at || '').replace('T', ' ').slice(0, 16))}</span>
+            <span>档位 ${(Array.isArray(sub.levels) ? sub.levels : []).map(Number).join(',') || '—'}</span>
+            <span style="color:#a07d3e;">+${Number(sub.xp) || 0}xp</span>
+            <button class="btn btn-warn btn-sm" data-cancel-sub="${sub.id}" style="margin-left:auto;padding:2px 8px;">取消本次（回退）</button>
+          </div>`).join('')}
+      </div>` : ''}
     </div>`;
   }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
+  box.querySelectorAll('[data-sub-toggle]').forEach(btn => btn.addEventListener('click', () => {
+    const b = box.querySelector('[data-sub-box="' + btn.dataset.subToggle + '"]');
+    if (b) b.style.display = (b.style.display === 'none') ? '' : 'none';
+  }));
+  box.querySelectorAll('[data-cancel-sub]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('取消本次填报？该次所得经验将回退，对应档位从已达成中移除。')) return;
+    const wr = await runWrite({ name: 'cancel_challenge_submission', params: { p_submission_id: btn.dataset.cancelSub } });
+    if (!wr.ok) { toast('取消失败，请重试'); return; }
+    const d4 = wr.res || {};
+    if (d4.ok === false) { toast('取消失败：' + (d4.reason || '')); return; }
+    const refund4 = Number(d4.refund_xp) || 0;
+    toast(refund4 ? '已取消本次填报，回退 ' + refund4 + 'xp' : '已取消本次填报');
+    loadChallengeTasks();
+  }));
   box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
     if (!confirm('删除这条挑战？已达成档位加过的经验将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
