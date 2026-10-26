@@ -1306,9 +1306,11 @@ html[data-weather] .wall-view{background:transparent}
 .challenge-lv { padding: 6px 10px; border-radius: 8px; border: 1px solid #e0c9a6; background: #fffdf8; font-size: 13px; color: #5a4a3a; outline: none; max-width: 168px; }
 
 /* v160：挑战任务档位多选 chips */
-.chg-chip-box { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-.chg-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:999px;
-  border:1px solid #e0c9a6; background:#fffdf8; font-size:12px; color:#8a7a66; cursor:pointer; user-select:none; }
+.chg-chip-box { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+.chg-chip { display:inline-flex; align-items:center; justify-content:center; min-width:52px; min-height:38px;
+  gap:4px; padding:8px 16px; border-radius:999px;
+  border:1.5px solid #e0c9a6; background:#fffdf8; font-size:16px; font-weight:600; color:#8a7a66;
+  cursor:pointer; user-select:none; box-sizing:border-box; }
 .chg-chip input { display:none; }
 .chg-chip.sel { background:#fdf3d7; border-color:#c9a96e; color:#a07d3e; font-weight:600; box-shadow:0 0 0 1px #c9a96e inset; }
 .chg-chip.on { background:#ece4d4; border-color:#d8c4a2; color:#b0a28a; text-decoration:line-through; opacity:.6; cursor:not-allowed; }
