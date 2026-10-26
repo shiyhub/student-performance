@@ -1301,3 +1301,11 @@ html[data-weather] .wall-view{background:transparent}
 
 /* v150：挑战任务档位选择器 */
 .challenge-lv { padding: 6px 10px; border-radius: 8px; border: 1px solid #e0c9a6; background: #fffdf8; font-size: 13px; color: #5a4a3a; outline: none; max-width: 168px; }
+
+/* v160：挑战任务档位多选 chips */
+.chg-chip-box { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.chg-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:999px;
+  border:1px solid #e0c9a6; background:#fffdf8; font-size:12px; color:#8a7a66; cursor:pointer; user-select:none; }
+.chg-chip input { display:none; }
+.chg-chip.on { background:#f3e9d2; border-color:#c9a96e; color:#a07d3e; text-decoration:line-through; }
+.chg-chip:not(.on):hover { border-color:#c9a96e; color:#a07d3e; }
