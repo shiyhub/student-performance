@@ -1298,3 +1298,6 @@ html[data-weather] .wall-view{background:transparent}
 .mate.rank-3 { border:1.5px solid #C98A5C; }
 .mate.rank-4 { border:1.5px solid #E3C684; }
 .mate.rank-5 { border:1.5px solid #C9B28C; }
+
+/* v150：挑战任务档位选择器 */
+.challenge-lv { padding: 6px 10px; border-radius: 8px; border: 1px solid #e0c9a6; background: #fffdf8; font-size: 13px; color: #5a4a3a; outline: none; max-width: 168px; }
