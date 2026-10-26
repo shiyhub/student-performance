@@ -114,12 +114,6 @@ function toast(msg) {
 }
 
 /* ================= 今日学习任务 ================= */
-const TASK_GRADES = [
-  { key: 'none',    label: '还没做',   icon: '⏳' },
-  { key: 'done',    label: '完成了',   icon: '✅' },
-  { key: 'good',    label: '优秀 A',   icon: '👍' },
-  { key: 'perfect', label: '完美 A+',  icon: '🏆' }
-];
 
 async function loadStudentTask() {
   if (!els.taskCard) return;
