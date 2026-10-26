@@ -199,9 +199,11 @@ async function syncRunner(op) {
     if (op.name === 'create_manual_tasks') { const r = await supabase.rpc('create_manual_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'create_personal_tasks') { const r = await supabase.rpc('create_personal_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_personal_task') { const r = await supabase.rpc('delete_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'delete_personal_tasks') { const r = await supabase.rpc('delete_personal_tasks', { p_task_ids: p.p_task_ids }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_fill_personal_task') { const r = await supabase.rpc('teacher_fill_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'create_challenge_tasks') { const r = await supabase.rpc('create_challenge_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_challenge_task') { const r = await supabase.rpc('delete_challenge_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'delete_challenge_tasks') { const r = await supabase.rpc('delete_challenge_tasks', { p_task_ids: p.p_task_ids }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -2305,6 +2307,9 @@ async function loadPersonalTasks() {
   const today = todayStr();
   box.innerHTML = rows.map(t => `
     <div class="auto-rule-row">
+      <label class="sel-check" style="display:flex;align-items:center;padding-right:8px;cursor:pointer;user-select:none;" title="选择该条">
+        <input type="checkbox" data-sel-ptask="${t.id}">
+      </label>
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           ${t.deadline ? `<span class="badge-dim" style="margin-left:6px;">截止 ${String(t.deadline).slice(5)}</span>` : ''}
@@ -2316,8 +2321,8 @@ async function loadPersonalTasks() {
       </div>
       <div class="rule-actions">
         ${t.status === 'pending' ? `
-          <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>
-          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}">取消</button>` : ''}
+          <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>` : ''}
+          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}" style="${t.status === 'done' ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${t.status === 'done' ? '删除（回退经验）' : '取消'}</button>
       </div>
     </div>`).join('');
   box.querySelectorAll('[data-fill-ptask]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2331,12 +2336,16 @@ async function loadPersonalTasks() {
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消这条个人任务？（未加分，学生端将不再显示）')) return;
+    if (!confirm('删除这条个人任务？已完成任务的已加经验将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
-    if (!wr.ok) { toast('取消失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d2 = wr.res || {};
+    if (d2.ok === false) { toast('删除失败：' + (d2.reason || '')); return; }
+    const refund2 = Number(d2.refund_xp) || 0;
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund2 ? '已删除，回退经验 ' + refund2 + 'xp' : '已删除'));
     loadPersonalTasks();
   }));
+  box.querySelectorAll('input[data-sel-ptask]').forEach(cb => cb.addEventListener('change', refreshPtaskSel));
 }
 
 /* ================= 挑战任务（档位制，教师可自定义档位与经验） ================= */
@@ -2486,6 +2495,9 @@ async function loadChallengeTasks() {
     }, 0);
     return `
     <div class="auto-rule-row">
+      <label class="sel-check" style="display:flex;align-items:center;padding-right:8px;cursor:pointer;user-select:none;" title="选择该条">
+        <input type="checkbox" data-sel-challenge="${t.id}">
+      </label>
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0,10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           <span class="badge-dim">${esc(t.student_name)}</span>
@@ -2495,17 +2507,21 @@ async function loadChallengeTasks() {
         </div>
       </div>
       <div class="rule-actions">
-        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>` : ''}
+        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}" style="${allDone ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${allDone ? '删除（回退经验）' : '取消'}</button>
       </div>
     </div>`;
   }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
   box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消这条挑战？（未加分，学生端将不再显示）')) return;
+    if (!confirm('删除这条挑战？已达成档位加过的经验将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
-    if (!wr.ok) { toast('取消失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d3 = wr.res || {};
+    if (d3.ok === false) { toast('删除失败：' + (d3.reason || '')); return; }
+    const refund3 = Number(d3.refund_xp) || 0;
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund3 ? '已删除，回退经验 ' + refund3 + 'xp' : '已删除'));
     loadChallengeTasks();
   }));
+  box.querySelectorAll('input[data-sel-challenge]').forEach(cb => cb.addEventListener('change', refreshChallengeSel));
 }
 
 async function loadAutoRules() {
@@ -3565,4 +3581,73 @@ document.addEventListener('DOMContentLoaded', () => {
       names: seatAllNames
     });
   };
+});
+
+/* ================= v152.1：个人任务 & 挑战任务 多选删除（83 号 SQL） ================= */
+function refreshPtaskSel() {
+  const box = els.personalTaskBox;
+  const n = box.querySelectorAll('input[data-sel-ptask]:checked').length;
+  const cnt = document.getElementById('ptaskSelCount');
+  if (cnt) cnt.textContent = n ? `已选 ${n} 条` : '';
+}
+document.getElementById('btnPtaskSelAll')?.addEventListener('click', () => {
+  els.personalTaskBox.querySelectorAll('input[data-sel-ptask]').forEach(cb => { cb.checked = true; });
+  refreshPtaskSel();
+});
+document.getElementById('btnPtaskSelNone')?.addEventListener('click', () => {
+  els.personalTaskBox.querySelectorAll('input[data-sel-ptask]').forEach(cb => { cb.checked = false; });
+  refreshPtaskSel();
+});
+document.getElementById('btnPtaskDelBatch')?.addEventListener('click', async () => {
+  const ids = Array.from(els.personalTaskBox.querySelectorAll('input[data-sel-ptask]:checked')).map(cb => cb.value);
+  if (!ids.length) { toast('请先勾选要删除的个人任务'); return; }
+  if (!confirm(`删除所选 ${ids.length} 条个人任务？已完成任务的已加经验将自动回退。`)) return;
+  const btn = document.getElementById('btnPtaskDelBatch');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'delete_personal_tasks', params: { p_task_ids: ids } });
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('删除失败：' + (d.reason || '')); return; }
+    const refund = Number(d.refund_xp) || 0;
+    const del = Number(d.deleted) || 0;
+    const fail = Number(d.failed) || 0;
+    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    loadPersonalTasks();
+  } catch (e) { toast('删除失败，请重试'); }
+  finally { btn.disabled = false; }
+});
+
+function refreshChallengeSel() {
+  const box = els.challengeTaskBox;
+  const n = box.querySelectorAll('input[data-sel-challenge]:checked').length;
+  const cnt = document.getElementById('challengeSelCount');
+  if (cnt) cnt.textContent = n ? `已选 ${n} 条` : '';
+}
+document.getElementById('btnChallengeSelAll')?.addEventListener('click', () => {
+  els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]').forEach(cb => { cb.checked = true; });
+  refreshChallengeSel();
+});
+document.getElementById('btnChallengeSelNone')?.addEventListener('click', () => {
+  els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]').forEach(cb => { cb.checked = false; });
+  refreshChallengeSel();
+});
+document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async () => {
+  const ids = Array.from(els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]:checked')).map(cb => cb.value);
+  if (!ids.length) { toast('请先勾选要删除的挑战任务'); return; }
+  if (!confirm(`删除所选 ${ids.length} 条挑战任务？已达成档位加过的经验将自动回退。`)) return;
+  const btn = document.getElementById('btnChallengeDelBatch');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'delete_challenge_tasks', params: { p_task_ids: ids } });
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('删除失败：' + (d.reason || '')); return; }
+    const refund = Number(d.refund_xp) || 0;
+    const del = Number(d.deleted) || 0;
+    const fail = Number(d.failed) || 0;
+    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    loadChallengeTasks();
+  } catch (e) { toast('删除失败，请重试'); }
+  finally { btn.disabled = false; }
 });

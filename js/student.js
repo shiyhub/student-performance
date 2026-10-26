@@ -2090,7 +2090,7 @@ async function loadChallengeTasks() {
       const on = doneSet.has(lvNum);
       return `<label class="chg-chip ${on ? 'on' : ''}">
         <input type="checkbox" value="${lvNum}" ${on ? 'disabled checked' : ''} data-lv="${t.id}">
-        ${lvNum}档·+${xp}${on ? ' ✅' : ''}
+        ${lvNum}
       </label>`;
     }).join('');
     return `<div class="today-task-row ${allDone ? 'done' : ''}">
