@@ -385,6 +385,12 @@ const els = {
   avatarPicker: $('#avatarPicker'),
   avatarHint: $('#avatarHint'),
   btnAvatarClose: $('#btnAvatarClose'),
+  leaderboardModal: $('#leaderboardModal'),
+  lbTitle: $('#lbTitle'),
+  lbSub: $('#lbSub'),
+  lbIcon: $('#lbIcon'),
+  leaderboardBody: $('#leaderboardBody'),
+  btnLbClose: $('#btnLbClose'),
   btnSound: $('#btnSound'),
   // 表单
   todayLabel: $('#todayLabel'),
@@ -1492,6 +1498,16 @@ function bindEvents() {
     if (e.target === els.avatarModal) { sfx.back(); els.avatarModal.classList.remove('show'); }
   });
 
+  // v152.3：雏菊榜单（左：经验榜 / 右：挑战榜）
+  const flowerLeft = document.getElementById('flowerLeft');
+  const flowerRight = document.getElementById('flowerRight');
+  if (flowerLeft) flowerLeft.addEventListener('click', () => { sfx.tap(); openLeaderboard('xp'); });
+  if (flowerRight) flowerRight.addEventListener('click', () => { sfx.tap(); openLeaderboard('challenge'); });
+  els.btnLbClose.addEventListener('click', () => { sfx.back(); els.leaderboardModal.classList.remove('show'); });
+  els.leaderboardModal.addEventListener('click', e => {
+    if (e.target === els.leaderboardModal) { sfx.back(); els.leaderboardModal.classList.remove('show'); }
+  });
+
   // 音效开关
   updateSoundButton();
   els.btnSound.addEventListener('click', () => {
@@ -2090,7 +2106,7 @@ async function loadChallengeTasks() {
       const on = doneSet.has(lvNum);
       return `<label class="chg-chip ${on ? 'on' : ''}">
         <input type="checkbox" value="${lvNum}" ${on ? 'disabled checked' : ''} data-lv="${t.id}">
-        ${lvNum}档·+${xp}${on ? ' ✅' : ''}
+        ${lvNum}
       </label>`;
     }).join('');
     return `<div class="today-task-row ${allDone ? 'done' : ''}">
@@ -2103,6 +2119,11 @@ async function loadChallengeTasks() {
       ${allDone ? '' : `<div style="margin-top:6px;"><button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 提交达成</button></div>`}
     </div>`;
   }).join('');
+  // v152.2：勾选档位高亮（未达成档位勾选时点亮，提交后由 .on 置灰覆盖）
+  box.querySelectorAll('.chg-chip input:not(:disabled)').forEach(cb => cb.addEventListener('change', () => {
+    const chip = cb.closest('.chg-chip');
+    if (chip) chip.classList.toggle('sel', cb.checked);
+  }));
   box.querySelectorAll('[data-confirm-challenge]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.confirmChallenge;
     const checks = box.querySelectorAll(`input[data-lv="${id}"]:not(:disabled):checked`);
@@ -2910,3 +2931,116 @@ function escapeHtml(s) {
   }
   fetchWeather();
 })();
+/* ============ v152.3：雏菊榜单（左：经验榜 / 右：挑战榜） ============ */
+let lbCurrentStudent = '';
+
+function openLeaderboard(kind) {
+  const cls = (els.inpClass ? els.inpClass.value : '') || '';
+  const name = (els.inpName ? els.inpName.value : '') || '';
+  lbCurrentStudent = name;
+  els.leaderboardModal.classList.add('show');
+  if (kind === 'xp') {
+    els.lbTitle.textContent = '经验榜';
+    els.lbSub.textContent = cls ? cls + ' 全班经验排名' : '全班经验排名';
+    els.lbIcon.textContent = '🏅';
+    loadLeaderboardXp(cls);
+  } else {
+    els.lbTitle.textContent = '挑战榜';
+    els.lbSub.textContent = '点击榜单查看最高档位排名';
+    els.lbIcon.textContent = '🏆';
+    loadLeaderboardChallenge(cls);
+  }
+}
+
+async function loadLeaderboardXp(cls) {
+  const box = els.leaderboardBody;
+  box.innerHTML = '<div class="lb-empty">正在加载…</div>';
+  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级进入。</div>'; return; }
+  let rows = [];
+  try {
+    const r = await supabase
+      .from('student_info')
+      .select('student_name,xp,level')
+      .eq('class', cls)
+      .order('xp', { ascending: false });
+    if (!r.error) rows = r.data || [];
+  } catch (e) {}
+  if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无学生数据。</div>'; return; }
+  const medal = ['🥇', '🥈', '🥉'];
+  box.innerHTML = rows.map((s, i) => `
+    <div class="lb-row ${s.student_name === lbCurrentStudent ? 'me' : ''}">
+      <span class="lb-rank ${i < 3 ? 'top' + (i + 1) : ''}">${i < 3 ? medal[i] : (i + 1)}</span>
+      <span class="lb-name">${esc(s.student_name)}</span>
+      <span class="lb-val">Lv.${s.level}</span>
+      <span class="lb-val">${s.xp}xp</span>
+    </div>`).join('');
+}
+
+async function loadLeaderboardChallenge(cls) {
+  const box = els.leaderboardBody;
+  box.innerHTML = '<div class="lb-empty">正在加载…</div>';
+  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级进入。</div>'; return; }
+  let rows = [];
+  try {
+    const r = await supabase
+      .from('challenge_task')
+      .select('id,title,task_date,status,student_name,max_level,done_levels')
+      .eq('class', cls)
+      .neq('status', 'cancelled');
+    if (!r.error) rows = r.data || [];
+  } catch (e) {}
+  if (!rows.length) { box.innerHTML = '<div class="lb-empty">还没有挑战任务。</div>'; return; }
+  const groups = new Map();
+  rows.forEach(t => {
+    const key = t.title;
+    if (!groups.has(key)) groups.set(key, { title: key, date: t.task_date || '', items: [] });
+    groups.get(key).items.push(t);
+  });
+  const list = Array.from(groups.values()).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  box.innerHTML = `
+    <button type="button" class="lb-back" data-lb-back style="display:none;">← 返回榜单列表</button>
+    <div id="lbList">${list.map(g => `
+      <div class="lb-challenge-item" data-lb-challenge="${esc(g.title)}">
+        <div class="lb-c-title">🏆 ${esc(g.title)}</div>
+        <div class="lb-c-meta">${esc(g.date || '')} · ${g.items.length} 名学生参与</div>
+      </div>`).join('')}</div>
+    <div id="lbDetail" style="display:none"></div>`;
+  box.querySelectorAll('[data-lb-challenge]').forEach(item => item.addEventListener('click', () => {
+    sfx.tap();
+    renderChallengeDetail(list, item.dataset.lbChallenge);
+  }));
+  box.querySelector('[data-lb-back]').addEventListener('click', () => {
+    sfx.tap();
+    document.getElementById('lbList').style.display = '';
+    document.getElementById('lbDetail').style.display = 'none';
+    box.querySelector('[data-lb-back]').style.display = 'none';
+    els.lbSub.textContent = '点击榜单查看最高档位排名';
+  });
+}
+
+function renderChallengeDetail(list, title) {
+  const box = els.leaderboardBody;
+  const g = list.find(x => x.title === title);
+  if (!g) return;
+  const medal = ['🥇', '🥈', '🥉'];
+  const items = g.items.slice().sort((a, b) => {
+    const ma = Number(a.max_level) || -1, mb = Number(b.max_level) || -1;
+    return mb - ma;
+  });
+  document.getElementById('lbList').style.display = 'none';
+  document.getElementById('lbDetail').style.display = '';
+  document.getElementById('lbDetail').innerHTML = `
+    <div class="lb-c-title" style="margin:4px 0 8px;">🏆 ${esc(title)} <span style="font-weight:400;color:#8a7a66;font-size:12px;">按最高档位排名</span></div>
+    ${items.map((s, i) => {
+      const lv = Number(s.max_level) || 0;
+      const done = (Array.isArray(s.done_levels) ? s.done_levels : []).length;
+      return `<div class="lb-row ${s.student_name === lbCurrentStudent ? 'me' : ''}">
+        <span class="lb-rank ${i < 3 ? 'top' + (i + 1) : ''}">${i < 3 ? medal[i] : (i + 1)}</span>
+        <span class="lb-name">${esc(s.student_name)}</span>
+        <span class="lb-val">${lv ? lv + '档' : '未达成'}</span>
+        ${done ? `<span class="text-muted" style="font-size:11px;">达成${done}档</span>` : ''}
+      </div>`;
+    }).join('')}`;
+  box.querySelector('[data-lb-back]').style.display = '';
+  els.lbSub.textContent = '「' + title + '」最高档位排名';
+}
