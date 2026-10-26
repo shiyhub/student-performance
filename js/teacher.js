@@ -485,6 +485,7 @@ function switchTab(name) {
   // 逐页切换，元素缺失时不报错（防止缓存旧 HTML 与新 JS 不同步）
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
+    personal: 'tabPersonal', challenge: 'tabChallenge',
     exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
