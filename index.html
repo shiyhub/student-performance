@@ -254,6 +254,21 @@
   </div>
 </div>
 
+<!-- 榜单弹窗（左雏菊：经验榜 / 右雏菊：挑战榜） -->
+<div class="modal-mask" id="leaderboardModal">
+  <div class="modal leaderboard-modal">
+    <div class="detail-head">
+      <div class="detail-avatar" id="lbIcon">🏅</div>
+      <div class="detail-who">
+        <h3 id="lbTitle">经验榜</h3>
+        <div class="text-muted" id="lbSub">全班经验排名</div>
+      </div>
+      <button class="detail-close" id="btnLbClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="leaderboard-body" id="leaderboardBody"></div>
+  </div>
+</div>
+
 <!-- 音效开关 -->
 <button type="button" id="btnSound" class="sound-toggle" aria-label="开关声音">🔊</button>
 
@@ -264,12 +279,12 @@
 <!-- v3.0：雨/雪 Canvas 粒子（独立于 skyDeco，避免 innerHTML 清空误删） -->
 <canvas id="wxCanvas" aria-hidden="true"></canvas>
 
-<div class="plant plant-left" aria-hidden="true">
+<div class="plant plant-left" title="点击查看经验榜">
   <img id="flowerLeft" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
   <img id="cloudLeft" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
 </div>
 
-<div class="plant plant-right" aria-hidden="true">
+<div class="plant plant-right" title="点击查看挑战榜">
   <img id="flowerRight" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
   <img id="cloudRight" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
 </div>
