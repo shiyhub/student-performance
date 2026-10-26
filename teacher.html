@@ -385,6 +385,18 @@
 
       <div class="card" style="margin-top:14px;">
         <div class="card-title">🗂️ 已发布个人任务</div>
+        <div style="margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskSelAll">全选</button>
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskSelNone">清空</button>
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（经验回退）</button>
+
+          <span class="text-muted" style="font-size:12px;" id="ptaskSelCount"></span>
+
+        </div>
+
         <div id="personalTaskBox"></div>
       </div>
     </section>
@@ -445,6 +457,18 @@
 
       <div class="card" style="margin-top:14px;">
         <div class="card-title">🗂️ 已发布挑战任务</div>
+        <div style="margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeSelAll">全选</button>
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeSelNone">清空</button>
+
+          <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（经验回退）</button>
+
+          <span class="text-muted" style="font-size:12px;" id="challengeSelCount"></span>
+
+        </div>
+
         <div id="challengeTaskBox"></div>
       </div>
     </section>
