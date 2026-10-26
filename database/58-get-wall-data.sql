@@ -20,9 +20,12 @@ declare
   v_since   date := v_today - 30;                                 -- 墙只需近 30 天状态；累计天数由 get_student_profile 单独算
   v_task_ids bigint[];
 begin
-  -- 1) 名单（student_directory 视图字段：id/class/student_name/avatar/xp/level）
+  -- 1) 名单（student_directory 视图字段：id/class/student_name/avatar/frame/xp/level）
+  --    v152：补充 id / class / frame —— class 供身份卡 currentRosterRow 按班匹配；
+  --          frame 供班级墙直接渲染头像框（此前缺失导致墙上不显示头像框、身份卡头像回退小动物）
   select coalesce(jsonb_agg(jsonb_build_object(
-           'student_name', i.student_name, 'avatar', i.avatar, 'xp', i.xp, 'level', i.level)
+           'id', i.id, 'class', i.class, 'student_name', i.student_name,
+           'avatar', i.avatar, 'frame', i.frame, 'xp', i.xp, 'level', i.level)
            order by i.student_name), '[]'::jsonb)
     into v_roster
     from public.student_directory i
