@@ -510,8 +510,14 @@ function switchTab(name) {
   if (name === 'students' && !loaded.students) loadStudents();
   if (name === 'tags' && !loaded.tags) loadTagsAdmin();
   if (name === 'auto') loadAutoTab();
-  if (name === 'personal') { loadPersonalStudents(); loadPersonalTasks(); }
-  if (name === 'challenge') { loadChallengeStudents(); loadChallengeTasks(); }
+  if (name === 'personal') {
+    if (!loaded.personal) { loaded.personal = true; initPersonalTaskForm(); }
+    else { loadPersonalStudents(); loadPersonalTasks(); }
+  }
+  if (name === 'challenge') {
+    if (!loaded.challenge) { loaded.challenge = true; initChallengeForm(); }
+    else { loadChallengeStudents(); loadChallengeTasks(); }
+  }
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
   if (name === 'tools') fillPreviewClasses();
   if (name === 'task') activateTaskTab();
@@ -2053,8 +2059,6 @@ async function loadAutoTab() {
     }
   } catch (e) { /* 下拉加载失败不阻塞规则列表 */ }
   await initManualTaskForm();
-  await initPersonalTaskForm();
-  await initChallengeForm();
   await loadAutoRules();
 }
 
