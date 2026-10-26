@@ -105,7 +105,6 @@ function esc(s) {
 }
 function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
-let toastTimer;
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;

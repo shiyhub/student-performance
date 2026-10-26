@@ -466,10 +466,3 @@ function applyFrameTo(el, frameKey) {
   attachParticles(el, k);
 }
 
-const FRAME_CLASS = {
-  none:'', bronze:'frame-bronze', silver:'frame-silver', gold:'frame-gold',
-  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown',
-  tac:'frame-tac', gun:'frame-gun', dragon:'frame-dragon', mecha:'frame-mecha', wolf:'frame-wolf',
-  sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
-  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie'
-};
