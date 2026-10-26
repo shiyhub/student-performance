@@ -665,16 +665,21 @@ function paintAvatar(el, av) {
 function currentAvatar() {
   const name = (els.inpName && els.inpName.value || '').trim();
   if (state.myAvatar) return avatarForName(name || '我', state.myAvatar);
-  const row = state.roster.find(s =>
-    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  const row = currentRosterRow();
   return avatarForName(name || '我', row && row.avatar);
 }
 
 // 当前学生的等级/经验（名单行）
+// v152：老缓存/旧 RPC 名单可能没有 class 字段——先按"班级+姓名"匹配，匹配不到再退化为"仅姓名"匹配
 function currentRosterRow() {
   const name = (els.inpName && els.inpName.value || '').trim();
-  return state.roster.find(s =>
-    s.student_name === name && (!state.currentClass || s.class === state.currentClass)) || null;
+  if (!name) return null;
+  let row = state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  if (!row && state.currentClass) {
+    row = state.roster.find(s => s.student_name === name);
+  }
+  return row || null;
 }
 
 /* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */

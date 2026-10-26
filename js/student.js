@@ -299,6 +299,8 @@ async function syncRunner(op) {
     if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
     if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
+    /* v152：挑战任务提交（82 号 SQL：confirm_challenge_levels，多档位数组） */
+    if (op.name === 'confirm_challenge_levels') { const r = await supabase.rpc('confirm_challenge_levels', p); return { ok: !r.error, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
   return { ok: false };
 }
@@ -1116,16 +1118,21 @@ function paintAvatar(el, av) {
 function currentAvatar() {
   const name = (els.inpName && els.inpName.value || '').trim();
   if (state.myAvatar) return avatarForName(name || '我', state.myAvatar);
-  const row = state.roster.find(s =>
-    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  const row = currentRosterRow();
   return avatarForName(name || '我', row && row.avatar);
 }
 
 // 当前学生的等级/经验（名单行）
+// v152：老缓存/旧 RPC 名单可能没有 class 字段——先按"班级+姓名"匹配，匹配不到再退化为"仅姓名"匹配
 function currentRosterRow() {
   const name = (els.inpName && els.inpName.value || '').trim();
-  return state.roster.find(s =>
-    s.student_name === name && (!state.currentClass || s.class === state.currentClass)) || null;
+  if (!name) return null;
+  let row = state.roster.find(s =>
+    s.student_name === name && (!state.currentClass || s.class === state.currentClass));
+  if (!row && state.currentClass) {
+    row = state.roster.find(s => s.student_name === name);
+  }
+  return row || null;
 }
 
 /* ---------- 今日心情：由勾选的积极/消极表现自动计算（5 档） ---------- */
@@ -1682,7 +1689,10 @@ const FRAME_CLASS = {
   rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown',
   tac:'frame-tac', gun:'frame-gun', dragon:'frame-dragon', mecha:'frame-mecha', wolf:'frame-wolf',
   sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
-  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie'
+  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie',
+  /* v152：补齐 v142 七款进阶头像框（CSS 与图片早已就位，缺此映射导致佩戴后身份卡/详情不显示框） */
+  huadian:'frame-huadian', blossom:'frame-blossom', ink:'frame-ink', spring:'frame-spring',
+  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf'
 };
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
@@ -2046,7 +2056,9 @@ async function loadPersonalTasks() {
   }));
 }
 
-// v150：挑战任务（教师布置，学生自选达成档位 10~110 步5，经验=档位/5）
+// v150 + v152：挑战任务（教师布置，学生自选达成档位，经验按教师自定义方案）
+// v152 重写：配合 82 号 SQL —— 提交走 confirm_challenge_levels（多档位数组、增量合并、
+// done_levels 列持久化）；离线提交自动入队联网同步
 const CHALLENGE_LEVELS = (() => { const a = []; for (let lv = 10; lv <= 110; lv += 5) a.push(lv); return a; })();
 async function loadChallengeTasks() {
   const card = els.challengeTaskCard, box = els.challengeTaskBox;
@@ -2070,13 +2082,15 @@ async function loadChallengeTasks() {
   box.innerHTML = rows.map(t => {
     const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : defaultLevels;
     const doneArr = Array.isArray(t.done_levels) ? t.done_levels : [];
-    const doneSet = new Set(doneArr);
-    const allDone = doneArr.length >= scheme.length;
-    const chips = scheme.map(([lv, xp]) => {
-      const on = doneSet.has(lv);
+    const doneSet = new Set(doneArr.map(Number));
+    const allDone = t.status === 'done' || (scheme.length > 0 && doneArr.length >= scheme.length);
+    const chips = scheme.map((lv) => {
+      const lvNum = Number(lv && lv[0]);
+      const xp = Number(lv && lv[1]) || 0;
+      const on = doneSet.has(lvNum);
       return `<label class="chg-chip ${on ? 'on' : ''}">
-        <input type="checkbox" value="${lv}" ${on ? 'disabled checked' : ''} data-lv="${t.id}">
-        ${lv}档·+${xp}${on ? ' ✅' : ''}
+        <input type="checkbox" value="${lvNum}" ${on ? 'disabled checked' : ''} data-lv="${t.id}">
+        ${lvNum}档·+${xp}${on ? ' ✅' : ''}
       </label>`;
     }).join('');
     return `<div class="today-task-row ${allDone ? 'done' : ''}">
@@ -2096,12 +2110,14 @@ async function loadChallengeTasks() {
     if (!lvList.length) { toast('请先勾选本次达成的档位'); return; }
     btn.disabled = true;
     try {
-      const r = await supabase.rpc('confirm_challenge_levels', { p_task_id: id, p_levels: lvList });
-      if (r.error) { toast('提交失败，请重试'); btn.disabled = false; return; }
-      const d = r.data || {};
+      const wr = await runWrite({ name: 'confirm_challenge_levels', params: { p_task_id: id, p_levels: lvList } });
+      if (!wr.ok) { toast('提交失败，请重试'); btn.disabled = false; return; }
+      if (wr.queued) { toast('已离线保存，联网后自动同步 ✅'); loadChallengeTasks(); btn.disabled = false; return; }
+      const d = wr.res || {};
       if (d.ok === false) { toast('提交失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
-      toast(`已达成 ${d.new_levels.length} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      const newN = (Array.isArray(d.new_levels) ? d.new_levels.length : (lvList.length || 0));
+      toast(`已达成 ${newN} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
       loadChallengeTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();

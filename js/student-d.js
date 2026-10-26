@@ -229,6 +229,7 @@ function showForm(presetName) {
   updateSubmitStatus();
   loadTodayTasks();
   loadPersonalTasks();
+  loadChallengeTasks();   // v152：修复学生端挑战任务卡片从不加载的问题（原 showForm 未调用）
 }
 
 // v114：显示"今天是否已提交"（离线时用缓存判断，让学生知道填过没有，避免重复填报）

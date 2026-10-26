@@ -2438,7 +2438,7 @@ document.getElementById('btnChallengeAssign')?.addEventListener('click', async (
       p_levels: challengeState.levels,
       p_students: challengeState.students.map(n => ({ value: n }))
     }});
-    if (!wr.ok) { toast('发布失败，请重试'); return; }
+    if (!wr.ok) { toast('发布失败：请确认已执行 82 号 SQL（挑战任务 v2）'); return; }
     if (wr.queued) { toast('已离线保存，联网后自动发布 ✅'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
@@ -2462,7 +2462,7 @@ async function loadChallengeTasks() {
     if (r.error) throw r.error;
     rows = r.data || [];
   } catch (e) {
-    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 80 号 SQL（challenge_task 表）')}</div>`;
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 82 号 SQL（挑战任务 v2，含 done_levels 列）')}</div>`;
     return;
   }
   if (!rows.length) {
@@ -2472,13 +2472,17 @@ async function loadChallengeTasks() {
   const today = todayStr();
   box.innerHTML = rows.map(t => {
     if (t.status === 'cancelled') return '';
-    const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : [];
+    // v152：档位方案 levels=[[档位,经验],...]；已达成 done_levels=[档位,...]（82 号 SQL 新增列）
+    const scheme = Array.isArray(t.levels) && t.levels.length
+      ? t.levels
+      : DEFAULT_CHALLENGE_LEVELS.map(x => x.slice());
     const doneArr = Array.isArray(t.done_levels) ? t.done_levels : [];
+    const doneSet = new Set(doneArr.map(Number));
     const total = scheme.length || doneArr.length;
-    const allDone = total > 0 && doneArr.length >= total;
-    const gain = doneArr.reduce((s, lv) => {
-      const f = scheme.find(x => x[0] === lv);
-      return s + (f ? f[1] : 0);
+    const allDone = t.status === 'done' || (total > 0 && doneArr.length >= total);
+    const gain = scheme.reduce((s, lv) => {
+      const lvNum = Number(lv && lv[0]);
+      return s + (doneSet.has(lvNum) ? (Number(lv && lv[1]) || 0) : 0);
     }, 0);
     return `
     <div class="auto-rule-row">
@@ -2491,7 +2495,7 @@ async function loadChallengeTasks() {
         </div>
       </div>
       <div class="rule-actions">
-        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>
+        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>` : ''}
       </div>
     </div>`;
   }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
