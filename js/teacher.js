@@ -152,6 +152,12 @@ const els = {
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
   previewClass: $('#previewClass'),
+  xpLogClass: $('#xpLogClass'),
+  xpLogStudent: $('#xpLogStudent'),
+  xpLogResult: $('#xpLogResult'),
+  btnXpLogQuery: $('#btnXpLogQuery'),
+  btnInjectXpLog: $('#btnInjectXpLog'),
+  injectXpLogResult: $('#injectXpLogResult'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
   // 新增 / 修改记录
@@ -329,6 +335,9 @@ function init() {
   // 测试工具
   if (els.btnRecalcXp) els.btnRecalcXp.addEventListener('click', onRecalcXp);
   if (els.previewClass) els.previewClass.addEventListener('change', fillPreviewStudents);
+  if (els.xpLogClass) els.xpLogClass.addEventListener('change', fillXpLogStudents);
+  if (els.btnXpLogQuery) els.btnXpLogQuery.addEventListener('click', queryXpLog);
+  if (els.btnInjectXpLog) els.btnInjectXpLog.addEventListener('click', injectXpLog);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
@@ -489,7 +498,7 @@ function switchTab(name) {
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     personal: 'tabPersonal', challenge: 'tabChallenge',
-    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools', seat: 'tabSeat'
+    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
   //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
@@ -526,6 +535,7 @@ function switchTab(name) {
   if (name === 'task') activateTaskTab();
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
+  if (name === 'xpLog') fillXpLogClasses();
   if (name === 'seat') activateSeatTab();
 }
 
@@ -2681,6 +2691,85 @@ async function onRecalcXp() {
     btn.disabled = false;
     btn.textContent = '一键重算全班经验';
   }
+}
+
+// v152.7：经验流水注入（测试工具）
+async function injectXpLog() {
+  if (!confirm('将按真实经验值把现有全部加分写入经验流水（可重复执行，不会重复）。确定继续吗？')) return;
+  const btn = els.btnInjectXpLog, out = els.injectXpLogResult;
+  if (btn) btn.disabled = true;
+  if (out) out.textContent = '注入中…';
+  try {
+    const { data, error } = await supabase.rpc('inject_xp_log');
+    if (error) { if (out) out.textContent = '失败：' + error.message; return; }
+    if (out) out.textContent = '注入完成，共写入 ' + ((data && data.injected) || 0) + ' 条经验记录';
+  } catch (e) { if (out) out.textContent = '失败：' + e.message; }
+  finally { if (btn) btn.disabled = false; }
+}
+
+// v152.7：经验记录查询
+const XP_LOG_SRC = { daily: '日常表现', task: '每日任务', personal: '个人任务', challenge: '挑战任务', manual: '手动任务' };
+const XP_LOG_DIM = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
+async function fillXpLogClasses() {
+  if (!els.xpLogClass) return;
+  const { data } = await supabase.from('student_info').select('class').order('class');
+  const classes = Array.from(new Set((data || []).map(s => s.class))).sort();
+  els.xpLogClass.innerHTML = '<option value="">请选择班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  fillXpLogStudents();
+}
+async function fillXpLogStudents() {
+  if (!els.xpLogClass || !els.xpLogStudent) return;
+  const cls = els.xpLogClass.value;
+  if (!cls) { els.xpLogStudent.innerHTML = '<option value="">先选班级</option>'; return; }
+  const { data } = await supabase
+    .from('student_info').select('student_name').eq('class', cls).order('student_name');
+  els.xpLogStudent.innerHTML = '<option value="">请选择学生</option>' +
+    (data || []).map(s => `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
+}
+async function queryXpLog() {
+  const cls = els.xpLogClass.value, name = els.xpLogStudent.value;
+  if (!cls || !name) { toast('请先选班级和学生'); return; }
+  const box = els.xpLogResult;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+  const { data, error } = await supabase.rpc('get_xp_log', { p_class: cls, p_student: name });
+  if (error) { box.innerHTML = `<div class="banner banner-error">查询失败：${esc(error.message)}（请确认已执行 87 号 SQL）</div>`; return; }
+  const rows = (data && data.rows) || [];
+  const total = (data && data.total) || 0;
+  let cur = 0;
+  const { data: info } = await supabase
+    .from('student_info').select('xp').eq('class', cls).eq('student_name', name).single();
+  if (info) cur = info.xp || 0;
+  if (!rows.length) {
+    box.innerHTML = '<div class="banner">该生暂无经验流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
+    return;
+  }
+  const rowsHtml = rows.map(r =>
+    `<tr>
+      <td style="white-space:nowrap;">${esc(r.date || '')}</td>
+      <td>${XP_LOG_SRC[r.source] || r.source}</td>
+      <td>${esc(r.label || '')}</td>
+      <td style="text-align:center;">${XP_LOG_DIM[r.dim] || (r.dim ? r.dim : '—')}</td>
+      <td style="text-align:right;">+${r.xp}</td>
+    </tr>`).join('');
+  box.innerHTML = `
+    <div style="margin-bottom:8px;font-size:14px;">
+      流水合计 <b>${total} xp</b> ｜ 当前经验 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
+      <span class="text-muted">（差额为教师手动调整或删除回退等无流水操作；流水合计即「真实经验值」参照）</span>
+    </div>
+    <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead><tr style="background:#f4f4f5;">
+          <th style="padding:8px 10px;text-align:left;">日期</th>
+          <th style="padding:8px 10px;text-align:left;">渠道</th>
+          <th style="padding:8px 10px;text-align:left;">说明</th>
+          <th style="padding:8px 10px;text-align:center;">维度</th>
+          <th style="padding:8px 10px;text-align:right;">经验</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
 }
 
 async function fillPreviewClasses() {
