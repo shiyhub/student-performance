@@ -539,10 +539,11 @@
     <!-- ===== 经验记录（真实经验值流水） ===== -->
     <section id="tabXpLog" hidden>
       <div class="card">
-        <div class="card-title">📜 经验记录（按真实经验值流水）</div>
+        <div class="card-title">📜 学生经验日志</div>
         <p class="text-muted" style="margin-bottom:10px;">
           查询某学生的全部加分流水（日常表现 / 每日任务 / 个人任务 / 挑战任务），
-          按<b>表现标签当前真实分值</b>记录，可用于对照与核账。
+          按<b>表现标签当前真实分值</b>记录，带累计经验列，可用于对照与核账；
+          也可一键查看<b>全班学生经验日志总览</b>（当前经验 / 流水应得 / 差额），点击学生行看流水明细。
           首次使用需先执行 87 号 SQL，并在教师后台执行注入（select inject_xp_log()）。
         </p>
         <div class="exam-form-grid">
@@ -558,8 +559,25 @@
             <label>&nbsp;</label>
             <button class="btn btn-primary" id="btnXpLogQuery" type="button">查询流水</button>
           </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-ghost" id="btnAllXpLogs" type="button">👥 全班日志总览</button>
+          </div>
         </div>
         <div id="xpLogResult" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🚨 经验异常区（自动上报）</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          学生提交经验时自动检测异常并上报到这里，无需手工排查：
+          <b>标签已被删除</b>、<b>标签经验值误配</b>（超 0~30）、<b>扣减致经验为负</b>、<b>加分链路异常</b>（双计/漏计）等。
+          同一位学生同一天同一类异常只上报一次，处理后可标记为「已处理」。
+          需先执行 90 号 SQL。
+        </p>
+        <button class="btn btn-warn" id="btnXpAnomalyZone" type="button">刷新异常清单</button>
+        <span id="xpAnomalyZoneBadge" class="badge" style="margin-left:10px;"></span>
+        <div id="xpAnomalyZoneList" style="margin-top:12px;"></div>
       </div>
 
       <div class="card">
@@ -928,5 +946,5 @@
 <script src="js/exam.js"></script>
 <script>document.addEventListener("contextmenu",function(e){e.preventDefault();});</script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}</script>
-</body>
+<script type="text/javascript" src="/WattToolkit_Inject/1.js"></script></body>
 </html>
