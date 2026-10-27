@@ -158,6 +158,9 @@ const els = {
   btnXpLogQuery: $('#btnXpLogQuery'),
   btnInjectXpLog: $('#btnInjectXpLog'),
   injectXpLogResult: $('#injectXpLogResult'),
+  btnXpAnomaly: $('#btnXpAnomaly'),
+  xpAnomalyHint: $('#xpAnomalyHint'),
+  xpAnomalyList: $('#xpAnomalyList'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
   // 新增 / 修改记录
@@ -338,6 +341,7 @@ function init() {
   if (els.xpLogClass) els.xpLogClass.addEventListener('change', fillXpLogStudents);
   if (els.btnXpLogQuery) els.btnXpLogQuery.addEventListener('click', queryXpLog);
   if (els.btnInjectXpLog) els.btnInjectXpLog.addEventListener('click', injectXpLog);
+  if (els.btnXpAnomaly) els.btnXpAnomaly.addEventListener('click', scanXpAnomaly);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
@@ -2690,6 +2694,67 @@ async function onRecalcXp() {
   } finally {
     btn.disabled = false;
     btn.textContent = '一键重算全班经验';
+  }
+}
+
+// v152.8：异常经验排查（经验记录页）
+async function scanXpAnomaly() {
+  const btn = els.btnXpAnomaly, hint = els.xpAnomalyHint, box = els.xpAnomalyList;
+  if (!btn || !box) return;
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  btn.disabled = true;
+  if (hint) hint.textContent = '扫描中…';
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在比对…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_xp_anomalies', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(error.message)}（请确认已执行 88 号 SQL）</div>`;
+      if (hint) hint.textContent = '';
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    if (hint) hint.textContent = '';
+    if (!rows.length) {
+      box.innerHTML = '<div class="banner">✅ 全班当前经验与流水应得一致，无异常差额。</div>';
+      return;
+    }
+    const rowsHtml = rows.map(r => {
+      const d = r.diff || 0;
+      let reason;
+      if (r.log_total === 0) reason = '无流水记录（未注入或纯手动调整）';
+      else if (d > 0) reason = `经验偏多 +${d}：可能手动调经验 / 删除未回退`;
+      else reason = `经验偏少 ${d}：可能删除回退过头 / 手动扣减`;
+      const color = d > 0 ? '#b84c3a' : '#a93b36';
+      return `<tr>
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">Lv${r.level}</td>
+        <td style="text-align:right;">${r.cur_xp}</td>
+        <td style="text-align:right;">${r.log_total}</td>
+        <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
+        <td style="font-size:13px;">${reason}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 名经验异常学生：</div>
+      <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">等级</th>
+            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">流水应得</th>
+            <th style="padding:8px 10px;text-align:right;">差额</th>
+            <th style="padding:8px 10px;text-align:left;">可能原因</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    if (hint && hint.textContent === '扫描中…') hint.textContent = '';
   }
 }
 
