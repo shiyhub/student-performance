@@ -161,6 +161,10 @@ const els = {
   btnXpAnomaly: $('#btnXpAnomaly'),
   xpAnomalyHint: $('#xpAnomalyHint'),
   xpAnomalyList: $('#xpAnomalyList'),
+  btnAllXpLogs: $('#btnAllXpLogs'),
+  btnXpAnomalyZone: $('#btnXpAnomalyZone'),
+  xpAnomalyZoneBadge: $('#xpAnomalyZoneBadge'),
+  xpAnomalyZoneList: $('#xpAnomalyZoneList'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
   // 新增 / 修改记录
@@ -338,10 +342,12 @@ function init() {
   // 测试工具
   if (els.btnRecalcXp) els.btnRecalcXp.addEventListener('click', onRecalcXp);
   if (els.previewClass) els.previewClass.addEventListener('change', fillPreviewStudents);
-  if (els.xpLogClass) els.xpLogClass.addEventListener('change', fillXpLogStudents);
+  if (els.xpLogClass) els.xpLogClass.addEventListener('change', () => { fillXpLogStudents(); if (els.btnXpAnomalyZone) loadXpAnomalyZone(); });
   if (els.btnXpLogQuery) els.btnXpLogQuery.addEventListener('click', queryXpLog);
   if (els.btnInjectXpLog) els.btnInjectXpLog.addEventListener('click', injectXpLog);
   if (els.btnXpAnomaly) els.btnXpAnomaly.addEventListener('click', scanXpAnomaly);
+  if (els.btnAllXpLogs) els.btnAllXpLogs.addEventListener('click', loadAllStudentLogs);
+  if (els.btnXpAnomalyZone) els.btnXpAnomalyZone.addEventListener('click', loadXpAnomalyZone);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
@@ -2758,6 +2764,144 @@ async function scanXpAnomaly() {
   }
 }
 
+// v153：学生经验日志（全班日志总览，点击行查该生流水）
+async function loadAllStudentLogs() {
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  const box = els.xpLogResult;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载全班日志…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_student_xp_logs', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}（请确认已执行 90 号 SQL）</div>`;
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    if (!rows.length) { box.innerHTML = '<div class="banner">该班暂无学生或流水。</div>'; return; }
+    const rowsHtml = rows.map(r => {
+      const d = r.diff || 0;
+      const color = d === 0 ? 'inherit' : (d > 0 ? '#b84c3a' : '#a93b36');
+      return `<tr class="xp-log-row" data-stu="${esc(r.student)}" style="cursor:pointer;">
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">Lv${r.level}</td>
+        <td style="text-align:right;">${r.cur_xp}</td>
+        <td style="text-align:right;">${r.log_total}</td>
+        <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
+        <td style="text-align:center;">${r.log_cnt || 0} 条</td>
+        <td style="text-align:center;">${esc(r.last_date || '—')}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">全班 <b>${rows.length}</b> 名学生经验日志（点击学生行查看该生流水明细）：</div>
+      <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">等级</th>
+            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">流水应得</th>
+            <th style="padding:8px 10px;text-align:right;">差额</th>
+            <th style="padding:8px 10px;text-align:center;">流水条数</th>
+            <th style="padding:8px 10px;text-align:center;">最近记录</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    box.querySelectorAll('.xp-log-row').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const name = tr.dataset.stu;
+        if (els.xpLogStudent) {
+          els.xpLogStudent.value = name;
+          if (els.xpLogStudent.value !== name) {
+            fillXpLogStudents().then(() => { els.xpLogStudent.value = name; queryXpLog(); });
+            return;
+          }
+        }
+        queryXpLog();
+      });
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+// v153：经验异常区（自动上报清单）
+const XP_ANOMALY_TYPE = {
+  missing_tag: '标签已删除',
+  bad_xp_value: '经验值配置异常',
+  negative_clip: '扣减致负截断',
+  xp_mismatch: '加分链路异常'
+};
+async function loadXpAnomalyZone() {
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  const box = els.xpAnomalyZoneList, badge = els.xpAnomalyZoneBadge;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载异常清单…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_xp_anomaly_zone', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}（请确认已执行 90 号 SQL）</div>`;
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    const cnt = (data && data.open_count) || 0;
+    if (badge) badge.textContent = cnt ? cnt + ' 条待处理' : '无待处理';
+    if (!rows.length) { box.innerHTML = '<div class="banner">✅ 暂无自动上报的经验异常。</div>'; return; }
+    const rowsHtml = rows.map(r => {
+      const d = r.detail || {};
+      let extra = '';
+      if (r.type === 'missing_tag' && d.tag_id) extra = '标签ID：<code>' + esc(String(d.tag_id).slice(0, 8)) + '</code>';
+      if (r.type === 'bad_xp_value') extra = (esc(d.label || '') + ' = ' + (d.xp_value === undefined ? '' : d.xp_value) + ' xp');
+      if (r.type === 'negative_clip') extra = '原经验 ' + d.before + '，扣 ' + d.delta;
+      if (r.type === 'xp_mismatch') extra = '应得 ' + d.expected + '，实际 ' + d.actual;
+      return `<tr>
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">${esc(r.date || '—')}</td>
+        <td style="text-align:center;">${esc(r.source || '—')}</td>
+        <td>${XP_ANOMALY_TYPE[r.type] || esc(r.type)}</td>
+        <td style="font-size:13px;">${esc(r.reason)}${extra ? '<br><span class="text-muted">' + extra + '</span>' : ''}</td>
+        <td style="text-align:center;white-space:nowrap;font-size:13px;">${esc(String(r.create_at || '').replace('T', ' ').slice(5, 16))}</td>
+        <td style="text-align:center;"><button class="btn btn-ghost btn-sm" data-id="${r.id}" type="button">标记已处理</button></td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 条待处理异常（提交时自动检测上报，同生同日同类仅一条）：</div>
+      <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">日期</th>
+            <th style="padding:8px 10px;text-align:center;">来源</th>
+            <th style="padding:8px 10px;text-align:left;">异常类型</th>
+            <th style="padding:8px 10px;text-align:left;">原因</th>
+            <th style="padding:8px 10px;text-align:center;">上报时间</th>
+            <th style="padding:8px 10px;text-align:center;">处理</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    box.querySelectorAll('button[data-id]').forEach(btn => {
+      btn.addEventListener('click', () => resolveXpAnomaly(btn.dataset.id));
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+// v153：标记异常已处理
+async function resolveXpAnomaly(id) {
+  if (!confirm('确认将该异常标记为已处理？')) return;
+  try {
+    const { data, error } = await supabase.rpc('resolve_xp_anomaly', { p_id: id });
+    if (error || !data || data.ok !== true) { toast('标记失败：' + ((error && error.message) || '仅登录教师可操作')); return; }
+    toast('已标记为已处理');
+    loadXpAnomalyZone();
+  } catch (e) { toast('标记失败：' + e.message); }
+}
+
+
 // v152.7：经验流水注入（测试工具）
 async function injectXpLog() {
   if (!confirm('将按真实经验值把现有全部加分写入经验流水（可重复执行，不会重复）。确定继续吗？')) return;
@@ -2810,14 +2954,18 @@ async function queryXpLog() {
     box.innerHTML = '<div class="banner">该生暂无经验流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
     return;
   }
-  const rowsHtml = rows.map(r =>
-    `<tr>
+  let acc = 0;
+  const rowsHtml = rows.map(r => {
+    acc += (r.xp || 0);
+    return `<tr>
       <td style="white-space:nowrap;">${esc(r.date || '')}</td>
       <td>${XP_LOG_SRC[r.source] || r.source}</td>
       <td>${esc(r.label || '')}</td>
       <td style="text-align:center;">${XP_LOG_DIM[r.dim] || (r.dim ? r.dim : '—')}</td>
       <td style="text-align:right;">+${r.xp}</td>
-    </tr>`).join('');
+      <td style="text-align:right;font-weight:600;">${acc}</td>
+    </tr>`;
+  }).join('');
   box.innerHTML = `
     <div style="margin-bottom:8px;font-size:14px;">
       流水合计 <b>${total} xp</b> ｜ 当前经验 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
@@ -2831,6 +2979,7 @@ async function queryXpLog() {
           <th style="padding:8px 10px;text-align:left;">说明</th>
           <th style="padding:8px 10px;text-align:center;">维度</th>
           <th style="padding:8px 10px;text-align:right;">经验</th>
+          <th style="padding:8px 10px;text-align:right;">累计</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
@@ -3845,3 +3994,4 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
 });
+//（注：内容由AI生成）
