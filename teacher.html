@@ -561,6 +561,18 @@
         </div>
         <div id="xpLogResult" style="margin-top:12px;"></div>
       </div>
+
+      <div class="card">
+        <div class="card-title">⚠️ 异常经验排查</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          比对全班「当前经验」与「经验流水应得」，列出差额非零的学生，
+          辅助排查异常经验来源（手动调经验 / 删除未回退 / 回退过头等）。
+          需先完成经验流水注入。
+        </p>
+        <button class="btn btn-warn" id="btnXpAnomaly" type="button">扫描全班异常</button>
+        <span id="xpAnomalyHint" class="text-muted" style="margin-left:10px;"></span>
+        <div id="xpAnomalyList" style="margin-top:12px;"></div>
+      </div>
     </section>
 
     <!-- ===== 测试工具（不影响真实使用） ===== -->
