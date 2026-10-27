@@ -254,9 +254,11 @@ const LEGACY_AVATAR_MAP = {
    按名字哈希稳定分配，避免历史学生头像失效；avatarForName 中 isImgKey 兜底最终保证合法 */
 function migrateLegacyAvatar(key) {
   const k = String(key || '');
-  const m = /^(cyber|mecha|rider|ultra)([1-8])$/.exec(k);
+  // v152.9：mecha1-4 已是新款「机甲战士」，不再是旧Q版；旧Q版仅 cyber/rider/ultra
+  const m = /^(cyber|rider|ultra)([1-8])$/.exec(k);
   if (m) return LEGACY_AVATAR_MAP[m[1]];
-  if (/^(girl|boy|neutral|animal|sweet|game|nature|mecha|fantasy)/.test(k)) return k;
+  // 有效图片 key 直接保留（含 mecha1-4、warrior1-5、fantasy、xian 等新款）
+  if (isImgKey(k)) return k;
   const h = hashCode(k);
   return 'animal' + (((h % 24) + 24) % 24 + 1);
 }
@@ -1633,6 +1635,18 @@ function buildImgChoice(key, selectedKey, unlocked, lockLevel) {
   return b;
 }
 
+// v152.9：换头像/头像框后同步墙缓存（含 Offline 缓存），刷新不再回退旧头像
+function persistWallCache() {
+  const cls = state.currentClass;
+  if (!cls) return;
+  const payload = {
+    roster: state.roster, records: state.records, seatMap: state.seatMap,
+    tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now()
+  };
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(payload)); } catch (e) {}
+  try { if (window.Offline && window.Offline.set) window.Offline.set('wall_' + cls, payload); } catch (e) {}
+}
+
 async function onChooseAvatar(key, btn) {
   sfx.pick();
   const res = await persistAvatar(key);
@@ -1669,6 +1683,9 @@ async function onChooseAvatar(key, btn) {
   els.avatarPicker.querySelectorAll('.avatar-choice').forEach(x =>
     x.classList.toggle('selected', x === btn));
   renderMoodPreview();
+  // v152.9：同步刷新墙卡片与缓存，避免刷新页面后显示旧头像
+  persistWallCache();
+  renderWall();
 
   if (typeof res.changes_left === 'number' && res.changes_left >= 0 && !isImgKey(key)) {
     toast(res.changes_left > 0 ? `换好啦！今天还能换 ${res.changes_left} 次` : '换好啦！今天的更换次数用完了');
@@ -1833,6 +1850,7 @@ async function onChooseFrame(key, btn) {
     if (row) row.frame = key;
     els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
     applyFrameTo(els.identityAvatarEmoji, key);
+    persistWallCache(); renderWall();
     toast('已离线选好，联网后自动同步 ✅');
     setTimeout(() => els.avatarModal.classList.remove('show'), 260);
     return;
@@ -1846,6 +1864,7 @@ async function onChooseFrame(key, btn) {
   if (row) row.frame = key;
   els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
   applyFrameTo(els.identityAvatarEmoji, key);
+  persistWallCache(); renderWall();
   toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
   setTimeout(() => els.avatarModal.classList.remove('show'), 260);
 }
