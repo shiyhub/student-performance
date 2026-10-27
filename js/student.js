@@ -300,7 +300,7 @@ async function syncRunner(op) {
     if (op.name === 'submit_today') { const r = await supabase.rpc('submit_today', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
-    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
+    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error, data: r.data, error: r.error }; }
     /* v152：挑战任务提交（82 号 SQL：confirm_challenge_levels，多档位数组） */
     if (op.name === 'confirm_challenge_levels') { const r = await supabase.rpc('confirm_challenge_levels', p); return { ok: !r.error, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
@@ -1894,8 +1894,10 @@ async function loadProfile() {
   const achs = data.achievements || [];
   const un = new Set(['none']);
   const has = k => achs.some(a => a.key === k && a.unlocked);
-  if (has('days10')) un.add('bronze');
-  if (has('days30')) un.add('silver');
+  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
+  const totD = Number(data.metrics && data.metrics.total_days) || 0;
+  if (totD >= 10) un.add('bronze');
+  if (totD >= 30) un.add('silver');
   if (Number(data.level) >= 5) un.add('gold');
   if (Number(data.level) >= 7) un.add('rainbow');
   if (has('active20')) un.add('star');
