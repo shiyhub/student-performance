@@ -151,7 +151,7 @@ const NEW_GROUPS = [
   { name: '游戏风',   prefix: 'game',    count: 17, level: 4, emoji: '🎮' },
   { name: '森系田园', prefix: 'nature',  count: 8,  level: 5, emoji: '🌿' },
   { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
-  { name: '次元武士', prefix: 'warrior', count: 5,  level: 6, emoji: '⚔️' },
+  { name: '次元武士', prefix: 'warrior', count: 4,  level: 6, emoji: '⚔️' },
   { name: '奇幻神域', prefix: 'fantasy', count: 11, level: 7, emoji: '✨' },
   { name: '国风仙韵', prefix: 'xian',    count: 5,  level: 8, emoji: '🏮' }
 ];
@@ -160,6 +160,15 @@ const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
   return arr;
 }, []);
 const NEW_LEVEL_MAP = Object.fromEntries(NEW_KEYS.map(k => [k, NEW_GROUPS.find(g => k.startsWith(g.prefix)).level]));
+// v160：传说神将——Lv.9 专属新头像（mecha5 / warrior5 / warrior6，从 6 级组拆出单独投放）
+const LEGEND_AVATARS = [
+  { key: 'mecha5',   level: 9 },
+  { key: 'warrior5', level: 9 },
+  { key: 'warrior6', level: 9 }
+];
+LEGEND_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
+const LEGEND_LEVEL = 9;
+
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
 // v142(RSK-14)：等级上限提升至 Lv.12 —— L8=900 / L9=1300 / L10=1800 / L11=2500 / L12=3500（与数据库 level_from_xp 同口径）
@@ -196,7 +205,23 @@ const FRAMES = [
   { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '升到 Lv.8' },
   { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '升到 Lv.9' },
   { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '升到 Lv.9' },
-  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' }
+  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' },
+  /* v155：魔法星空 6 款 + 兽耳小铺 9 款（新增款式，原 27 款不变） */
+  { key: 'ice',      name: '冰晶雪翼', icon: '❄️', need: '升到 Lv.7' },
+  { key: 'moon',     name: '月神羽翼', icon: '🌙', need: '升到 Lv.7' },
+  { key: 'crystal',  name: '水晶星梦', icon: '💎', need: '升到 Lv.7' },
+  { key: 'silk',     name: '丝带蝶舞', icon: '🎀', need: '升到 Lv.7' },
+  { key: 'goldwing', name: '鎏金圣翼', icon: '🪽', need: '升到 Lv.7' },
+  { key: 'kitty',    name: '月眠猫咪', icon: '🐱', need: '升到 Lv.7' },
+  { key: 'devilcat', name: '恶魔小猫', icon: '😈', need: '升到 Lv.8' },
+  { key: 'angelcat', name: '天使小猫', icon: '😇', need: '升到 Lv.8' },
+  { key: 'clover',   name: '四叶祝福', icon: '🍀', need: '升到 Lv.8' },
+  { key: 'neko',     name: '奇幻猫耳', icon: '🐾', need: '升到 Lv.8' },
+  { key: 'sweets',   name: '甜心点心', icon: '🍩', need: '升到 Lv.8' },
+  { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '升到 Lv.8' },
+  { key: 'broken',   name: '破碎之心', icon: '💔', need: '升到 Lv.8' },
+  { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '升到 Lv.8' },
+  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '升到 Lv.8' }
 ];
 const XP_PER_POSITIVE = 2;
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
@@ -241,10 +266,10 @@ function ensureMobileGate() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
   input.focus();
 }
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -873,8 +898,11 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
     const rank = rankMap[s.student_name] || 0;   // v150：经验榜名次（1-5）
+    // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
+    const rankDeco = (rank >= 1 && rank <= 3) ? `<span class="rank-deco deco-${rank}"></span>` : '';
     html += `<button class="mate${rank ? ` rank-${rank}` : ''}" data-detail="${esc(s.student_name)}">
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
+        ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
@@ -1598,7 +1626,23 @@ async function openAvatarPicker() {
     els.avatarPicker.appendChild(sec);
   });
 
+  // —— v160：传说神将（Lv.9 专属新头像，独立分区）——
+  {
+    const unlocked = lv >= LEGEND_LEVEL;
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
+    sec.innerHTML = unlocked
+      ? `<div class="avatar-sec-title">🌟 传说神将<span class="avatar-sec-tip ok">Lv.${LEGEND_LEVEL} 已解锁，可随意更换</span></div>`
+      : `<div class="avatar-sec-title">🔒 🌟 传说神将<span class="avatar-sec-tip">升到 Lv.${LEGEND_LEVEL} 解锁（品质更高的头像）</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    LEGEND_AVATARS.forEach(x => grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level)));
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  }
+
   // —— 头像框（v105）——
+
   buildFrameSection();
 
   renderMoodPreview();
