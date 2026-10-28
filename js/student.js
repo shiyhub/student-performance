@@ -408,6 +408,18 @@ const els = {
   identityXpFill: $('#identityXpFill'),
   identityXpText: $('#identityXpText'),
   avatarModal: $('#avatarModal'),
+  // v160：头像框独立页面（个人主页头像下方入口）
+  btnOpenFrames: $('#btnOpenFrames'),
+  frameView: $('#frameView'),
+  btnFrameBack: $('#btnFrameBack'),
+  frameConfigBanner: $('#frameConfigBanner'),
+  framePreviewCard: $('#framePreviewCard'),
+  framePreviewAvatar: $('#framePreviewAvatar'),
+  framePreviewLevel: $('#framePreviewLevel'),
+  framePreviewName: $('#framePreviewName'),
+  framePreviewTip: $('#framePreviewTip'),
+  framePageGrid: $('#framePageGrid'),
+  frameCountTip: $('#frameCountTip'),
   avatarModalEmoji: $('#avatarModalEmoji'),
   avatarPicker: $('#avatarPicker'),
   avatarHint: $('#avatarHint'),
@@ -1641,9 +1653,7 @@ async function openAvatarPicker() {
     els.avatarPicker.appendChild(sec);
   }
 
-  // —— 头像框（v105）——
-
-  buildFrameSection();
+  // v160：头像框已独立成单独页面（个人主页头像下方「更换头像框」入口），弹窗只保留头像
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
@@ -1769,7 +1779,12 @@ const FRAME_CLASS = {
   rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie',
   /* v152：补齐 v142 七款进阶头像框（CSS 与图片早已就位，缺此映射导致佩戴后身份卡/详情不显示框） */
   huadian:'frame-huadian', blossom:'frame-blossom', ink:'frame-ink', spring:'frame-spring',
-  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf'
+  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf',
+  /* v160：补齐新 15 款头像框（魔法星空 6 + 兽耳小铺 9，缺此映射佩戴后身份卡/详情不显示框） */
+  ice:'frame-ice', moon:'frame-moon', crystal:'frame-crystal', silk:'frame-silk',
+  goldwing:'frame-goldwing', kitty:'frame-kitty',
+  devilcat:'frame-devilcat', angelcat:'frame-angelcat', clover:'frame-clover', neko:'frame-neko',
+  sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech'
 };
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
@@ -1855,6 +1870,116 @@ function attachParticles(el, key) {
   el.appendChild(layer);
 }
 
+/* ---------------- v160：头像框独立页面 + 解锁逻辑重写（与 student-d.js 同实现） ----------------
+   学生端头像框从头像区拆出：个人主页头像下方「更换头像框」入口 → 独立页面 #frameView。
+   解锁集合 calcUnlockedFrames 与 95/96 号服务端口径完全一致；
+   打开页面时强制 loadProfile() 刷新，避免旧缓存导致 7 级不解锁。 */
+function calcUnlockedFrames(profile) {
+  const achs = (profile && profile.achievements) || [];
+  const lv = Number(profile && profile.level) || 1;
+  const has = k => achs.some(a => a.key === k && a.unlocked);
+  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
+  const totD = Number(profile && profile.metrics && profile.metrics.total_days) || 0;
+  const un = new Set(['none']);
+  if (totD >= 10) un.add('bronze');
+  if (totD >= 30) un.add('silver');
+  if (lv >= 5) un.add('gold');
+  if (lv >= 7) un.add('rainbow');   // 服务端 43/47/29：rainbow = Lv.7 满级
+  if (has('active20')) un.add('star');
+  if (has('perfect5')) un.add('heart');
+  if (has('top3')) un.add('crown');
+  /* v130：12 款游戏风（服务端 43 号同口径） */
+  if (lv >= 2) { un.add('tac'); un.add('sakura'); }
+  if (lv >= 3) { un.add('gun'); un.add('pixie'); }
+  if (lv >= 4) { un.add('mecha'); un.add('magic'); }
+  if (lv >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
+  if (lv >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
+  /* v142：七风格进阶（v160 补全，原来 7 级以上全漏） */
+  if (lv >= 7) { un.add('huadian'); un.add('blossom'); }
+  if (lv >= 8) { un.add('ink'); un.add('spring'); }
+  if (lv >= 9) { un.add('redlily'); un.add('mask'); }
+  if (lv >= 10) { un.add('neonwolf'); }
+  /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
+  if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
+  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech'].forEach(k => un.add(k)); }
+  return un;
+}
+
+function frameNameOf(key) {
+  const f = FRAMES.find(x => x.key === key);
+  return f ? f.name : (key === 'none' ? '无框' : key);
+}
+
+function updateFramePreview(frameKey) {
+  if (!els.framePreviewAvatar) return;
+  const av = currentAvatar();
+  paintAvatar(els.framePreviewAvatar, av);
+  applyFrameTo(els.framePreviewAvatar, frameKey || state.myFrame || 'none');
+  if (els.framePreviewLevel) {
+    els.framePreviewLevel.textContent = 'Lv.' + (Number(state.profile && state.profile.level) || 1);
+  }
+}
+
+function renderFramePage() {
+  const grid = els.framePageGrid;
+  if (!grid) return;
+  const row = currentRosterRow();
+  const curFrame = state.myFrame || (row && row.frame) || 'none';
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || calcUnlockedFrames(state.profile));
+  updateFramePreview(curFrame);
+  if (els.framePreviewName) {
+    const cls = (els.inpClass.value || '').trim();
+    const nm = (els.inpName.value || '').trim();
+    els.framePreviewName.textContent = cls ? cls + ' · ' + nm : (nm || '未选择学生');
+  }
+  if (els.framePreviewTip) {
+    els.framePreviewTip.textContent =
+      (state.profile && state.profile.ok !== false) ? `当前佩戴：${frameNameOf(curFrame)}` : '先回主页填好班级和姓名，再进来挑头像框';
+  }
+  grid.innerHTML = '';
+  FRAMES.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
+    const unlocked = f.key === 'none' || unlockedSet.has(f.key);
+    b.innerHTML = `<span class="fc-ring"></span>` +
+      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+    b.addEventListener('click', () => {
+      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      onChooseFrame(f.key, b);
+    });
+    grid.appendChild(b);
+  });
+  if (els.frameCountTip) {
+    const total = FRAMES.length;
+    const got = FRAMES.filter(f => f.key === 'none' || unlockedSet.has(f.key)).length;
+    els.frameCountTip.textContent = `已解锁 ${got}/${total}`;
+  }
+}
+
+async function openFramePage() {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) { toast('请先回主页填好班级和姓名'); return; }
+  sfx.tap();
+  if (els.wallView) els.wallView.hidden = true;
+  if (els.formView) els.formView.hidden = true;
+  if (els.frameView) els.frameView.hidden = false;
+  window.scrollTo(0, 0);
+  if (els.frameConfigBanner) els.frameConfigBanner.hidden = !!ready;
+  await loadProfile();          // 关键：打开即刷新，不再吃旧缓存
+  renderFramePage();
+  if (typeof Nav !== 'undefined' && Nav.push) Nav.push('frames');
+}
+
+function closeFramePage() {
+  sfx.back();
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.formView) els.formView.hidden = false;
+  window.scrollTo(0, 0);
+  if (typeof Nav !== 'undefined' && Nav.pop) Nav.pop();
+}
+
 function buildFrameSection() {
   const sec = document.createElement('div');
   sec.className = 'avatar-sec';
@@ -1863,7 +1988,7 @@ function buildFrameSection() {
   grid.className = 'frame-grid';
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
-  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || calcUnlockedFrames(state.profile));
   FRAMES.forEach(f => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -1942,23 +2067,7 @@ async function loadProfile() {
   const totD = Number(data.metrics && data.metrics.total_days) || 0;
   if (totD >= 10) un.add('bronze');
   if (totD >= 30) un.add('silver');
-  if (Number(data.level) >= 5) un.add('gold');
-  if (Number(data.level) >= 7) un.add('rainbow');
-  if (has('active20')) un.add('star');
-  if (has('perfect5')) un.add('heart');
-  if (has('top3')) un.add('crown');
-  /* v130(RSK-11)：12 款游戏风头像框，按等级解锁（与服务端 43 号 SQL 同口径） */
-  if (Number(data.level) >= 2) { un.add('tac'); un.add('sakura'); }
-  if (Number(data.level) >= 3) { un.add('gun'); un.add('pixie'); }
-  if (Number(data.level) >= 4) { un.add('mecha'); un.add('magic'); }
-  if (Number(data.level) >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
-  if (Number(data.level) >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
-  /* v142：七风格进阶头像框（与 71 号 SQL set_student_frame 同口径） */
-  if (Number(data.level) >= 7) { un.add('huadian'); un.add('blossom'); }
-  if (Number(data.level) >= 8) { un.add('ink'); un.add('spring'); }
-  if (Number(data.level) >= 9) { un.add('redlily'); un.add('mask'); }
-  if (Number(data.level) >= 10) { un.add('neonwolf'); }
-  data.unlocked_frames = Array.from(un);
+  data.unlocked_frames = Array.from(calcUnlockedFrames(data));
 
   renderAchievements(achs);
   applyFrameTo(els.identityAvatarEmoji, state.myFrame);

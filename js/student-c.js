@@ -286,6 +286,9 @@ function bindEvents() {
 
   // 头像选择
   els.btnPickAvatar.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
+  // v160：更换头像框独立入口 → 独立页面
+  if (els.btnOpenFrames) els.btnOpenFrames.addEventListener('click', () => { openFramePage(); });
+  if (els.btnFrameBack) els.btnFrameBack.addEventListener('click', () => { closeFramePage(); });
   els.btnAvatarClose.addEventListener('click', () => { sfx.back(); els.avatarModal.classList.remove('show'); });
   els.avatarModal.addEventListener('click', e => {
     if (e.target === els.avatarModal) { sfx.back(); els.avatarModal.classList.remove('show'); }
@@ -366,8 +369,7 @@ function openAvatarPicker() {
     els.avatarPicker.appendChild(sec);
   });
 
-  // —— 头像框（v105）——
-  buildFrameSection();
+  // v160：头像框已独立成单独页面（个人主页头像下方「更换头像框」入口），弹窗只保留头像
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
