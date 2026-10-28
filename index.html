@@ -108,6 +108,11 @@
       <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
       <span class="identity-avatar-hint">点我换头像 ✨</span>
     </button>
+    <button type="button" class="identity-frame-btn" id="btnOpenFrames" aria-label="更换头像框" title="更换头像框">
+      <span class="identity-frame-icon">🖼️</span>
+      <span class="identity-frame-label">更换头像框</span>
+      <span class="identity-frame-arrow">›</span>
+    </button>
     <div class="identity-xp">
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
       <div class="identity-xp-text" id="identityXpText">经验 0 · 再得 20 点升到 Lv.2</div>
@@ -207,6 +212,44 @@
     <div class="submit-status" id="submitStatus" hidden></div>
     <button class="btn btn-warn" id="btnSubmit">提交今天的表现 🎈</button>
   </div>
+</div>
+
+<!-- ================= 视图四：我的头像框（独立页面） ================= -->
+<div class="container student-view" id="frameView" hidden>
+
+  <button class="wall-back" id="btnFrameBack" aria-label="返回个人主页" title="返回个人主页"><span class="back-tri">‹</span></button>
+
+  <header class="s-header">
+    <div class="s-mascot">🖼️</div>
+    <h1 class="s-title">我的头像框</h1>
+    <div class="s-date" id="frameHintLabel">点一下佩戴 · 回主页就能看到</div>
+  </header>
+
+  <div id="frameConfigBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能佩戴头像框，请联系老师完成部署。
+  </div>
+
+  <!-- 当前佩戴预览 -->
+  <section class="card frame-preview-card" id="framePreviewCard">
+    <div class="frame-preview">
+      <div class="frame-preview-avatar-wrap">
+        <div class="frame-preview-avatar" id="framePreviewAvatar">🐯</div>
+        <span class="identity-lv-badge" id="framePreviewLevel">Lv.1</span>
+      </div>
+    </div>
+    <div class="frame-preview-meta">
+      <div class="frame-preview-name" id="framePreviewName">未选择学生</div>
+      <div class="frame-preview-tip" id="framePreviewTip">先回主页填好班级和姓名，再进来挑头像框</div>
+    </div>
+  </section>
+
+  <!-- 全部头像框 -->
+  <section class="card">
+    <div class="frame-page-title">全部头像框 <span class="frame-page-tip" id="frameCountTip"></span></div>
+    <div class="frame-grid" id="framePageGrid"></div>
+  </section>
+
+  <div class="frame-page-foot">达成条件自动解锁 · 等级不够的框会显示 🔒</div>
 </div>
 
 <!-- ================= 某位同学的表现详情弹窗 ================= -->
