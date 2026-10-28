@@ -840,18 +840,16 @@ html,body{background:#e8e6e1 !important;}
 /* ---- 头像框选择区 ---- */
 /* ============ v160：头像框独立页面（个人主页头像下方入口 → #frameView） ============ */
 .identity-frame-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  margin: 10px auto 0; padding: 7px 16px;
-  background: linear-gradient(135deg, #fffdf6, #fdf3e3);
-  border: 1.5px solid #f0c66a; border-radius: 999px;
-  font-size: 13px; font-weight: 700; color: #8a5a1b;
-  cursor: pointer; transition: transform .18s, box-shadow .18s;
-  box-shadow: 0 2px 6px rgba(200,150,60,.18);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  margin: -8px auto 10px; padding: 2px 10px;
+  background: transparent; border: none;
+  font-size: 12.5px; font-weight: 700; color: var(--primary-d);
+  cursor: pointer; transition: opacity .15s;
 }
-.identity-frame-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(200,150,60,.28); }
-.identity-frame-btn:active { transform: scale(.96); }
-.identity-frame-icon { font-size: 15px; }
-.identity-frame-arrow { font-size: 14px; color: #c08a2e; }
+.identity-frame-btn:hover { opacity: .8; }
+.identity-frame-btn:active { opacity: .6; }
+.identity-frame-icon { font-size: 13px; }
+.identity-frame-arrow { font-size: 12px; }
 #frameView .frame-grid { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; padding: 4px; }
 .frame-preview-card { display: flex; align-items: center; gap: 18px; margin-bottom: 12px; }
 .frame-preview { flex: 0 0 auto; }
@@ -869,7 +867,8 @@ html,body{background:#e8e6e1 !important;}
 .frame-page-tip { font-size: 12px; font-weight: 600; color: #98a69f; margin-left: 8px; }
 .frame-page-foot { text-align: center; font-size: 12px; color: #a2ada6; padding: 14px 0 8px; }
 @media (min-width: 860px) {
-  .identity-frame-btn { font-size: 16px; padding: 9px 22px; gap: 8px; }
+  .identity-frame-btn { font-size: 16px; padding: 2px 12px; gap: 5px; }
+  .identity-frame-icon { font-size: 17px; }
   #frameView .frame-grid { grid-template-columns: repeat(6, minmax(0,1fr)); gap: 14px; }
   .frame-preview-avatar-wrap { width: 128px; height: 128px; }
   .frame-preview-avatar { width: 112px; height: 112px; font-size: 62px; }
@@ -878,7 +877,8 @@ html,body{background:#e8e6e1 !important;}
   .frame-page-title { font-size: 19px; }
 }
 @media (min-width: 1400px) {
-  .identity-frame-btn { font-size: 20px; padding: 12px 30px; }
+  .identity-frame-btn { font-size: 26px; padding: 3px 16px; gap: 7px; }
+  .identity-frame-icon { font-size: 28px; }
   #frameView .frame-grid { grid-template-columns: repeat(8, minmax(0,1fr)); gap: 16px; }
   .frame-preview-avatar-wrap { width: 176px; height: 176px; }
   .frame-preview-avatar { width: 152px; height: 152px; font-size: 86px; }
