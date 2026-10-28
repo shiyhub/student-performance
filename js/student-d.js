@@ -117,6 +117,19 @@ function calcUnlockedFrames(profile) {
   return un;
 }
 
+// 解锁兜底：档案接口失败/缓存为空时，用班级墙 roster 里的真实等级重算，
+// 避免"进入页面全部锁定"的误导（roster 来自 get_wall_data，必带 level）
+function ensureProfileUnlocked() {
+  const p = state.profile;
+  if (p && Array.isArray(p.unlocked_frames) && p.unlocked_frames.length > 0) return;
+  const row = currentRosterRow();
+  const lv = (row && Number(row.level)) || 1;
+  state.profile = Object.assign({}, p || {}, {
+    level: lv,
+    unlocked_frames: Array.from(calcUnlockedFrames({ level: lv, metrics: {}, achievements: [] }))
+  });
+}
+
 function frameNameOf(key) {
   const f = FRAMES.find(x => x.key === key);
   return f ? f.name : (key === 'none' ? '无框' : key);
@@ -139,7 +152,8 @@ function renderFramePage() {
   if (!grid) return;
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
-  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || calcUnlockedFrames(state.profile));
+  ensureProfileUnlocked();
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
   // 顶部预览
   updateFramePreview(curFrame);
   if (els.framePreviewName) {
@@ -186,6 +200,7 @@ async function openFramePage() {
   window.scrollTo(0, 0);
   if (els.frameConfigBanner) els.frameConfigBanner.hidden = !!ready;
   await loadProfile();          // 关键：打开即刷新，不再吃旧缓存
+  ensureProfileUnlocked();      // 档案失败时用 roster 等级兜底，避免全锁定
   renderFramePage();
   if (typeof Nav !== 'undefined' && Nav.push) Nav.push('frames');
 }
