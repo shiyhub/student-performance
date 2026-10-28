@@ -938,7 +938,7 @@ function downloadQr() {
     a.click();
     document.body.removeChild(a);
   } catch (e) {
-    window.open(canvas.toDataURL('image/png'), '_blank');
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');  // 固定窗口名：多次点击复用同一预览
   }
 }
 

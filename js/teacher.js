@@ -1680,7 +1680,7 @@ function downloadStuQr() {
     a.click();
     document.body.removeChild(a);
   } catch (e) {
-    window.open(canvas.toDataURL('image/png'), '_blank');
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');
   }
 }
 
@@ -1714,7 +1714,7 @@ function downloadClassQr() {
     a.click();
     document.body.removeChild(a);
   } catch (e) {
-    window.open(canvas.toDataURL('image/png'), '_blank');
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');
   }
 }
 
@@ -3005,12 +3005,20 @@ async function fillPreviewStudents() {
     (data || []).map(s => `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
 }
 
+// v153：学生预览窗口防重——多次点击只会出现一个预览网页（复用并聚焦已有窗口）
+let previewWin = null;
 function openStudentPreview() {
   const cls = els.previewClass.value;
   const name = els.previewStudent.value;
   if (!cls || !name) { toast('请先选班级和学生'); return; }
   const url = `./index.html?class=${encodeURIComponent(cls)}&student=${encodeURIComponent(name)}&readonly=1`;
-  window.open(url, '_blank');
+  if (previewWin && !previewWin.closed) {
+    previewWin.location.href = url;  // 已打开过 → 复用原窗口跳转（切换学生同样生效）
+    previewWin.focus();
+    return;
+  }
+  previewWin = window.open(url, 'spPreview');  // 固定窗口名：浏览器层面兜底复用
+  if (previewWin) previewWin.focus();
 }
 
 /* ---------------- 工具 ---------------- */
@@ -3994,4 +4002,3 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
 });
-//（注：内容由AI生成）
