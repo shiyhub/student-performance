@@ -866,17 +866,7 @@ html,body{background:#e8e6e1 !important;}
   font-size: 10.5px; padding: 3px 6px; z-index: 4;
 }
 
-/* v156：徽章式头像框适配——戴框时头像缩小居中，素材整圆完整显示 */
-.identity-avatar-emoji.framed,
-.frame-preview-avatar.framed { z-index: 2; }
-.identity-avatar-emoji.framed .avatar-img,
-.identity-avatar-emoji.framed .avatar-emoji,
-.frame-preview-avatar.framed .avatar-img,
-.frame-preview-avatar.framed .avatar-emoji { position: relative; z-index: 2; }
-.identity-avatar-emoji.framed .avatar-img,
-.frame-preview-avatar.framed .avatar-img { width: 42%; height: 42%; border-radius: 50%; }
-.identity-avatar-emoji.framed .avatar-emoji { font-size: 20px; line-height: 1; }
-.frame-preview-avatar.framed .avatar-emoji { font-size: 19px; line-height: 1; }
+/* v157：头像框素材已中心镂空透明，头像恢复正常大小显示 */
 
 .frame-preview-meta { flex: 1; min-width: 0; }
 .frame-preview-name { font-size: 17px; font-weight: 800; color: var(--primary-d); }
