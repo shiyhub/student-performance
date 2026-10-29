@@ -103,16 +103,15 @@
   <div class="diary-col c1">
   <!-- 身份（个人信息） -->
   <section class="card red-card" id="identityCard">
-    <button type="button" class="identity-avatar" id="btnPickAvatar">
+    <button type="button" class="identity-avatar" id="btnPickAvatar" aria-label="更换头像">
       <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
       <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
-      <span class="identity-avatar-hint">点我换头像 ✨</span>
     </button>
-    <button type="button" class="identity-frame-btn" id="btnOpenFrames" aria-label="更换头像框" title="更换头像框">
-      <span class="identity-frame-icon">🖼️</span>
-      <span class="identity-frame-label">更换头像框</span>
-      <span class="identity-frame-arrow">›</span>
-    </button>
+    <div class="identity-actions">
+      <button type="button" class="identity-hint-btn" id="btnPickAvatarHint">点我换头像 ✨</button>
+      <span class="identity-actions-sep">·</span>
+      <button type="button" class="identity-hint-btn" id="btnOpenFrames">🖼️ 更换头像框</button>
+    </div>
     <div class="identity-xp">
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
       <div class="identity-xp-text" id="identityXpText">经验 0 · 再得 20 点升到 Lv.2</div>
