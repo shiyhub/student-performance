@@ -410,6 +410,7 @@ const els = {
   avatarModal: $('#avatarModal'),
   // v160：头像框独立页面（个人主页头像下方入口）
   btnOpenFrames: $('#btnOpenFrames'),
+  btnPickAvatarHint: $('#btnPickAvatarHint'),
   frameView: $('#frameView'),
   btnFrameBack: $('#btnFrameBack'),
   frameConfigBanner: $('#frameConfigBanner'),

@@ -286,6 +286,7 @@ function bindEvents() {
 
   // 头像选择
   els.btnPickAvatar.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
+  if (els.btnPickAvatarHint) els.btnPickAvatarHint.addEventListener('click', () => { sfx.tap(); openAvatarPicker(); });
   // v160：更换头像框独立入口 → 独立页面
   if (els.btnOpenFrames) els.btnOpenFrames.addEventListener('click', () => { openFramePage(); });
   if (els.btnFrameBack) els.btnFrameBack.addEventListener('click', () => { closeFramePage(); });
