@@ -299,6 +299,7 @@ async function loadProfile() {
   state.myFrame = data.frame || 'none';
 
   // 已解锁头像框集合：统一走 calcUnlockedFrames（v160：补全 7/8/9/10 级七风格 + 15 款新框，修复 7 级不解锁）
+  const achs = data.achievements || [];
   data.unlocked_frames = Array.from(calcUnlockedFrames(data));
 
   renderAchievements(achs);
