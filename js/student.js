@@ -1154,7 +1154,7 @@ function avatarForName(name, saved, sm) {
 function avatarInner(av) {
   return av.kind === 'img'
     ? `<img class="avatar-img" src="${av.src}" alt="" loading="lazy">`
-    : av.emoji;
+    : `<span class="avatar-emoji">${av.emoji}</span>`;
 }
 function paintAvatar(el, av) {
   if (!el) return;
