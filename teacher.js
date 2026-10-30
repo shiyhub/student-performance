@@ -152,6 +152,19 @@ const els = {
   btnRecalcXp: $('#btnRecalcXp'),
   recalcResult: $('#recalcResult'),
   previewClass: $('#previewClass'),
+  xpLogClass: $('#xpLogClass'),
+  xpLogStudent: $('#xpLogStudent'),
+  xpLogResult: $('#xpLogResult'),
+  btnXpLogQuery: $('#btnXpLogQuery'),
+  btnInjectXpLog: $('#btnInjectXpLog'),
+  injectXpLogResult: $('#injectXpLogResult'),
+  btnXpAnomaly: $('#btnXpAnomaly'),
+  xpAnomalyHint: $('#xpAnomalyHint'),
+  xpAnomalyList: $('#xpAnomalyList'),
+  btnAllXpLogs: $('#btnAllXpLogs'),
+  btnXpAnomalyZone: $('#btnXpAnomalyZone'),
+  xpAnomalyZoneBadge: $('#xpAnomalyZoneBadge'),
+  xpAnomalyZoneList: $('#xpAnomalyZoneList'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
   // 新增 / 修改记录
@@ -199,9 +212,12 @@ async function syncRunner(op) {
     if (op.name === 'create_manual_tasks') { const r = await supabase.rpc('create_manual_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'create_personal_tasks') { const r = await supabase.rpc('create_personal_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_personal_task') { const r = await supabase.rpc('delete_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'delete_personal_tasks') { const r = await supabase.rpc('delete_personal_tasks', { p_task_ids: p.p_task_ids }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_fill_personal_task') { const r = await supabase.rpc('teacher_fill_personal_task', { p_task_id: p.p_task_id }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'create_challenge_tasks') { const r = await supabase.rpc('create_challenge_tasks', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'delete_challenge_task') { const r = await supabase.rpc('delete_challenge_task', { p_task_id: p.p_task_id }); return { ok: !r.error, error: r.error }; }
+    if (op.name === 'delete_challenge_tasks') { const r = await supabase.rpc('delete_challenge_tasks', { p_task_ids: p.p_task_ids }); return { ok: !r.error, data: r.data, error: r.error }; }
+    if (op.name === 'cancel_challenge_submission') { const r = await supabase.rpc('cancel_challenge_submission', { p_submission_id: p.p_submission_id }); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'teacher_home_reply') { const r = await supabase.from('home_note_reply').insert(p); return { ok: !r.error, error: r.error }; }
     if (op.name === 'exam_save') {
       const { fileName, imageBlob } = p;
@@ -326,6 +342,12 @@ function init() {
   // 测试工具
   if (els.btnRecalcXp) els.btnRecalcXp.addEventListener('click', onRecalcXp);
   if (els.previewClass) els.previewClass.addEventListener('change', fillPreviewStudents);
+  if (els.xpLogClass) els.xpLogClass.addEventListener('change', () => { fillXpLogStudents(); if (els.btnXpAnomalyZone) loadXpAnomalyZone(); });
+  if (els.btnXpLogQuery) els.btnXpLogQuery.addEventListener('click', queryXpLog);
+  if (els.btnInjectXpLog) els.btnInjectXpLog.addEventListener('click', injectXpLog);
+  if (els.btnXpAnomaly) els.btnXpAnomaly.addEventListener('click', scanXpAnomaly);
+  if (els.btnAllXpLogs) els.btnAllXpLogs.addEventListener('click', loadAllStudentLogs);
+  if (els.btnXpAnomalyZone) els.btnXpAnomalyZone.addEventListener('click', loadXpAnomalyZone);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
@@ -486,7 +508,7 @@ function switchTab(name) {
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     personal: 'tabPersonal', challenge: 'tabChallenge',
-    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', tools: 'tabTools', seat: 'tabSeat'
+    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
   //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
@@ -523,6 +545,7 @@ function switchTab(name) {
   if (name === 'task') activateTaskTab();
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
+  if (name === 'xpLog') fillXpLogClasses();
   if (name === 'seat') activateSeatTab();
 }
 
@@ -1129,6 +1152,10 @@ async function saveRecordModal() {
   if (missing) return showRecError(`请为「${missing.label}」选择一个具体项目`);
 
   const behavior = buildBehavior();
+  // 空表现拦截：不允许保存空白日常记录（与后端 100 号兜底对应）
+  if (!behavior.items || !behavior.items.length) {
+    return showRecError('请至少选择一项表现，不能保存空白记录');
+  }
 
   const payload = {
     record_date: els.recDate.value,
@@ -1657,7 +1684,7 @@ function downloadStuQr() {
     a.click();
     document.body.removeChild(a);
   } catch (e) {
-    window.open(canvas.toDataURL('image/png'), '_blank');
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');
   }
 }
 
@@ -1691,7 +1718,7 @@ function downloadClassQr() {
     a.click();
     document.body.removeChild(a);
   } catch (e) {
-    window.open(canvas.toDataURL('image/png'), '_blank');
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');
   }
 }
 
@@ -2305,6 +2332,9 @@ async function loadPersonalTasks() {
   const today = todayStr();
   box.innerHTML = rows.map(t => `
     <div class="auto-rule-row">
+      <label class="sel-check" style="display:flex;align-items:center;padding-right:8px;cursor:pointer;user-select:none;" title="选择该条">
+        <input type="checkbox" data-sel-ptask="${t.id}">
+      </label>
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           ${t.deadline ? `<span class="badge-dim" style="margin-left:6px;">截止 ${String(t.deadline).slice(5)}</span>` : ''}
@@ -2316,8 +2346,8 @@ async function loadPersonalTasks() {
       </div>
       <div class="rule-actions">
         ${t.status === 'pending' ? `
-          <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>
-          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}">取消</button>` : ''}
+          <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>` : ''}
+          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}" style="${t.status === 'done' ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${t.status === 'done' ? '删除（回退经验）' : '取消'}</button>
       </div>
     </div>`).join('');
   box.querySelectorAll('[data-fill-ptask]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2331,12 +2361,16 @@ async function loadPersonalTasks() {
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消这条个人任务？（未加分，学生端将不再显示）')) return;
+    if (!confirm('删除这条个人任务？已完成任务的已加经验将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
-    if (!wr.ok) { toast('取消失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d2 = wr.res || {};
+    if (d2.ok === false) { toast('删除失败：' + (d2.reason || '')); return; }
+    const refund2 = Number(d2.refund_xp) || 0;
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund2 ? '已删除，回退经验 ' + refund2 + 'xp' : '已删除'));
     loadPersonalTasks();
   }));
+  box.querySelectorAll('input[data-sel-ptask]').forEach(cb => cb.addEventListener('change', refreshPtaskSel));
 }
 
 /* ================= 挑战任务（档位制，教师可自定义档位与经验） ================= */
@@ -2469,6 +2503,21 @@ async function loadChallengeTasks() {
     box.innerHTML = '<div class="empty">还没有发布挑战任务。</div>';
     return;
   }
+  // v152.2：查询填报记录（单次可取消），按挑战分组
+  let subsMap = new Map();
+  try {
+    const s = await supabase
+      .from('challenge_submission')
+      .select('id,challenge_id,student_name,levels,xp,submitted_at,status')
+      .eq('status', 'active');
+    if (!s.error && s.data) {
+      (s.data || []).forEach(sub => {
+        const arr = subsMap.get(sub.challenge_id) || [];
+        arr.push(sub);
+        subsMap.set(sub.challenge_id, arr);
+      });
+    }
+  } catch (e) {}
   const today = todayStr();
   box.innerHTML = rows.map(t => {
     if (t.status === 'cancelled') return '';
@@ -2486,6 +2535,9 @@ async function loadChallengeTasks() {
     }, 0);
     return `
     <div class="auto-rule-row">
+      <label class="sel-check" style="display:flex;align-items:center;padding-right:8px;cursor:pointer;user-select:none;" title="选择该条">
+        <input type="checkbox" data-sel-challenge="${t.id}">
+      </label>
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0,10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           <span class="badge-dim">${esc(t.student_name)}</span>
@@ -2495,17 +2547,45 @@ async function loadChallengeTasks() {
         </div>
       </div>
       <div class="rule-actions">
-        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}">取消</button>` : ''}
+        ${(subsMap.get(t.id) || []).length ? `<button class="btn btn-ghost btn-sm" data-sub-toggle="${t.id}">填报记录 ${(subsMap.get(t.id) || []).length} 次</button>` : ''}
+        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}" style="${allDone ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${allDone ? '删除（回退经验）' : '取消'}</button>
       </div>
+      ${(subsMap.get(t.id) || []).length ? `<div class="sub-list" data-sub-box="${t.id}" style="display:none;margin:6px 0 0 44px;padding:6px 10px;background:#faf6ef;border:1px solid #e8dcc6;border-radius:8px;font-size:12px;">
+        ${(subsMap.get(t.id) || []).map(sub => `
+          <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px dashed #e8dcc6;">
+            <span style="color:#8a7a66;">${esc(String(sub.submitted_at || '').replace('T', ' ').slice(0, 16))}</span>
+            <span>档位 ${(Array.isArray(sub.levels) ? sub.levels : []).map(Number).join(',') || '—'}</span>
+            <span style="color:#a07d3e;">+${Number(sub.xp) || 0}xp</span>
+            <button class="btn btn-warn btn-sm" data-cancel-sub="${sub.id}" style="margin-left:auto;padding:2px 8px;">取消本次（回退）</button>
+          </div>`).join('')}
+      </div>` : ''}
     </div>`;
   }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
-  box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消这条挑战？（未加分，学生端将不再显示）')) return;
-    const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
+  box.querySelectorAll('[data-sub-toggle]').forEach(btn => btn.addEventListener('click', () => {
+    const b = box.querySelector('[data-sub-box="' + btn.dataset.subToggle + '"]');
+    if (b) b.style.display = (b.style.display === 'none') ? '' : 'none';
+  }));
+  box.querySelectorAll('[data-cancel-sub]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('取消本次填报？该次所得经验将回退，对应档位从已达成中移除。')) return;
+    const wr = await runWrite({ name: 'cancel_challenge_submission', params: { p_submission_id: btn.dataset.cancelSub } });
     if (!wr.ok) { toast('取消失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    const d4 = wr.res || {};
+    if (d4.ok === false) { toast('取消失败：' + (d4.reason || '')); return; }
+    const refund4 = Number(d4.refund_xp) || 0;
+    toast(refund4 ? '已取消本次填报，回退 ' + refund4 + 'xp' : '已取消本次填报');
     loadChallengeTasks();
   }));
+  box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('删除这条挑战？已达成档位加过的经验将自动回退。')) return;
+    const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d3 = wr.res || {};
+    if (d3.ok === false) { toast('删除失败：' + (d3.reason || '')); return; }
+    const refund3 = Number(d3.refund_xp) || 0;
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund3 ? '已删除，回退经验 ' + refund3 + 'xp' : '已删除'));
+    loadChallengeTasks();
+  }));
+  box.querySelectorAll('input[data-sel-challenge]').forEach(cb => cb.addEventListener('change', refreshChallengeSel));
 }
 
 async function loadAutoRules() {
@@ -2627,6 +2707,289 @@ async function onRecalcXp() {
   }
 }
 
+// v152.8：异常经验排查（经验记录页）
+async function scanXpAnomaly() {
+  const btn = els.btnXpAnomaly, hint = els.xpAnomalyHint, box = els.xpAnomalyList;
+  if (!btn || !box) return;
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  btn.disabled = true;
+  if (hint) hint.textContent = '扫描中…';
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在比对…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_xp_anomalies', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(error.message)}（请确认已执行 88 号 SQL）</div>`;
+      if (hint) hint.textContent = '';
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    if (hint) hint.textContent = '';
+    if (!rows.length) {
+      box.innerHTML = '<div class="banner">✅ 全班当前经验与流水应得一致，无异常差额。</div>';
+      return;
+    }
+    const rowsHtml = rows.map(r => {
+      const d = r.diff || 0;
+      let reason;
+      if (r.log_total === 0) reason = '无流水记录（未注入或纯手动调整）';
+      else if (d > 0) reason = `经验偏多 +${d}：可能手动调经验 / 删除未回退`;
+      else reason = `经验偏少 ${d}：可能删除回退过头 / 手动扣减`;
+      const color = d > 0 ? '#b84c3a' : '#a93b36';
+      return `<tr>
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">Lv${r.level}</td>
+        <td style="text-align:right;">${r.cur_xp}</td>
+        <td style="text-align:right;">${r.log_total}</td>
+        <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
+        <td style="font-size:13px;">${reason}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 名经验异常学生：</div>
+      <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">等级</th>
+            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">流水应得</th>
+            <th style="padding:8px 10px;text-align:right;">差额</th>
+            <th style="padding:8px 10px;text-align:left;">可能原因</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    if (hint && hint.textContent === '扫描中…') hint.textContent = '';
+  }
+}
+
+// v153：学生经验日志（全班日志总览，点击行查该生流水）
+async function loadAllStudentLogs() {
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  const box = els.xpLogResult;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载全班日志…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_student_xp_logs', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}（请确认已执行 90 号 SQL）</div>`;
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    if (!rows.length) { box.innerHTML = '<div class="banner">该班暂无学生或流水。</div>'; return; }
+    const rowsHtml = rows.map(r => {
+      const d = r.diff || 0;
+      const color = d === 0 ? 'inherit' : (d > 0 ? '#b84c3a' : '#a93b36');
+      return `<tr class="xp-log-row" data-stu="${esc(r.student)}" style="cursor:pointer;">
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">Lv${r.level}</td>
+        <td style="text-align:right;">${r.cur_xp}</td>
+        <td style="text-align:right;">${r.log_total}</td>
+        <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
+        <td style="text-align:center;">${r.log_cnt || 0} 条</td>
+        <td style="text-align:center;">${esc(r.last_date || '—')}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">全班 <b>${rows.length}</b> 名学生经验日志（点击学生行查看该生流水明细）：</div>
+      <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">等级</th>
+            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">流水应得</th>
+            <th style="padding:8px 10px;text-align:right;">差额</th>
+            <th style="padding:8px 10px;text-align:center;">流水条数</th>
+            <th style="padding:8px 10px;text-align:center;">最近记录</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    box.querySelectorAll('.xp-log-row').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const name = tr.dataset.stu;
+        if (els.xpLogStudent) {
+          els.xpLogStudent.value = name;
+          if (els.xpLogStudent.value !== name) {
+            fillXpLogStudents().then(() => { els.xpLogStudent.value = name; queryXpLog(); });
+            return;
+          }
+        }
+        queryXpLog();
+      });
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+// v153：经验异常区（自动上报清单）
+const XP_ANOMALY_TYPE = {
+  missing_tag: '标签已删除',
+  bad_xp_value: '经验值配置异常',
+  negative_clip: '扣减致负截断',
+  xp_mismatch: '加分链路异常'
+};
+async function loadXpAnomalyZone() {
+  const cls = els.xpLogClass.value;
+  if (!cls) { toast('请先选择班级'); return; }
+  const box = els.xpAnomalyZoneList, badge = els.xpAnomalyZoneBadge;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载异常清单…</div>';
+  try {
+    const { data, error } = await supabase.rpc('get_xp_anomaly_zone', { p_class: cls });
+    if (error) {
+      box.innerHTML = `<div class="banner banner-error">加载失败：${esc(error.message)}（请确认已执行 90 号 SQL）</div>`;
+      return;
+    }
+    const rows = (data && data.rows) || [];
+    const cnt = (data && data.open_count) || 0;
+    if (badge) badge.textContent = cnt ? cnt + ' 条待处理' : '无待处理';
+    if (!rows.length) { box.innerHTML = '<div class="banner">✅ 暂无自动上报的经验异常。</div>'; return; }
+    const rowsHtml = rows.map(r => {
+      const d = r.detail || {};
+      let extra = '';
+      if (r.type === 'missing_tag' && d.tag_id) extra = '标签ID：<code>' + esc(String(d.tag_id).slice(0, 8)) + '</code>';
+      if (r.type === 'bad_xp_value') extra = (esc(d.label || '') + ' = ' + (d.xp_value === undefined ? '' : d.xp_value) + ' xp');
+      if (r.type === 'negative_clip') extra = '原经验 ' + d.before + '，扣 ' + d.delta;
+      if (r.type === 'xp_mismatch') extra = '应得 ' + d.expected + '，实际 ' + d.actual;
+      return `<tr>
+        <td><b>${esc(r.student)}</b></td>
+        <td style="text-align:center;">${esc(r.date || '—')}</td>
+        <td style="text-align:center;">${esc(r.source || '—')}</td>
+        <td>${XP_ANOMALY_TYPE[r.type] || esc(r.type)}</td>
+        <td style="font-size:13px;">${esc(r.reason)}${extra ? '<br><span class="text-muted">' + extra + '</span>' : ''}</td>
+        <td style="text-align:center;white-space:nowrap;font-size:13px;">${esc(String(r.create_at || '').replace('T', ' ').slice(5, 16))}</td>
+        <td style="text-align:center;"><button class="btn btn-ghost btn-sm" data-id="${r.id}" type="button">标记已处理</button></td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 条待处理异常（提交时自动检测上报，同生同日同类仅一条）：</div>
+      <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr style="background:#f4f4f5;">
+            <th style="padding:8px 10px;text-align:left;">学生</th>
+            <th style="padding:8px 10px;text-align:center;">日期</th>
+            <th style="padding:8px 10px;text-align:center;">来源</th>
+            <th style="padding:8px 10px;text-align:left;">异常类型</th>
+            <th style="padding:8px 10px;text-align:left;">原因</th>
+            <th style="padding:8px 10px;text-align:center;">上报时间</th>
+            <th style="padding:8px 10px;text-align:center;">处理</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    box.querySelectorAll('button[data-id]').forEach(btn => {
+      btn.addEventListener('click', () => resolveXpAnomaly(btn.dataset.id));
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+// v153：标记异常已处理
+async function resolveXpAnomaly(id) {
+  if (!confirm('确认将该异常标记为已处理？')) return;
+  try {
+    const { data, error } = await supabase.rpc('resolve_xp_anomaly', { p_id: id });
+    if (error || !data || data.ok !== true) { toast('标记失败：' + ((error && error.message) || '仅登录教师可操作')); return; }
+    toast('已标记为已处理');
+    loadXpAnomalyZone();
+  } catch (e) { toast('标记失败：' + e.message); }
+}
+
+
+// v152.7：经验流水注入（测试工具）
+async function injectXpLog() {
+  if (!confirm('将按真实经验值把现有全部加分写入经验流水（可重复执行，不会重复）。确定继续吗？')) return;
+  const btn = els.btnInjectXpLog, out = els.injectXpLogResult;
+  if (btn) btn.disabled = true;
+  if (out) out.textContent = '注入中…';
+  try {
+    const { data, error } = await supabase.rpc('inject_xp_log');
+    if (error) { if (out) out.textContent = '失败：' + error.message; return; }
+    if (out) out.textContent = '注入完成，共写入 ' + ((data && data.injected) || 0) + ' 条经验记录';
+  } catch (e) { if (out) out.textContent = '失败：' + e.message; }
+  finally { if (btn) btn.disabled = false; }
+}
+
+// v152.7：经验记录查询
+const XP_LOG_SRC = { daily: '日常表现', task: '每日任务', personal: '个人任务', challenge: '挑战任务', manual: '手动任务' };
+const XP_LOG_DIM = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
+async function fillXpLogClasses() {
+  if (!els.xpLogClass) return;
+  const { data } = await supabase.from('student_info').select('class').order('class');
+  const classes = Array.from(new Set((data || []).map(s => s.class))).sort();
+  els.xpLogClass.innerHTML = '<option value="">请选择班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  fillXpLogStudents();
+}
+async function fillXpLogStudents() {
+  if (!els.xpLogClass || !els.xpLogStudent) return;
+  const cls = els.xpLogClass.value;
+  if (!cls) { els.xpLogStudent.innerHTML = '<option value="">先选班级</option>'; return; }
+  const { data } = await supabase
+    .from('student_info').select('student_name').eq('class', cls).order('student_name');
+  els.xpLogStudent.innerHTML = '<option value="">请选择学生</option>' +
+    (data || []).map(s => `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
+}
+async function queryXpLog() {
+  const cls = els.xpLogClass.value, name = els.xpLogStudent.value;
+  if (!cls || !name) { toast('请先选班级和学生'); return; }
+  const box = els.xpLogResult;
+  if (!box) return;
+  box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
+  const { data, error } = await supabase.rpc('get_xp_log', { p_class: cls, p_student: name });
+  if (error) { box.innerHTML = `<div class="banner banner-error">查询失败：${esc(error.message)}（请确认已执行 87 号 SQL）</div>`; return; }
+  const rows = (data && data.rows) || [];
+  const total = (data && data.total) || 0;
+  let cur = 0;
+  const { data: info } = await supabase
+    .from('student_info').select('xp').eq('class', cls).eq('student_name', name).single();
+  if (info) cur = info.xp || 0;
+  if (!rows.length) {
+    box.innerHTML = '<div class="banner">该生暂无经验流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
+    return;
+  }
+  let acc = 0;
+  const rowsHtml = rows.map(r => {
+    acc += (r.xp || 0);
+    return `<tr>
+      <td style="white-space:nowrap;">${esc(r.date || '')}</td>
+      <td>${XP_LOG_SRC[r.source] || r.source}</td>
+      <td>${esc(r.label || '')}</td>
+      <td style="text-align:center;">${XP_LOG_DIM[r.dim] || (r.dim ? r.dim : '—')}</td>
+      <td style="text-align:right;">+${r.xp}</td>
+      <td style="text-align:right;font-weight:600;">${acc}</td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div style="margin-bottom:8px;font-size:14px;">
+      流水合计 <b>${total} xp</b> ｜ 当前经验 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
+      <span class="text-muted">（差额为教师手动调整或删除回退等无流水操作；流水合计即「真实经验值」参照）</span>
+    </div>
+    <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead><tr style="background:#f4f4f5;">
+          <th style="padding:8px 10px;text-align:left;">日期</th>
+          <th style="padding:8px 10px;text-align:left;">渠道</th>
+          <th style="padding:8px 10px;text-align:left;">说明</th>
+          <th style="padding:8px 10px;text-align:center;">维度</th>
+          <th style="padding:8px 10px;text-align:right;">经验</th>
+          <th style="padding:8px 10px;text-align:right;">累计</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
 async function fillPreviewClasses() {
   if (!els.previewClass) return;
   const { data } = await supabase.from('student_info').select('class').order('class');
@@ -2646,12 +3009,20 @@ async function fillPreviewStudents() {
     (data || []).map(s => `<option value="${esc(s.student_name)}">${esc(s.student_name)}</option>`).join('');
 }
 
+// v153：学生预览窗口防重——多次点击只会出现一个预览网页（复用并聚焦已有窗口）
+let previewWin = null;
 function openStudentPreview() {
   const cls = els.previewClass.value;
   const name = els.previewStudent.value;
   if (!cls || !name) { toast('请先选班级和学生'); return; }
   const url = `./index.html?class=${encodeURIComponent(cls)}&student=${encodeURIComponent(name)}&readonly=1`;
-  window.open(url, '_blank');
+  if (previewWin && !previewWin.closed) {
+    previewWin.location.href = url;  // 已打开过 → 复用原窗口跳转（切换学生同样生效）
+    previewWin.focus();
+    return;
+  }
+  previewWin = window.open(url, 'spPreview');  // 固定窗口名：浏览器层面兜底复用
+  if (previewWin) previewWin.focus();
 }
 
 /* ---------------- 工具 ---------------- */
@@ -3565,4 +3936,73 @@ document.addEventListener('DOMContentLoaded', () => {
       names: seatAllNames
     });
   };
+});
+
+/* ================= v152.1：个人任务 & 挑战任务 多选删除（83 号 SQL） ================= */
+function refreshPtaskSel() {
+  const box = els.personalTaskBox;
+  const n = box.querySelectorAll('input[data-sel-ptask]:checked').length;
+  const cnt = document.getElementById('ptaskSelCount');
+  if (cnt) cnt.textContent = n ? `已选 ${n} 条` : '';
+}
+document.getElementById('btnPtaskSelAll')?.addEventListener('click', () => {
+  els.personalTaskBox.querySelectorAll('input[data-sel-ptask]').forEach(cb => { cb.checked = true; });
+  refreshPtaskSel();
+});
+document.getElementById('btnPtaskSelNone')?.addEventListener('click', () => {
+  els.personalTaskBox.querySelectorAll('input[data-sel-ptask]').forEach(cb => { cb.checked = false; });
+  refreshPtaskSel();
+});
+document.getElementById('btnPtaskDelBatch')?.addEventListener('click', async () => {
+  const ids = Array.from(els.personalTaskBox.querySelectorAll('input[data-sel-ptask]:checked')).map(cb => cb.value);
+  if (!ids.length) { toast('请先勾选要删除的个人任务'); return; }
+  if (!confirm(`删除所选 ${ids.length} 条个人任务？已完成任务的已加经验将自动回退。`)) return;
+  const btn = document.getElementById('btnPtaskDelBatch');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'delete_personal_tasks', params: { p_task_ids: ids } });
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('删除失败：' + (d.reason || '')); return; }
+    const refund = Number(d.refund_xp) || 0;
+    const del = Number(d.deleted) || 0;
+    const fail = Number(d.failed) || 0;
+    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    loadPersonalTasks();
+  } catch (e) { toast('删除失败，请重试'); }
+  finally { btn.disabled = false; }
+});
+
+function refreshChallengeSel() {
+  const box = els.challengeTaskBox;
+  const n = box.querySelectorAll('input[data-sel-challenge]:checked').length;
+  const cnt = document.getElementById('challengeSelCount');
+  if (cnt) cnt.textContent = n ? `已选 ${n} 条` : '';
+}
+document.getElementById('btnChallengeSelAll')?.addEventListener('click', () => {
+  els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]').forEach(cb => { cb.checked = true; });
+  refreshChallengeSel();
+});
+document.getElementById('btnChallengeSelNone')?.addEventListener('click', () => {
+  els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]').forEach(cb => { cb.checked = false; });
+  refreshChallengeSel();
+});
+document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async () => {
+  const ids = Array.from(els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]:checked')).map(cb => cb.value);
+  if (!ids.length) { toast('请先勾选要删除的挑战任务'); return; }
+  if (!confirm(`删除所选 ${ids.length} 条挑战任务？已达成档位加过的经验将自动回退。`)) return;
+  const btn = document.getElementById('btnChallengeDelBatch');
+  btn.disabled = true;
+  try {
+    const wr = await runWrite({ name: 'delete_challenge_tasks', params: { p_task_ids: ids } });
+    if (!wr.ok) { toast('删除失败，请重试'); return; }
+    const d = wr.res || {};
+    if (d.ok === false) { toast('删除失败：' + (d.reason || '')); return; }
+    const refund = Number(d.refund_xp) || 0;
+    const del = Number(d.deleted) || 0;
+    const fail = Number(d.failed) || 0;
+    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    loadChallengeTasks();
+  } catch (e) { toast('删除失败，请重试'); }
+  finally { btn.disabled = false; }
 });
