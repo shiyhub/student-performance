@@ -588,7 +588,7 @@ function renderRecordTimeline(rows) {
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
       let itemsHtml = '';
-      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
       if (items.length) {
         itemsHtml = '<ul class="detail-items">';
         items.forEach(it => {
@@ -652,7 +652,7 @@ function avatarForName(name, saved, sm) {
 function avatarInner(av) {
   return av.kind === 'img'
     ? `<img class="avatar-img" src="${av.src}" alt="" loading="lazy">`
-    : av.emoji;
+    : `<span class="avatar-emoji">${av.emoji}</span>`;
 }
 function paintAvatar(el, av) {
   if (!el) return;

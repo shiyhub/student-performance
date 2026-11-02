@@ -4007,4 +4007,3 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
 });
-//（注：内容由AI生成）

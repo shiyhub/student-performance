@@ -151,7 +151,7 @@ const NEW_GROUPS = [
   { name: '游戏风',   prefix: 'game',    count: 17, level: 4, emoji: '🎮' },
   { name: '森系田园', prefix: 'nature',  count: 8,  level: 5, emoji: '🌿' },
   { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
-  { name: '次元武士', prefix: 'warrior', count: 5,  level: 6, emoji: '⚔️' },
+  { name: '次元武士', prefix: 'warrior', count: 4,  level: 6, emoji: '⚔️' },
   { name: '奇幻神域', prefix: 'fantasy', count: 11, level: 7, emoji: '✨' },
   { name: '国风仙韵', prefix: 'xian',    count: 5,  level: 8, emoji: '🏮' }
 ];
@@ -160,6 +160,15 @@ const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
   return arr;
 }, []);
 const NEW_LEVEL_MAP = Object.fromEntries(NEW_KEYS.map(k => [k, NEW_GROUPS.find(g => k.startsWith(g.prefix)).level]));
+// v160：传说神将——Lv.9 专属新头像（mecha5 / warrior5 / warrior6，从 6 级组拆出单独投放）
+const LEGEND_AVATARS = [
+  { key: 'mecha5',   level: 9 },
+  { key: 'warrior5', level: 9 },
+  { key: 'warrior6', level: 9 }
+];
+LEGEND_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
+const LEGEND_LEVEL = 9;
+
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
 // v142(RSK-14)：等级上限提升至 Lv.12 —— L8=900 / L9=1300 / L10=1800 / L11=2500 / L12=3500（与数据库 level_from_xp 同口径）
@@ -196,7 +205,25 @@ const FRAMES = [
   { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '升到 Lv.8' },
   { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '升到 Lv.9' },
   { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '升到 Lv.9' },
-  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' }
+  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' },
+  /* v155：魔法星空 6 款 + 兽耳小铺 9 款（新增款式，原 27 款不变） */
+  { key: 'ice',      name: '冰晶雪翼', icon: '❄️', need: '升到 Lv.7' },
+  { key: 'moon',     name: '月神羽翼', icon: '🌙', need: '升到 Lv.7' },
+  { key: 'crystal',  name: '水晶星梦', icon: '💎', need: '升到 Lv.7' },
+  { key: 'silk',     name: '丝带蝶舞', icon: '🎀', need: '升到 Lv.7' },
+  { key: 'goldwing', name: '鎏金圣翼', icon: '🪽', need: '升到 Lv.7' },
+  { key: 'kitty',    name: '月眠猫咪', icon: '🐱', need: '升到 Lv.7' },
+  { key: 'devilcat', name: '恶魔小猫', icon: '😈', need: '升到 Lv.8' },
+  { key: 'angelcat', name: '天使小猫', icon: '😇', need: '升到 Lv.8' },
+  { key: 'clover',   name: '四叶祝福', icon: '🍀', need: '升到 Lv.8' },
+  { key: 'neko',     name: '奇幻猫耳', icon: '🐾', need: '升到 Lv.8' },
+  { key: 'sweets',   name: '甜心点心', icon: '🍩', need: '升到 Lv.8' },
+  { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '升到 Lv.8' },
+  { key: 'broken',   name: '破碎之心', icon: '💔', need: '升到 Lv.8' },
+  { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '升到 Lv.8' },
+  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '升到 Lv.8' },
+  /* v161：紫晶蝶梦（新增款式，Lv.8 开放） */
+  { key: 'ribbon',   name: '紫晶蝶梦', icon: '🪻', need: '升到 Lv.8' }
 ];
 const XP_PER_POSITIVE = 2;
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
@@ -241,10 +268,10 @@ function ensureMobileGate() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
   input.focus();
 }
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-4]|warrior[1-5]|fantasy([1-9]|1[0-1])|xian[1-5])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -254,9 +281,11 @@ const LEGACY_AVATAR_MAP = {
    按名字哈希稳定分配，避免历史学生头像失效；avatarForName 中 isImgKey 兜底最终保证合法 */
 function migrateLegacyAvatar(key) {
   const k = String(key || '');
-  const m = /^(cyber|mecha|rider|ultra)([1-8])$/.exec(k);
+  // v152.9：mecha1-4 已是新款「机甲战士」，不再是旧Q版；旧Q版仅 cyber/rider/ultra
+  const m = /^(cyber|rider|ultra)([1-8])$/.exec(k);
   if (m) return LEGACY_AVATAR_MAP[m[1]];
-  if (/^(girl|boy|neutral|animal|sweet|game|nature|mecha|fantasy)/.test(k)) return k;
+  // 有效图片 key 直接保留（含 mecha1-4、warrior1-5、fantasy、xian 等新款）
+  if (isImgKey(k)) return k;
   const h = hashCode(k);
   return 'animal' + (((h % 24) + 24) % 24 + 1);
 }
@@ -298,7 +327,7 @@ async function syncRunner(op) {
     if (op.name === 'submit_today') { const r = await supabase.rpc('submit_today', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
-    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
+    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error, data: r.data, error: r.error }; }
     /* v152：挑战任务提交（82 号 SQL：confirm_challenge_levels，多档位数组） */
     if (op.name === 'confirm_challenge_levels') { const r = await supabase.rpc('confirm_challenge_levels', p); return { ok: !r.error, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
@@ -381,6 +410,19 @@ const els = {
   identityXpFill: $('#identityXpFill'),
   identityXpText: $('#identityXpText'),
   avatarModal: $('#avatarModal'),
+  // v160：头像框独立页面（个人主页头像下方入口）
+  btnOpenFrames: $('#btnOpenFrames'),
+  btnPickAvatarHint: $('#btnPickAvatarHint'),
+  frameView: $('#frameView'),
+  btnFrameBack: $('#btnFrameBack'),
+  frameConfigBanner: $('#frameConfigBanner'),
+  framePreviewCard: $('#framePreviewCard'),
+  framePreviewAvatar: $('#framePreviewAvatar'),
+  framePreviewLevel: $('#framePreviewLevel'),
+  framePreviewName: $('#framePreviewName'),
+  framePreviewTip: $('#framePreviewTip'),
+  framePageGrid: $('#framePageGrid'),
+  frameCountTip: $('#frameCountTip'),
   avatarModalEmoji: $('#avatarModalEmoji'),
   avatarPicker: $('#avatarPicker'),
   avatarHint: $('#avatarHint'),
@@ -871,8 +913,11 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
     const rank = rankMap[s.student_name] || 0;   // v150：经验榜名次（1-5）
+    // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
+    const rankDeco = (rank >= 1 && rank <= 3) ? `<span class="rank-deco deco-${rank}"></span>` : '';
     html += `<button class="mate${rank ? ` rank-${rank}` : ''}" data-detail="${esc(s.student_name)}">
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
+        ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
@@ -1047,7 +1092,7 @@ function renderRecordTimeline(rows) {
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
       let itemsHtml = '';
-      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
       if (items.length) {
         itemsHtml = '<ul class="detail-items">';
         items.forEach(it => {
@@ -1111,7 +1156,7 @@ function avatarForName(name, saved, sm) {
 function avatarInner(av) {
   return av.kind === 'img'
     ? `<img class="avatar-img" src="${av.src}" alt="" loading="lazy">`
-    : av.emoji;
+    : `<span class="avatar-emoji">${av.emoji}</span>`;
 }
 function paintAvatar(el, av) {
   if (!el) return;
@@ -1214,7 +1259,7 @@ async function loadTags() {
   } else {
     const res = await supabase
       .from('behavior_tags')
-      .select('id, label, tag_type, options, category, score, sort_order, history_unique')
+      .select('id, label, tag_type, options, category, score, sort_order, history_unique, xp_value')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
     data = res.data; error = res.error;
@@ -1271,7 +1316,7 @@ function mergeLocalRecord(cls, name, items, mood, serverToday) {
   const existing = state.records.find(r =>
     r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
   if (existing) {
-    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items : [];
+    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items.filter(it => it && typeof it === 'object') : [];
     const seen = new Set(oldItems.map(it => it.id + '|' + (it.value || '')));
     const fresh = items.filter(it => !seen.has(it.id + '|' + (it.value || '')));
     existing.behavior = { mood: mood || (existing.behavior && existing.behavior.mood) || 'normal', items: oldItems.concat(fresh) };
@@ -1349,7 +1394,7 @@ async function loadDoneItems() {
   }
   (rows || []).forEach(r => {
     if (r.student_name !== name) return;
-    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
     items.forEach(it => {
       const tid = it.id;
       if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
@@ -1596,8 +1641,22 @@ async function openAvatarPicker() {
     els.avatarPicker.appendChild(sec);
   });
 
-  // —— 头像框（v105）——
-  buildFrameSection();
+  // —— v160：传说神将（Lv.9 专属新头像，独立分区）——
+  {
+    const unlocked = lv >= LEGEND_LEVEL;
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
+    sec.innerHTML = unlocked
+      ? `<div class="avatar-sec-title">🌟 传说神将<span class="avatar-sec-tip ok">Lv.${LEGEND_LEVEL} 已解锁，可随意更换</span></div>`
+      : `<div class="avatar-sec-title">🔒 🌟 传说神将<span class="avatar-sec-tip">升到 Lv.${LEGEND_LEVEL} 解锁（品质更高的头像）</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    LEGEND_AVATARS.forEach(x => grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level)));
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  }
+
+  // v160：头像框已独立成单独页面（个人主页头像下方「更换头像框」入口），弹窗只保留头像
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
@@ -1631,6 +1690,18 @@ function buildImgChoice(key, selectedKey, unlocked, lockLevel) {
     onChooseAvatar(key, b);
   });
   return b;
+}
+
+// v152.9：换头像/头像框后同步墙缓存（含 Offline 缓存），刷新不再回退旧头像
+function persistWallCache() {
+  const cls = state.currentClass;
+  if (!cls) return;
+  const payload = {
+    roster: state.roster, records: state.records, seatMap: state.seatMap,
+    tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now()
+  };
+  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(payload)); } catch (e) {}
+  try { if (window.Offline && window.Offline.set) window.Offline.set('wall_' + cls, payload); } catch (e) {}
 }
 
 async function onChooseAvatar(key, btn) {
@@ -1669,6 +1740,9 @@ async function onChooseAvatar(key, btn) {
   els.avatarPicker.querySelectorAll('.avatar-choice').forEach(x =>
     x.classList.toggle('selected', x === btn));
   renderMoodPreview();
+  // v152.9：同步刷新墙卡片与缓存，避免刷新页面后显示旧头像
+  persistWallCache();
+  renderWall();
 
   if (typeof res.changes_left === 'number' && res.changes_left >= 0 && !isImgKey(key)) {
     toast(res.changes_left > 0 ? `换好啦！今天还能换 ${res.changes_left} 次` : '换好啦！今天的更换次数用完了');
@@ -1708,7 +1782,13 @@ const FRAME_CLASS = {
   rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie',
   /* v152：补齐 v142 七款进阶头像框（CSS 与图片早已就位，缺此映射导致佩戴后身份卡/详情不显示框） */
   huadian:'frame-huadian', blossom:'frame-blossom', ink:'frame-ink', spring:'frame-spring',
-  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf'
+  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf',
+  /* v160：补齐新 15 款头像框（魔法星空 6 + 兽耳小铺 9，缺此映射佩戴后身份卡/详情不显示框） */
+  ice:'frame-ice', moon:'frame-moon', crystal:'frame-crystal', silk:'frame-silk',
+  goldwing:'frame-goldwing', kitty:'frame-kitty',
+  devilcat:'frame-devilcat', angelcat:'frame-angelcat', clover:'frame-clover', neko:'frame-neko',
+  sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech',
+  ribbon:'frame-ribbon'
 };
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
@@ -1794,6 +1874,131 @@ function attachParticles(el, key) {
   el.appendChild(layer);
 }
 
+/* ---------------- v160：头像框独立页面 + 解锁逻辑重写（与 student-d.js 同实现） ----------------
+   学生端头像框从头像区拆出：个人主页头像下方「更换头像框」入口 → 独立页面 #frameView。
+   解锁集合 calcUnlockedFrames 与 95/96 号服务端口径完全一致；
+   打开页面时强制 loadProfile() 刷新，避免旧缓存导致 7 级不解锁。 */
+function calcUnlockedFrames(profile) {
+  const achs = (profile && profile.achievements) || [];
+  const lv = Number(profile && profile.level) || 1;
+  const has = k => achs.some(a => a.key === k && a.unlocked);
+  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
+  const totD = Number(profile && profile.metrics && profile.metrics.total_days) || 0;
+  const un = new Set(['none']);
+  if (totD >= 10) un.add('bronze');
+  if (totD >= 30) un.add('silver');
+  if (lv >= 5) un.add('gold');
+  if (lv >= 7) un.add('rainbow');   // 服务端 43/47/29：rainbow = Lv.7 满级
+  if (has('active20')) un.add('star');
+  if (has('perfect5')) un.add('heart');
+  if (has('top3')) un.add('crown');
+  /* v130：12 款游戏风（服务端 43 号同口径） */
+  if (lv >= 2) { un.add('tac'); un.add('sakura'); }
+  if (lv >= 3) { un.add('gun'); un.add('pixie'); }
+  if (lv >= 4) { un.add('mecha'); un.add('magic'); }
+  if (lv >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
+  if (lv >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
+  /* v142：七风格进阶（v160 补全，原来 7 级以上全漏） */
+  if (lv >= 7) { un.add('huadian'); un.add('blossom'); }
+  if (lv >= 8) { un.add('ink'); un.add('spring'); }
+  if (lv >= 9) { un.add('redlily'); un.add('mask'); }
+  if (lv >= 10) { un.add('neonwolf'); }
+  /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
+  if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
+  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
+  return un;
+}
+
+// 解锁兜底：档案接口失败/缓存为空时，用班级墙 roster 里的真实等级重算，
+// 避免"进入页面全部锁定"的误导（roster 来自 get_wall_data，必带 level）
+function ensureProfileUnlocked() {
+  const p = state.profile;
+  if (p && Array.isArray(p.unlocked_frames) && p.unlocked_frames.length > 0) return;
+  const row = currentRosterRow();
+  const lv = (row && Number(row.level)) || 1;
+  state.profile = Object.assign({}, p || {}, {
+    level: lv,
+    unlocked_frames: Array.from(calcUnlockedFrames({ level: lv, metrics: {}, achievements: [] }))
+  });
+}
+
+function frameNameOf(key) {
+  const f = FRAMES.find(x => x.key === key);
+  return f ? f.name : (key === 'none' ? '无框' : key);
+}
+
+function updateFramePreview(frameKey) {
+  if (!els.framePreviewAvatar) return;
+  const av = currentAvatar();
+  paintAvatar(els.framePreviewAvatar, av);
+  applyFrameTo(els.framePreviewAvatar, frameKey || state.myFrame || 'none');
+  if (els.framePreviewLevel) {
+    els.framePreviewLevel.textContent = 'Lv.' + (Number(state.profile && state.profile.level) || 1);
+  }
+}
+
+function renderFramePage() {
+  const grid = els.framePageGrid;
+  if (!grid) return;
+  const row = currentRosterRow();
+  const curFrame = state.myFrame || (row && row.frame) || 'none';
+  ensureProfileUnlocked();
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  updateFramePreview(curFrame);
+  if (els.framePreviewName) {
+    const cls = (els.inpClass.value || '').trim();
+    const nm = (els.inpName.value || '').trim();
+    els.framePreviewName.textContent = cls ? cls + ' · ' + nm : (nm || '未选择学生');
+  }
+  if (els.framePreviewTip) {
+    els.framePreviewTip.textContent =
+      (state.profile && state.profile.ok !== false) ? `当前佩戴：${frameNameOf(curFrame)}` : '先回主页填好班级和姓名，再进来挑头像框';
+  }
+  grid.innerHTML = '';
+  FRAMES.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
+    const unlocked = f.key === 'none' || unlockedSet.has(f.key);
+    b.innerHTML = `<span class="fc-ring"></span>` +
+      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+    b.addEventListener('click', () => {
+      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      onChooseFrame(f.key, b);
+    });
+    grid.appendChild(b);
+  });
+  if (els.frameCountTip) {
+    const total = FRAMES.length;
+    const got = FRAMES.filter(f => f.key === 'none' || unlockedSet.has(f.key)).length;
+    els.frameCountTip.textContent = `已解锁 ${got}/${total}`;
+  }
+}
+
+async function openFramePage() {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) { toast('请先回主页填好班级和姓名'); return; }
+  sfx.tap();
+  if (els.wallView) els.wallView.hidden = true;
+  if (els.formView) els.formView.hidden = true;
+  if (els.frameView) els.frameView.hidden = false;
+  window.scrollTo(0, 0);
+  if (els.frameConfigBanner) els.frameConfigBanner.hidden = !!ready;
+  await loadProfile();          // 关键：打开即刷新，不再吃旧缓存
+  ensureProfileUnlocked();      // 档案失败时用 roster 等级兜底，避免全锁定
+  renderFramePage();
+  if (typeof Nav !== 'undefined' && Nav.push) Nav.push('frames');
+}
+
+function closeFramePage() {
+  sfx.back();
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.formView) els.formView.hidden = false;
+  window.scrollTo(0, 0);
+  if (typeof Nav !== 'undefined' && Nav.pop) Nav.pop();
+}
+
 function buildFrameSection() {
   const sec = document.createElement('div');
   sec.className = 'avatar-sec';
@@ -1802,7 +2007,7 @@ function buildFrameSection() {
   grid.className = 'frame-grid';
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
-  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || calcUnlockedFrames(state.profile));
   FRAMES.forEach(f => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -1833,6 +2038,7 @@ async function onChooseFrame(key, btn) {
     if (row) row.frame = key;
     els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
     applyFrameTo(els.identityAvatarEmoji, key);
+    persistWallCache(); renderWall();
     toast('已离线选好，联网后自动同步 ✅');
     setTimeout(() => els.avatarModal.classList.remove('show'), 260);
     return;
@@ -1846,6 +2052,7 @@ async function onChooseFrame(key, btn) {
   if (row) row.frame = key;
   els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
   applyFrameTo(els.identityAvatarEmoji, key);
+  persistWallCache(); renderWall();
   toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
   setTimeout(() => els.avatarModal.classList.remove('show'), 260);
 }
@@ -1875,25 +2082,11 @@ async function loadProfile() {
   const achs = data.achievements || [];
   const un = new Set(['none']);
   const has = k => achs.some(a => a.key === k && a.unlocked);
-  if (has('days10')) un.add('bronze');
-  if (has('days30')) un.add('silver');
-  if (Number(data.level) >= 5) un.add('gold');
-  if (Number(data.level) >= 7) un.add('rainbow');
-  if (has('active20')) un.add('star');
-  if (has('perfect5')) un.add('heart');
-  if (has('top3')) un.add('crown');
-  /* v130(RSK-11)：12 款游戏风头像框，按等级解锁（与服务端 43 号 SQL 同口径） */
-  if (Number(data.level) >= 2) { un.add('tac'); un.add('sakura'); }
-  if (Number(data.level) >= 3) { un.add('gun'); un.add('pixie'); }
-  if (Number(data.level) >= 4) { un.add('mecha'); un.add('magic'); }
-  if (Number(data.level) >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
-  if (Number(data.level) >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
-  /* v142：七风格进阶头像框（与 71 号 SQL set_student_frame 同口径） */
-  if (Number(data.level) >= 7) { un.add('huadian'); un.add('blossom'); }
-  if (Number(data.level) >= 8) { un.add('ink'); un.add('spring'); }
-  if (Number(data.level) >= 9) { un.add('redlily'); un.add('mask'); }
-  if (Number(data.level) >= 10) { un.add('neonwolf'); }
-  data.unlocked_frames = Array.from(un);
+  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
+  const totD = Number(data.metrics && data.metrics.total_days) || 0;
+  if (totD >= 10) un.add('bronze');
+  if (totD >= 30) un.add('silver');
+  data.unlocked_frames = Array.from(calcUnlockedFrames(data));
 
   renderAchievements(achs);
   applyFrameTo(els.identityAvatarEmoji, state.myFrame);

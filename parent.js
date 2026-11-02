@@ -1,0 +1,1064 @@
+/**
+ * 家长查询页逻辑
+ * 权限：匿名（anon）不能直接读表，只能调用 RPC get_student_records
+ *      班级 + 学生姓名 + 家长姓名 三项在数据库端匹配，失败只返回空结果
+ * 依赖：js/vendor/supabase.js、js/vendor/qrcode.min.js（本地引入）
+ */
+const supabase = window.supabase
+  ? window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey)
+  : null;
+const ready = !!supabase &&
+  !String(window.SUPABASE_CONFIG.url || '').includes('YOUR_PROJECT_REF');
+
+/* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
+ * 家长端：二维码弹窗/试卷弹窗打开时 push 一层 history；
+ * 返回键/手势按 UI 状态回退：弹窗 → 查询结果 → 查询表单；表单页不拦截。
+ */
+const Nav = (() => {
+  let depth = 0, ready = false;
+  const marks = [];
+  function enable() { ready = true; }
+  function push(mark) {
+    if (!ready) return;
+    if (marks.length && marks[marks.length - 1] === mark) return;
+    marks.push(mark); depth++;
+    try { history.pushState({ d: depth }, ''); } catch (e) {}
+  }
+  function onPop(e) {
+    if (e.state && typeof e.state.d === 'number') depth = Math.max(0, e.state.d);
+    depth = Math.max(0, depth - 1);
+    if (marks.length) marks.pop();
+    NavBack();
+  }
+  return { enable, push, onPop };
+})();
+window.addEventListener('popstate', e => Nav.onPop(e));
+
+function NavBack() {
+  if (els.qrModal.classList.contains('show')) { closeQrModal(); return true; }
+  if (els.paperViewModal.classList.contains('show')) { closePaper(); return true; }
+  if (els.resultCard && !els.resultCard.hidden) {
+    els.resultCard.hidden = true;
+    els.papersCard.hidden = true;
+    els.mismatchBanner.hidden = true;
+    els.queryCard.hidden = false;
+    window.scrollTo({ top: 0 });
+    return true;
+  }
+  return false;   // 查询表单（根）：不拦截
+}
+
+const $ = (sel, root) => (root || document).querySelector(sel);
+
+const MOOD_MAP = {
+  happy:  { emoji: '😄', label: '很棒' },
+  good:   { emoji: '🙂', label: '不错' },
+  normal: { emoji: '😐', label: '一般' },
+  down:   { emoji: '😟', label: '有点低落' },
+  sad:    { emoji: '😢', label: '需要加油' }
+};
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+const els = {
+  configBanner: $('#configBanner'),
+  headerHint: $('#headerHint'),
+  classLockBar: $('#classLockBar'),
+  classLockName: $('#classLockName'),
+  classField: $('#classField'),
+  inpClass: $('#inpClass'),
+  inpStudent: $('#inpStudent'),
+  inpBirth: $('#inpBirth'),
+  btnQuery: $('#btnQuery'),
+  btnBack: $('#btnBack'),
+  mismatchBanner: $('#mismatchBanner'),
+  queryCard: $('#queryCard'),
+  resultCard: $('#resultCard'),
+  resultTitle: $('#resultTitle'),
+  resultCount: $('#resultCount'),
+  recordList: $('#recordList'),
+  btnQrEntry: $('#btnQrEntry'),
+  qrModal: $('#qrModal'),
+  qrClass: $('#qrClass'),
+  qrImage: $('#qrImage'),
+  qrLoading: $('#qrLoading'),
+  qrLink: $('#qrLink'),
+  btnCopyLink: $('#btnCopyLink'),
+  btnDownloadQr: $('#btnDownloadQr'),
+  btnQrClose: $('#btnQrClose'),
+  // 时间筛选 + 汇总
+  quickSeg: $('#quickSeg'),
+  dateChips: $('#dateChips'),
+  viewDetail: $('#viewDetail'),
+  viewSummary: $('#viewSummary'),
+  summaryBox: $('#summaryBox'),
+  emptyRange: $('#emptyRange'),
+  // 在家表现
+  homeDate: $('#homeDate'),
+  homeContent: $('#homeContent'),
+  btnHomeSubmit: $('#btnHomeSubmit'),
+  // v50：我的留言与老师交流
+  homeThread: $('#homeThread'),
+  homeThreadList: $('#homeThreadList'),
+  // 试卷
+  papersCard: $('#papersCard'),
+  papersList: $('#papersList'),
+  paperViewModal: $('#paperViewModal'),
+  paperViewImg: $('#paperViewImg'),
+  paperViewOpen: $('#paperViewOpen'),
+  btnPaperViewClose: $('#btnPaperViewClose'),
+  // 每日任务
+  tasksCard: $('#tasksCard'),
+  tasksList: $('#tasksList')
+};
+
+// 扫码进入时班级由链接锁定，家长只需填写学生姓名 + 家长姓名
+let lockedClass = '';
+if (window.Offline && document.body) window.Offline.mountBadge();
+
+// 查询与会话状态
+const state = {
+  ctx: { cls: '', student: '', birth: '' },
+  scanCode: '',   // 学生个人二维码带来的密码（优先作凭据）
+  allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
+  papers: [],           // 该生试卷（独立 RPC，学生端不开放）
+  homeNotes: [],        // v50：我的留言与老师回复线程
+  quick: 'all',         // all | week | lastweek | 4w | custom
+  picked: null,         // 自选日期 Set（null=未启用自选）
+  viewMode: 'detail'    // detail | summary
+};
+
+/* ---------- v107：统一离线层辅助（家长端） ---------- */
+/* ---------- v37(RSK-12)：家长缓存长期有效（不再 24 小时过期） ---------- */
+// 缓存不再设置有效期：弱网/断网时家长仍可查看最近一次查询结果；
+// cachedAt 仅用于展示缓存时间，联网查询成功会自动更新缓存。
+async function readParentCache(key) {
+  try {
+    const v = await window.Offline.get(key);
+    if (!v) return null;
+    return v;
+  } catch (e) { return null; }
+}
+const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout|超时|请求超时|ECONN|ETIMEDOUT/i.test((e && e.message) || '');
+async function syncRunner(op) {
+  const p = op.params || {};
+  try {
+    if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
+    if (op.name === 'add_home_note_reply') { const r = await supabase.rpc('add_home_note_reply', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
+  } catch (e) { throw e; }
+  return { ok: false };
+}
+async function runWrite(op) {
+  if (!window.Offline) return { ok: false, queued: false };   // 离线层未加载：明确失败，不抛异常
+  if (!window.Offline.online) {
+    const q = await window.Offline.enqueue(op);
+    if (!q) return { ok: false, queued: false };   // 入队失败（存储异常）：明确失败，不丢不卡
+    return { ok: true, queued: true };
+  }
+  try {
+    const r = await syncRunner(op);
+    if (r.ok) return { ok: true, queued: false, res: r.data };
+    // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
+    if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
+    return { ok: false, queued: false };
+  } catch (e) {
+    if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
+    return { ok: false, queued: false };
+  }
+}
+async function flushOfflineQueue() {
+  if (!window.Offline || !window.Offline.online) return;
+  const n = await window.Offline.drain(syncRunner);
+  if (n > 0) toast('📡 已同步 ' + n + ' 条离线操作');
+}
+window.ParentSync = async () => { await flushOfflineQueue(); };
+if (window.Offline) {
+  window.Offline.subscribe(v => { if (v) flushOfflineQueue(); });
+}
+
+init();
+Nav.enable();   // RSK-10：页面初始化完成，返回栈启用
+
+function init() {
+  if (!ready) {
+    els.configBanner.hidden = false;
+    els.btnQuery.disabled = true;
+    return;
+  }
+
+  // 链接里带 class 即视为"班级二维码"扫码进入：锁定班级
+  const params = new URLSearchParams(location.search);
+  const c = (params.get('class') || '').trim();
+  const sName = (params.get('student') || '').trim();
+  const sCode = (params.get('code') || '').trim();
+  if (c) {
+    lockedClass = c;
+    els.inpClass.value = c;
+    els.classField.hidden = true;
+    els.classLockName.textContent = c;
+    els.classLockBar.hidden = false;
+    if (sName && sCode) {
+      // 学生个人二维码：自动填入并直接查询，老人零输入
+      els.headerHint.textContent = '扫码已识别学生，正在自动查询…';
+      els.inpStudent.value = sName;
+      state.scanCode = sCode;
+      setTimeout(() => { els.btnQuery.click(); }, 300);
+    } else {
+      els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和出生年月日';
+    }
+  }
+
+  // 手动修改出生年月日输入框时，退出"扫码凭据"模式
+  els.inpBirth.addEventListener('input', () => { state.scanCode = ''; });
+
+  els.btnQuery.addEventListener('click', onQuery);
+  els.btnBack.addEventListener('click', () => {
+    els.resultCard.hidden = true;
+    els.papersCard.hidden = true;
+    els.mismatchBanner.hidden = true;
+    els.queryCard.hidden = false;
+    window.scrollTo({ top: 0 });
+  });
+
+  // 二维码弹窗
+  els.btnQrEntry.addEventListener('click', openQrModal);
+  els.btnQrClose.addEventListener('click', closeQrModal);
+  els.qrModal.addEventListener('click', e => { if (e.target === els.qrModal) closeQrModal(); });
+  els.qrClass.addEventListener('input', refreshQrDebounced);
+  els.btnCopyLink.addEventListener('click', copyQrLink);
+  els.btnDownloadQr.addEventListener('click', downloadQr);
+
+  // 时间筛选 / 视图切换
+  els.quickSeg.addEventListener('click', e => {
+    const b = e.target.closest('.seg-btn');
+    if (!b) return;
+    setQuick(b.dataset.quick);
+  });
+  els.viewDetail.addEventListener('click', () => setView('detail'));
+  els.viewSummary.addEventListener('click', () => setView('summary'));
+
+  // 在家表现
+  els.btnHomeSubmit.addEventListener('click', onSubmitHome);
+
+  // 教师后台跳转过来时（#qr）自动弹出生成窗
+  if (location.hash === '#qr') {
+    setTimeout(openQrModal, 300);
+  }
+}
+
+/* ---------------- 查询 ---------------- */
+
+async function onQuery() {
+  const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
+  const cls = norm(lockedClass || els.inpClass.value || '');
+  const student = norm(els.inpStudent.value);
+  const birth = state.scanCode || norm(els.inpBirth.value);
+  if (!cls || !student || !birth) {
+    toast(lockedClass ? '学生姓名和出生年月日都要填写哦' : '班级、学生姓名、出生年月日都要填写哦');
+    return;
+  }
+  if (state.scanCode) {
+    if (!/^\d{6}$/.test(birth)) {
+      els.mismatchBanner.hidden = true;
+      toast('二维码链接无效，请联系老师重新获取');
+      return;
+    }
+  } else if (!/^\d{8}$/.test(birth)) {
+    els.mismatchBanner.hidden = true;
+    toast('出生年月日请输入 8 位数字，例如 20150901');
+    return;
+  }
+
+  els.mismatchBanner.hidden = true;
+  els.btnQuery.disabled = true;
+  els.btnQuery.textContent = '查询中…';
+  // 查询超时兜底：弱网/请求挂起时 12~15s 后报错并恢复按钮，避免一直停在"查询中"
+  const withTimeout = (p, ms, tag) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时，请检查网络后重试')), ms))
+  ]);
+  // v39(RSK-14)：弱网自适应重试——最多重试 3 次（共 4 次尝试），超时逐次放宽（慢网挂起时提高成功率）；仅网络/超时类错误重试
+  let retriedOnce = false;
+  const rpcRetry = async (fn, ms, tag) => {
+    let lastErr = null;
+    const timeouts = [ms, ms, ms + 5000, ms + 8000];
+    for (let i = 0; i < 4; i++) {
+      try {
+        const r = await Promise.race([
+          fn(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error(tag + '请求超时')), timeouts[i]))
+        ]);
+        if (r && r.error) {
+          lastErr = r.error;
+          if (!isNetErr(r.error)) return r;   // 业务错误（三要素不对等）不重试
+        } else {
+          return r;
+        }
+      } catch (err) {
+        lastErr = err;
+        if (!isNetErr(err)) throw err;
+      }
+      if (i < 3) {
+        if (!retriedOnce) { retriedOnce = true; toast('网络较慢，正在自动重试…'); }
+        await new Promise(res => setTimeout(res, 1500));
+      }
+    }
+    throw lastErr;
+  };
+  try {
+    // 离线：跳过在线校验，直接读上次验证通过的缓存（长期有效）
+    if (!window.Offline || !window.Offline.online) {
+      const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
+      els.btnQuery.disabled = false;
+      els.btnQuery.textContent = '查询记录';
+      if (v) {
+        state.ctx = { cls, student, birth };
+        renderResults(student, v.records || []);
+        renderPapers(v.papers || []);
+        renderTasks(v.tasks || []);
+        renderHomeThread(v.homeNotes || []);
+        const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
+        toast(t ? `离线模式：显示缓存数据（缓存于 ${t}）` : '离线模式：显示上次查询的缓存数据');
+      } else {
+        els.mismatchBanner.textContent = '当前离线，且这台设备还没有查询过这组信息：请先联网查询一次，之后断网也能看。';
+        els.mismatchBanner.hidden = false;
+      }
+      return;
+    }
+    // 先校验三要素，给出具体原因
+    const vRes = await rpcRetry(() => supabase.rpc('verify_parent', { p_class: cls, p_student: student, p_birth: birth }), 12000, '身份校验');
+    const v = vRes.data;
+    if (v && v.ok === false) {
+      if (state.scanCode) { state.scanCode = ''; }
+      els.mismatchBanner.textContent = v.reason === 'no_student'
+        ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
+        : v.reason === 'locked'
+          ? '错误次数过多，该学生已临时锁定 15 分钟，请稍后再试（或请老师重置密码）。'
+          : '学生找到了，但出生年月日或学生密码对不上，请核对后再试（密码可请老师重新生成）。';
+      els.mismatchBanner.hidden = false;
+      return;
+    }
+    // v145(RSK-15)：身份校验通过 → 先渲染本机缓存（秒开），4 个 RPC 随后后台静默刷新覆盖
+    // （数据库在海外，弱网 RTT 高；家长查询语义要求最新数据，故先展示缓存、联网后自动更新）
+    let fastCache = null;
+    try { fastCache = await readParentCache('parent_' + cls + '_' + student + '_' + birth); } catch (e) { fastCache = null; }
+    if (fastCache) {
+      state.ctx = { cls, student, birth };
+      renderResults(student, fastCache.records || []);
+      renderPapers(fastCache.papers || []);
+      renderTasks(fastCache.tasks || []);
+      renderHomeThread(fastCache.homeNotes || []);
+    }
+    // 记录为关键数据必须成功；试卷/任务/留言失败降级为空，不阻断查询（弱网下尽量先出记录）
+    const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
+      rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 12000, '记录'),
+      rpcRetry(() => supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 12000, '试卷').catch(() => ({ error: true })),
+      rpcRetry(() => supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 12000, '任务').catch(() => ({ error: true })),
+      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 12000, '留言').then(r => r, () => null)
+    ]);
+    if (recRes.error) throw recRes.error;
+    // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
+    try {
+      const { data: tags } = await rpcRetry(() => supabase.from('behavior_tags').select('label,options').eq('is_active', true), 8000, '标签');
+      const m = {};
+      (tags || []).forEach(t => (t.options || []).forEach(o => { m[o] = t.label; }));
+      window.__tagOptionMap = m;
+    } catch (e) {}
+    const records = recRes.data || [];
+    const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
+    const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
+    const tasks = taskData.tasks || [];
+    const noteData = (noteRes && noteRes.data && noteRes.data.ok) ? noteRes.data : { notes: [] };
+    const homeNotes = noteData.notes || [];
+    if (!records.length && !papers.length && !tasks.length && !homeNotes.length) {
+      els.mismatchBanner.textContent = '校验通过，但还没有任何记录；稍后再来看看。';
+      els.mismatchBanner.hidden = false;
+      return;
+    }
+    // v38：部分数据接口失败时不阻断——已显示记录，并提示其余内容待网络好转后更新
+    const partialFailed = paperRes.error || taskRes.error || (noteRes && noteRes.error);
+    state.ctx = { cls, student, birth };
+    state.homeNotes = homeNotes;
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, homeNotes, cachedAt: Date.now() });
+    renderResults(student, records);
+    renderPapers(papers);
+    renderTasks(tasks);
+    renderHomeThread(homeNotes);
+    if (partialFailed) toast('网络较慢：在校表现已加载，试卷/任务等部分内容稍后自动更新，可再点「查询记录」刷新。');
+  } catch (e) {
+    // 在线查询失败（断网/服务异常）：自动重试已由 rpcRetry 处理；仍失败则回退本地缓存（长期有效）
+    try {
+      const v = await readParentCache('parent_' + cls + '_' + student + '_' + birth);
+      if (v) {
+        state.ctx = { cls, student, birth };
+        renderResults(student, v.records || []);
+        renderPapers(v.papers || []);
+        renderTasks(v.tasks || []);
+        renderHomeThread(v.homeNotes || []);
+        const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
+        toast(t ? `网络请求失败，已显示缓存数据（缓存于 ${t}，联网后重试可更新）` : '网络请求失败，已显示上次查询的缓存数据');
+        return;
+      }
+    } catch (e2) {}
+    // v39：区分服务端错误与网络错误，避免误判——服务端可达但报错 ≠ 网络问题
+    const msg = (e && e.message) || '';
+    const isServerErr = !isNetErr(e) && (!!(e && e.code) || /PGRST|PostgrestError|API key|JWT|permission|violat|duplicate|row-level|relationship/i.test(msg));
+    toast(isServerErr
+      ? '服务器暂时繁忙，请稍后再点「查询记录」重试。'
+      : '网络请求失败（当前网络较慢），且本机暂无这组信息的缓存：建议连接 WiFi 或到信号好的位置，再点「查询记录」重试。');
+  } finally {
+    els.btnQuery.disabled = false;
+    els.btnQuery.textContent = '查询记录';
+  }
+}
+
+/* ---------------- 在家表现提交（仅老师可见） ---------------- */
+
+async function onSubmitHome() {
+  const content = els.homeContent.value.trim();
+  if (!content) { toast('先写一点孩子在家的表现吧'); return; }
+  const date = els.homeDate.value || todayStr();
+  els.btnHomeSubmit.disabled = true;
+  els.btnHomeSubmit.textContent = '提交中…';
+  try {
+    const wr = await runWrite({ name: 'add_home_note', params: {
+      p_class: state.ctx.cls,
+      p_student: state.ctx.student,
+      p_birth: state.ctx.birth,
+      p_content: content.slice(0, 500),
+      p_date: date
+    } });
+    if (!wr.ok) {
+      toast('身份信息未通过校验，请返回重新查询后再提交');
+      return;
+    }
+    els.homeContent.value = '';
+    toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : '已提交，只有老师能看到哦 🏠');
+    if (!wr.queued) { try { await refreshHomeThread(); } catch (e3) {} }
+  } catch (e) {
+    toast('提交失败：' + ((e && e.message) || '请稍后再试'));
+  } finally {
+    els.btnHomeSubmit.disabled = false;
+    els.btnHomeSubmit.textContent = '提交在家表现';
+  }
+}
+
+/* ---------------- v50：我的留言与老师交流（多轮回复） ---------------- */
+
+function fmtDate(ymd) {
+  const [, m, d] = String(ymd || '').split('-').map(Number);
+  if (!m || !d) return ymd || '';
+  return `${m}月${d}日`;
+}
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function renderHomeThread(notes) {
+  if (!notes || !notes.length) {
+    els.homeThread.hidden = true;
+    els.homeThreadList.innerHTML = '';
+    return;
+  }
+  els.homeThread.hidden = false;
+  els.homeThreadList.innerHTML = notes.map(n => {
+    const replies = (n.replies || []).slice().sort((a, b) =>
+      (a.create_at || '').localeCompare(b.create_at || ''));
+    return `<div class="ht-card">
+              <div class="ht-head">
+                <span class="ht-date">🗓 ${fmtDate(n.record_date)}</span>
+                <span class="ht-who">我</span>
+              </div>
+              <div class="ht-content">${esc(n.content || '')}</div>
+              ${replies.map(r => `
+                <div class="ht-reply ${r.sender === 'teacher' ? 'teacher' : 'me'}">
+                  <span class="htr-who">${r.sender === 'teacher' ? '👩‍🏫 老师' : '我'}</span>
+                  <span class="htr-text">${esc(r.content || '')}</span>
+                  <span class="htr-time">${fmtTime(r.create_at)}</span>
+                </div>`).join('')}
+              <div class="ht-reply-box">
+                <input class="input" data-ht-input="${n.id}" placeholder="回复老师…" maxlength="500">
+                <button class="btn btn-primary btn-sm" data-ht-send="${n.id}">回复</button>
+              </div>
+            </div>`;
+  }).join('');
+
+  els.homeThreadList.querySelectorAll('[data-ht-send]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const noteId = btn.dataset.htSend;
+      const input = els.homeThreadList.querySelector(`[data-ht-input="${noteId}"]`);
+      const content = (input && input.value || '').trim();
+      if (!content) { toast('先输入回复内容'); return; }
+      btn.disabled = true;
+      try {
+        const wr = await runWrite({ name: 'add_home_note_reply', params: {
+          p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth,
+          p_note_id: noteId, p_content: content.slice(0, 500)
+        } });
+        if (!wr.ok) { toast('回复失败，请重试'); return; }
+        toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复老师 ✅');
+        if (input) input.value = '';
+        await refreshHomeThread();
+      } catch (e) {
+        toast('回复失败：' + ((e && e.message) || '请稍后再试'));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  els.homeThreadList.querySelectorAll('[data-ht-input]').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const btn = els.homeThreadList.querySelector(`[data-ht-send="${inp.dataset.htInput}"]`);
+        if (btn) btn.click();
+      }
+    });
+  });
+}
+
+async function refreshHomeThread() {
+  if (!state.ctx.cls) return;
+  let notes = state.homeNotes || [];
+  try {
+    const r = await supabase.rpc('get_my_home_notes', { p_class: state.ctx.cls, p_student: state.ctx.student, p_birth: state.ctx.birth });
+    if (r.data && r.data.ok) notes = r.data.notes || [];
+    state.homeNotes = notes;
+    try {
+      const key = 'parent_' + state.ctx.cls + '_' + state.ctx.student + '_' + state.ctx.birth;
+      const old = await window.Offline.get(key);
+      await window.Offline.set(key, Object.assign({}, old || {}, { homeNotes: notes, cachedAt: Date.now() }));
+    } catch (e2) {}
+  } catch (e) {}
+  renderHomeThread(notes);
+}
+
+/* ---------------- 时间筛选 + 视图 ---------------- */
+
+function todayStr() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 解析 YYYY-MM-DD 为本地日期
+function parseDate(ymd) {
+  const [y, m, d] = String(ymd).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function toYmd(dt) {
+  const p = n => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+}
+// 该日期所在周的周一（中国习惯：周一为一周起点）
+function mondayOf(ymd) {
+  const dt = parseDate(ymd);
+  const wd = (dt.getDay() + 6) % 7; // 周一=0 … 周日=6
+  dt.setDate(dt.getDate() - wd);
+  return dt;
+}
+function addDays(dt, n) {
+  const d = new Date(dt);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+// 快捷时间段对应的日期集合（Set<YYYY-MM-DD>）
+function quickDateSet(quick, validDates) {
+  const today = todayStr();
+  const mon = mondayOf(today);
+  let from = null, to = today;
+  if (quick === 'week') {
+    from = toYmd(mon);
+  } else if (quick === 'lastweek') {
+    const lm = addDays(mon, -7);
+    from = toYmd(lm);
+    to = toYmd(addDays(lm, 6));
+  } else if (quick === '4w') {
+    from = toYmd(addDays(mon, -21)); // 含本周共 4 周
+  } else {
+    return null;
+  }
+  const set = new Set();
+  validDates.forEach(d => { if (d >= from && d <= to) set.add(d); });
+  return set;
+}
+
+function renderResults(studentName, rows) {
+  els.queryCard.hidden = true;
+  els.resultCard.hidden = false;
+  Nav.push('result');   // RSK-10：查询结果页 = 子视图
+  els.resultTitle.textContent = `${esc(studentName)} 的在校表现`;
+
+  state.allRows = rows;
+  state.quick = 'all';   // 默认全部，避免本周无记录误导家长
+  state.picked = null;
+  state.viewMode = 'summary';
+
+  // 在家表现日期默认今天
+  els.homeDate.value = todayStr();
+  els.homeContent.value = '';
+
+  renderDateChips();
+  updateSegActive();
+  applyFilter();
+  window.scrollTo({ top: 0 });
+}
+
+// 顶部"有记录的日期"多选条
+function renderDateChips() {
+  const dates = Array.from(new Set(state.allRows.map(r => r.record_date))).sort().reverse();
+  els.dateChips.innerHTML = dates.map(d =>
+    `<button type="button" class="date-chip" data-date="${d}">${chipDateLabel(d)}</button>`
+  ).join('');
+  els.dateChips.querySelectorAll('.date-chip').forEach(b => {
+    b.addEventListener('click', () => toggleDate(b.dataset.date));
+  });
+}
+function chipDateLabel(ymd) {
+  const [, m, d] = String(ymd).split('-').map(Number);
+  const dt = parseDate(ymd);
+  return `${m}/${d} 周${'一二三四五六日'[(dt.getDay() + 6) % 7]}`;
+}
+
+function setQuick(quick) {
+  state.quick = quick;
+  state.picked = null;
+  // 周/近4周默认看汇总；全部默认看明细
+  state.viewMode = (quick === 'all') ? 'detail' : 'summary';
+  updateSegActive();
+  applyFilter();
+}
+function toggleDate(ymd) {
+  if (!state.picked) state.picked = new Set();
+  if (state.picked.has(ymd)) state.picked.delete(ymd);
+  else state.picked.add(ymd);
+  state.quick = state.picked.size ? 'custom' : 'all';
+  state.viewMode = state.picked.size >= 2 ? 'summary' : 'detail';
+  updateSegActive();
+  applyFilter();
+}
+function setView(mode) {
+  state.viewMode = mode;
+  updateSegActive();
+  applyFilter();
+}
+function updateSegActive() {
+  els.quickSeg.querySelectorAll('.seg-btn').forEach(b =>
+    b.classList.toggle('active', state.quick === b.dataset.quick));
+  els.viewDetail.classList.toggle('active', state.viewMode === 'detail');
+  els.viewSummary.classList.toggle('active', state.viewMode === 'summary');
+  els.dateChips.querySelectorAll('.date-chip').forEach(b =>
+    b.classList.toggle('active', !!(state.picked && state.picked.has(b.dataset.date))));
+}
+
+// 计算当前筛选命中的记录（仍保持日期倒序）
+function filteredRows() {
+  let set = null;
+  if (state.quick === 'custom' && state.picked && state.picked.size) {
+    set = state.picked;
+  } else if (state.quick !== 'all') {
+    const valid = new Set(state.allRows.map(r => r.record_date));
+    set = quickDateSet(state.quick, valid);
+  }
+  if (!set) return state.allRows;
+  return state.allRows.filter(r => set.has(r.record_date));
+}
+
+function applyFilter() {
+  const rows = filteredRows();
+  els.resultCount.textContent = state.quick === 'all' && !state.picked
+    ? `共 ${state.allRows.length} 条记录`
+    : `已选 ${rows.length} 条 / 共 ${state.allRows.length} 条`;
+  els.emptyRange.hidden = rows.length > 0;
+
+  if (state.viewMode === 'summary') {
+    els.summaryBox.hidden = false;
+    els.recordList.hidden = true;
+    els.summaryBox.innerHTML = renderSummary(rows);
+  } else {
+    els.summaryBox.hidden = true;
+    els.recordList.hidden = false;
+    els.recordList.innerHTML = renderDetailList(rows);
+  }
+}
+
+function renderDetailList(rows) {
+  const groups = [];
+  const map = new Map();
+  rows.forEach(r => {
+    if (!map.has(r.record_date)) {
+      const g = { date: r.record_date, rows: [] };
+      map.set(r.record_date, g);
+      groups.push(g);
+    }
+    map.get(r.record_date).rows.push(r);
+  });
+  let html = '';
+  groups.forEach(g => {
+    html += `<div class="day-head">
+               <span>${formatDate(g.date)}</span>
+               <span class="day-count">${g.rows.length > 1 ? `合并 ${g.rows.length} 条` : ''}</span>
+             </div>`;
+    // 同一天多条：合并为一张卡（表现项合并、心情取最后一条、评语合并）
+    const merged = {
+      id: g.rows[g.rows.length - 1].id,
+      record_date: g.date,
+      behavior: {
+        mood: (g.rows[g.rows.length - 1].behavior || {}).mood,
+        items: g.rows.flatMap(r => (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [])
+      },
+      teacher_comment: g.rows.map(r => (r.teacher_comment || '').trim()).filter(Boolean).join('；')
+    };
+    html += renderRecordCard(merged);
+  });
+  return html;
+}
+
+/* ---------------- 分类汇总 ---------------- */
+
+function renderSummary(rows) {
+  if (!rows.length) return '';
+
+  // 平均星级（未打星的记录不参与平均）
+  const ratedRows = rows.filter(r => Number(r.self_evaluation) > 0);
+  const avg = ratedRows.length
+    ? ratedRows.reduce((s, r) => s + Number(r.self_evaluation), 0) / ratedRows.length
+    : null;
+  const dates = Array.from(new Set(rows.map(r => r.record_date))).sort();
+  const rangeTxt = dates.length === 1
+    ? formatDate(dates[0])
+    : `${formatDate(dates[0]).replace(/ 星期.*/, '')} ~ ${formatDate(dates[dates.length - 1]).replace(/ 星期.*/, '')}（${dates.length} 天）`;
+
+  // 心情分布
+  const moodCount = { happy: 0, good: 0, normal: 0, down: 0, sad: 0 };
+  // 积极/消极：key = label 或 label·二级项
+  const posMap = new Map();
+  const negMap = new Map();
+  // 填写型内容
+  const textItems = [];
+  let commentCount = 0;
+
+  rows.forEach(r => {
+    const mood = r.behavior && r.behavior.mood;
+    if (moodCount[mood] !== undefined) moodCount[mood]++;
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
+    items.forEach(it => {
+      const label = it.label || '';
+      const neg = it.category === 'negative';
+      const target = neg ? negMap : posMap;
+      if (it.type === 'text') {
+        textItems.push({ label, value: it.value || '', date: r.record_date, neg });
+        const k = '✏️ ' + label;
+        target.set(k, (target.get(k) || 0) + 1);
+      } else {
+        const k = it.value ? `${label} · ${it.value}` : label;
+        target.set(k, (target.get(k) || 0) + 1);
+      }
+    });
+    if ((r.teacher_comment || '').trim()) commentCount++;
+  });
+
+  const moodLine = ['happy', 'good', 'normal', 'down', 'sad']
+    .filter(k => moodCount[k] > 0)
+    .map(k => `<span class="sm-item">${MOOD_MAP[k].emoji} ×${moodCount[k]}</span>`)
+    .join('');
+
+  const groupHtml = (title, icon, map, cls) => {
+    const arr = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    if (!arr.length) return '';
+    return `<div class="sum-group ${cls}">
+              <div class="sum-group-title">${icon} ${title}</div>
+              ${arr.map(([k, n]) => `<div class="sum-line"><span class="sum-k">${esc(k)}</span><span class="sum-n">×${n}</span></div>`).join('')}
+            </div>`;
+  };
+
+  // 填写型明细（最多展示全部，按日期倒序）
+  const textHtml = textItems.length
+    ? `<div class="sum-texts">
+         <div class="sum-group-title">📝 填写内容</div>
+         ${textItems.map(t =>
+           `<div class="sum-text ${t.neg ? 'neg' : ''}"><b>${esc(t.label)}（${shortDate(t.date)}）：</b>${esc(t.value)}</div>`
+         ).join('')}
+       </div>`
+    : '';
+
+  return `<div class="sum-card">
+            <div class="sum-overview">
+              <div><span class="sum-big">${rows.length}</span><span class="sum-sub">条记录</span></div>
+              <div class="sum-range">${rangeTxt}</div>
+            </div>
+            <div class="sum-moods">${moodLine || '<span class="text-muted">暂无心情数据</span>'}</div>
+            ${groupHtml('积极表现', '🌟', posMap, 'pos')}
+            ${groupHtml('需要加油', '💧', negMap, 'neg')}
+            ${textHtml}
+            <div class="sum-comment-n">老师评语 <b>${commentCount}</b> 条（见逐日明细）</div>
+          </div>`;
+}
+
+function shortDate(ymd) {
+  const [, m, d] = String(ymd).split('-').map(Number);
+  return `${m}/${d}`;
+}
+
+function renderRecordCard(r) {
+  const starCount = Number(r.self_evaluation) || 0;
+  const stars = starCount
+    ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+    : '<span class="text-muted">本次未打星</span>';
+  const mood = MOOD_MAP[r.behavior && r.behavior.mood];
+
+  let itemsHtml = '';
+  const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
+  if (items.length) {
+    itemsHtml = '<ul class="item-list">';
+    items.forEach(it => {
+      const neg = it.category === 'negative';
+      let label = it.label || '';
+      // 若该标签是某个一级标签下的小项，前面补上一级名（如 欠作业·语文作业）
+      const pLabel = (window.__tagOptionMap || {})[label];
+      if (pLabel && label.indexOf(pLabel) !== 0) label = pLabel + '·' + label;
+      label = (neg ? '⚠️ ' : '') + escapeHtmlP(label);
+      const liCls = neg ? ' class="item-neg"' : '';
+      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
+      if (it.type === 'text') {
+        itemsHtml += `<li${liCls}><b>${label}：</b>${escapeHtmlP(it.value || '')}</li>`;
+      } else if (it.value) {
+        itemsHtml += `<li${liCls}>${tick}${label} <span class="item-sub">· ${escapeHtmlP(it.value)}</span></li>`;
+      } else {
+        itemsHtml += `<li${liCls}>${tick}${label}</li>`;
+      }
+    });
+    itemsHtml += '</ul>';
+  }
+
+  const comment = (r.teacher_comment || '').trim();
+  const commentHtml = comment
+    ? `<div class="comment-box"><span class="comment-label">老师评语：</span>${esc(comment)}</div>`
+    : '';
+
+  return `<div class="rec-card">
+            <div class="rec-topline">
+              <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
+              <span class="rec-time">${formatTime(r.create_at)}</span>
+            </div>
+            <div class="rec-main">
+              <span class="stars-mini">${stars}</span>
+            </div>
+            ${itemsHtml}
+            ${commentHtml}
+          </div>`;
+}
+
+/* ---------------- 二维码 ---------------- */
+
+let qrRefreshTimer;
+function openQrModal() {
+  els.qrClass.value = (lockedClass || els.inpClass.value || '').trim();
+  els.qrModal.classList.add('show');
+  Nav.push('qr');   // RSK-10：打开扫码弹窗
+  refreshQr();
+}
+function closeQrModal() {
+  els.qrModal.classList.remove('show');
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+// 班级级链接：只带 class，全班家长通用
+function buildQrLink() {
+  const url = new URL(location.href);
+  url.hash = '';
+  url.search = '';
+  url.searchParams.set('class', els.qrClass.value.trim());
+  return url.toString();
+}
+
+function refreshQr() {
+  const cls = els.qrClass.value.trim();
+  els.qrImage.innerHTML = '';
+  if (!cls) {
+    els.qrImage.hidden = true;
+    els.qrLink.textContent = '请先填写班级';
+    return;
+  }
+  const link = buildQrLink();
+  els.qrLink.textContent = link;
+  els.qrImage.hidden = false;
+  try {
+    // 本地二维码库（MIT 许可）：向容器内插入 canvas；480px 便于打印/放大
+    new window.QRCode(els.qrImage, {
+      text: link,
+      width: 480,
+      height: 480,
+      colorDark: '#26332e',
+      colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.M
+    });
+  } catch (e) {
+    els.qrImage.hidden = true;
+    toast('二维码生成失败，可直接复制链接转发');
+  }
+}
+function refreshQrDebounced() {
+  clearTimeout(qrRefreshTimer);
+  qrRefreshTimer = setTimeout(refreshQr, 350);
+}
+
+async function copyQrLink() {
+  const text = els.qrLink.textContent;
+  if (!text.startsWith('http')) { toast('请先填写班级'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('链接已复制，可发到家长群');
+  } catch (e) {
+    // 旧浏览器兜底
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('链接已复制，可发到家长群'); }
+    catch (err) { window.prompt('请手动复制链接：', text); }
+    document.body.removeChild(ta);
+  }
+}
+
+// 下载二维码为 PNG（可打印张贴）
+function downloadQr() {
+  const cls = els.qrClass.value.trim();
+  if (!cls) { toast('请先填写班级'); return; }
+  const canvas = els.qrImage.querySelector('canvas');
+  if (!canvas) { toast('二维码还没生成好，请稍候再试'); return; }
+  try {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `家长查询二维码-${cls}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    window.open(canvas.toDataURL('image/png'), 'qrPreview');  // 固定窗口名：多次点击复用同一预览
+  }
+}
+
+/* ---------------- 工具 ---------------- */
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function formatDate(ymd) {
+  const [y, m, d] = String(ymd).split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  const isToday = y === today.getFullYear() && m === today.getMonth() + 1 && d === today.getDate();
+  return `${m}月${d}日 星期${WEEK[date.getDay()]}${isToday ? '（今天）' : ''}`;
+}
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ---------------- 试卷与成绩（仅家长可见，学生端不开放） ---------------- */
+
+function renderPapers(papers) {
+  state.papers = papers || [];
+  if (!state.papers.length) {
+    els.papersCard.hidden = true;
+    els.papersList.innerHTML = '';
+    return;
+  }
+  els.papersCard.hidden = false;
+  els.papersList.innerHTML = state.papers.map(p => {
+    const scoreTxt = formatScore(p.score, p.score_text);
+    const subject = (p.subject || '').trim();
+    const note = (p.note || '').trim();
+    return `<button type="button" class="paper-card" data-url="${esc(p.image_url)}">
+      <span class="paper-thumb"><img src="${esc(p.image_url)}" alt="试卷照片" loading="lazy" onerror="this.closest('.paper-card').style.display='none'"></span>
+      <span class="paper-meta">
+        <span class="paper-line1"><b>${esc(subject || '试卷')}</b><span class="paper-date">${esc(shortPaperDate(p.record_date))}</span></span>
+        <span class="paper-score">${scoreTxt}</span>
+        ${note ? `<span class="paper-note">${esc(note)}</span>` : ''}
+      </span>
+    </button>`;
+  }).join('');
+
+  els.papersList.querySelectorAll('.paper-card').forEach(card => {
+    card.addEventListener('click', () => openPaper(card.dataset.url));
+  });
+}
+
+function formatScore(score, scoreText) {
+  if (score !== null && score !== undefined && score !== '') {
+    const n = Number(score);
+    if (!isNaN(n)) return '成绩：<b>' + String(parseFloat(n.toFixed(1))) + ' 分</b>';
+  }
+  if (scoreText && String(scoreText).trim()) return '成绩：' + esc(String(scoreText).trim());
+  return '成绩待老师补充';
+}
+
+function shortPaperDate(ymd) {
+  const [y, m, d] = String(ymd || '').split('-').map(Number);
+  if (!y) return '';
+  return `${m}月${d}日`;
+}
+
+function openPaper(url) {
+  els.paperViewImg.src = url;
+  els.paperViewOpen.href = url;
+  els.paperViewModal.classList.add('show');
+  Nav.push('paper');   // RSK-10：打开试卷预览弹窗
+}
+function closePaper() {
+  els.paperViewModal.classList.remove('show');
+  els.paperViewImg.src = '';
+}
+if (els.btnPaperViewClose) els.btnPaperViewClose.addEventListener('click', closePaper);
+if (els.paperViewModal) {
+  els.paperViewModal.addEventListener('click', e => { if (e.target === els.paperViewModal) closePaper(); });
+}
+
+/* ---------------- 每日学习任务（家长可见） ---------------- */
+function renderTasks(tasks) {
+  if (!tasks || !tasks.length) { els.tasksCard.hidden = true; els.tasksList.innerHTML = ''; return; }
+  const gradeMap = {
+    none:    { label: '未完成', cls: 'g-none', icon: '⏳' },
+    done:    { label: '完成',   cls: 'g-done', icon: '✅' },
+    good:    { label: '优秀 A', cls: 'g-good', icon: '👍' },
+    perfect: { label: '完美 A+', cls: 'g-perfect', icon: '🏆' }
+  };
+  els.tasksCard.hidden = false;
+  els.tasksList.innerHTML = tasks.map(t => {
+    const g = gradeMap[t.grade] || gradeMap.none;
+    const d = (t.task_date || '').slice(0, 10);
+    const typeTag = t.task_type === 'homework'
+      ? '<span class="p-task-type hw">家庭作业</span>'
+      : t.task_type === 'classwork'
+        ? '<span class="p-task-type cw">课堂作业</span>' : '';
+    return `<div class="task-row">
+      <div class="task-row-main">
+        <div class="task-row-date">${escapeHtmlP(d)} ${typeTag}</div>
+        <div class="task-row-title">${escapeHtmlP(t.title)}</div>
+        ${t.detail ? `<div class="task-row-detail">${escapeHtmlP(t.detail)}</div>` : ''}
+      </div>
+      <div class="task-row-grade ${g.cls}">${g.icon} ${g.label}</div>
+    </div>`;
+  }).join('');
+}
+function escapeHtmlP(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
