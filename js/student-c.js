@@ -468,5 +468,4 @@ function applyFrameTo(el, frameKey) {
   /* v137(RSK-13)：头像框粒子动效——换框时同步换粒子 */
   attachParticles(el, k);
 }
-//（注：内容由AI生成）
 

@@ -904,7 +904,7 @@ async function openRecordModal(mode, record) {
   // 预填历史 items
   if (record && record.behavior && Array.isArray(record.behavior.items)) {
     const liveIds = new Set(cache.tags.map(t => t.id));
-    record.behavior.items.forEach(it => {
+    record.behavior.items.filter(it => it && typeof it === 'object').forEach(it => {
       if (!liveIds.has(it.id)) { recState.preserved.push(it); return; }
       if (it.type === 'text') {
         recState.chosen[it.id] = true;
@@ -1152,6 +1152,10 @@ async function saveRecordModal() {
   if (missing) return showRecError(`请为「${missing.label}」选择一个具体项目`);
 
   const behavior = buildBehavior();
+  // 空表现拦截：不允许保存空白日常记录（与后端 100 号兜底对应）
+  if (!behavior.items || !behavior.items.length) {
+    return showRecError('请至少选择一项表现，不能保存空白记录');
+  }
 
   const payload = {
     record_date: els.recDate.value,
@@ -1199,7 +1203,7 @@ function renderRecordCard(r) {
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
   let itemsHtml = '';
-  const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+  const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
   if (items.length) {
     itemsHtml = '<ul class="item-list">';
     items.forEach(it => {
@@ -3404,10 +3408,11 @@ function renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date) {
   // 统计
   let filled = 0, posN = 0, negN = 0, totalN = 0, dimN = {};
   allStudents.forEach(name => {
-    const items = (byStu[name] && byStu[name].behavior && byStu[name].behavior.items);
-    if (items && items.length) {
+    const items = ((byStu[name] && byStu[name].behavior && byStu[name].behavior.items) || [])
+      .filter(it => it && typeof it === 'object');
+    if (items.length) {
       filled++;
-      (items || []).forEach(it => {
+      items.forEach(it => {
         const tag = tagMap[it.id] || {};
         const dim = tag.dim || 'zhi';
         dimN[dim] = (dimN[dim] || 0) + 1;
@@ -3432,7 +3437,7 @@ function renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date) {
     <div class="task-stu-grid">` +
     allStudents.map(name => {
       const r = byStu[name];
-      const items = (r && r.behavior && r.behavior.items) || [];
+      const items = ((r && r.behavior && r.behavior.items) || []).filter(it => it && typeof it === 'object');
       const st = seatMap[name];
       const seatTag = st ? `<span class="task-stu-seat">${st.r + 1}排${st.c + 1}座</span>` : '';
       const mood = r && r.behavior && r.behavior.mood ? MOOD_MAP[r.behavior.mood] : null;
@@ -3729,7 +3734,7 @@ async function runStats() {
   const tagCount = {};
   let posTotal=0, negTotal=0, totalItems=0;
   (recs||[]).forEach(r => {
-    ((r.behavior&&r.behavior.items)||[]).forEach(it => {
+    ((r.behavior&&r.behavior.items)||[]).filter(it => it && typeof it === 'object').forEach(it => {
       if (category && it.category !== category) return;
       const label = it.label || '(未命名)';
       tagCount[label] = tagCount[label] || {pos:0,neg:0};
@@ -3754,7 +3759,7 @@ async function runStats() {
     const list = (recs||[]).slice(0,60);
     if (!list.length) timelineHtml += '<div class="text-muted">该时间段没有记录。</div>';
     list.forEach(r => {
-      const items = ((r.behavior&&r.behavior.items)||[]).map(it =>
+      const items = ((r.behavior&&r.behavior.items)||[]).filter(it => it && typeof it === 'object').map(it =>
         `<span class="batch-chip" style="${it.category==='negative'?'background:#fde3e3;color:#c0392b;':''}">${esc(it.label)}</span>`).join(' ');
       const comment = r.teacher_comment ? `<div style="color:#888;margin-top:4px;">💬 ${esc(r.teacher_comment)}</div>` : '';
       timelineHtml += `<div style="border-bottom:1px dashed #eee;padding:8px 0;">
@@ -3788,7 +3793,7 @@ async function runStats() {
     const [mode, val] = tagSel.split('::');
     const didSet = new Set();
     (recs||[]).forEach(r => {
-      ((r.behavior&&r.behavior.items)||[]).forEach(it => {
+      ((r.behavior&&r.behavior.items)||[]).filter(it => it && typeof it === 'object').forEach(it => {
         if (mode==='OPT' && it.value===val) didSet.add(r.student_name);
         if (mode==='TAG' && it.label===val) didSet.add(r.student_name);
       });

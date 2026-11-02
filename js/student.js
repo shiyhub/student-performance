@@ -3237,4 +3237,3 @@ function renderChallengeDetail(list, title) {
   box.querySelector('[data-lb-back]').style.display = '';
   els.lbSub.textContent = '「' + title + '」最高档位排名';
 }
-//（注：内容由AI生成）

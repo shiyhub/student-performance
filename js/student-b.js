@@ -746,4 +746,3 @@ function renderIdentityLevel() {
   }
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
-//（注：内容由AI生成）
