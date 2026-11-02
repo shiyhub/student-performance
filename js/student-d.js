@@ -113,7 +113,7 @@ function calcUnlockedFrames(profile) {
   if (lv >= 10) { un.add('neonwolf'); }
   /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
   if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
-  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech'].forEach(k => un.add(k)); }
+  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
   return un;
 }
 

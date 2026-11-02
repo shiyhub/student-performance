@@ -119,6 +119,7 @@ function enterWallFlow() {
 }
 
 function showDeviceGate() {
+  ensureMobileGate();
   const gate = document.getElementById('deviceGate');
   const clsSel = document.getElementById('gateClass');
   const nameInput = document.getElementById('gateName');
