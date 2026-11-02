@@ -221,7 +221,9 @@ const FRAMES = [
   { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '升到 Lv.8' },
   { key: 'broken',   name: '破碎之心', icon: '💔', need: '升到 Lv.8' },
   { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '升到 Lv.8' },
-  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '升到 Lv.8' }
+  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '升到 Lv.8' },
+  /* v161：紫晶蝶梦（新增款式，Lv.8 开放） */
+  { key: 'ribbon',   name: '紫晶蝶梦', icon: '🪻', need: '升到 Lv.8' }
 ];
 const XP_PER_POSITIVE = 2;
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
@@ -1090,7 +1092,7 @@ function renderRecordTimeline(rows) {
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
       let itemsHtml = '';
-      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
       if (items.length) {
         itemsHtml = '<ul class="detail-items">';
         items.forEach(it => {
@@ -1314,7 +1316,7 @@ function mergeLocalRecord(cls, name, items, mood, serverToday) {
   const existing = state.records.find(r =>
     r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
   if (existing) {
-    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items : [];
+    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items.filter(it => it && typeof it === 'object') : [];
     const seen = new Set(oldItems.map(it => it.id + '|' + (it.value || '')));
     const fresh = items.filter(it => !seen.has(it.id + '|' + (it.value || '')));
     existing.behavior = { mood: mood || (existing.behavior && existing.behavior.mood) || 'normal', items: oldItems.concat(fresh) };
@@ -1392,7 +1394,7 @@ async function loadDoneItems() {
   }
   (rows || []).forEach(r => {
     if (r.student_name !== name) return;
-    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
     items.forEach(it => {
       const tid = it.id;
       if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
@@ -1785,7 +1787,8 @@ const FRAME_CLASS = {
   ice:'frame-ice', moon:'frame-moon', crystal:'frame-crystal', silk:'frame-silk',
   goldwing:'frame-goldwing', kitty:'frame-kitty',
   devilcat:'frame-devilcat', angelcat:'frame-angelcat', clover:'frame-clover', neko:'frame-neko',
-  sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech'
+  sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech',
+  ribbon:'frame-ribbon'
 };
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
@@ -1902,7 +1905,7 @@ function calcUnlockedFrames(profile) {
   if (lv >= 10) { un.add('neonwolf'); }
   /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
   if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
-  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech'].forEach(k => un.add(k)); }
+  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
   return un;
 }
 
@@ -3234,3 +3237,4 @@ function renderChallengeDetail(list, title) {
   box.querySelector('[data-lb-back]').style.display = '';
   els.lbSub.textContent = '「' + title + '」最高档位排名';
 }
+//（注：内容由AI生成）

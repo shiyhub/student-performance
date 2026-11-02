@@ -64,7 +64,7 @@ function mergeLocalRecord(cls, name, items, mood, serverToday) {
   const existing = state.records.find(r =>
     r.class === cls && r.student_name === name && String(r.record_date).slice(0, 10) === today);
   if (existing) {
-    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items : [];
+    const oldItems = (existing.behavior && Array.isArray(existing.behavior.items)) ? existing.behavior.items.filter(it => it && typeof it === 'object') : [];
     const seen = new Set(oldItems.map(it => it.id + '|' + (it.value || '')));
     const fresh = items.filter(it => !seen.has(it.id + '|' + (it.value || '')));
     existing.behavior = { mood: mood || (existing.behavior && existing.behavior.mood) || 'normal', items: oldItems.concat(fresh) };
@@ -142,7 +142,7 @@ async function loadDoneItems() {
   }
   (rows || []).forEach(r => {
     if (r.student_name !== name) return;
-    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
     items.forEach(it => {
       const tid = it.id;
       if (!state.doneItems[tid]) state.doneItems[tid] = new Set();
@@ -468,4 +468,5 @@ function applyFrameTo(el, frameKey) {
   /* v137(RSK-13)：头像框粒子动效——换框时同步换粒子 */
   attachParticles(el, k);
 }
+//（注：内容由AI生成）
 

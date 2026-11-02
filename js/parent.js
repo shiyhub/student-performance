@@ -706,7 +706,7 @@ function renderDetailList(rows) {
       record_date: g.date,
       behavior: {
         mood: (g.rows[g.rows.length - 1].behavior || {}).mood,
-        items: g.rows.flatMap(r => (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [])
+        items: g.rows.flatMap(r => (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [])
       },
       teacher_comment: g.rows.map(r => (r.teacher_comment || '').trim()).filter(Boolean).join('；')
     };
@@ -742,7 +742,7 @@ function renderSummary(rows) {
   rows.forEach(r => {
     const mood = r.behavior && r.behavior.mood;
     if (moodCount[mood] !== undefined) moodCount[mood]++;
-    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+    const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
     items.forEach(it => {
       const label = it.label || '';
       const neg = it.category === 'negative';
@@ -809,7 +809,7 @@ function renderRecordCard(r) {
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
   let itemsHtml = '';
-  const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+  const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
   if (items.length) {
     itemsHtml = '<ul class="item-list">';
     items.forEach(it => {
@@ -1062,3 +1062,4 @@ function renderTasks(tasks) {
 function escapeHtmlP(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+//（注：内容由AI生成）

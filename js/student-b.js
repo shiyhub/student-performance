@@ -588,7 +588,7 @@ function renderRecordTimeline(rows) {
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
       let itemsHtml = '';
-      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items : [];
+      const items = (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [];
       if (items.length) {
         itemsHtml = '<ul class="detail-items">';
         items.forEach(it => {
@@ -746,3 +746,4 @@ function renderIdentityLevel() {
   }
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
+//（注：内容由AI生成）
