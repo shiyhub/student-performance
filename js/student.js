@@ -310,6 +310,17 @@ const sfx = window.SFX || {
 
 /* ---------- v107：统一离线层辅助 ---------- */
 const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+
+/* v163(RSK-19)：数据请求超时兜底——海外 Supabase 节点在弱网下可能长时间挂起，
+ * 无超时会导致页面永久停留在加载态；超时后走缓存或错误提示，不再卡死。 */
+var DATA_TIMEOUT = 15000;
+function withTimeout(promise, ms) {
+  var timer = null;
+  var t = new Promise(function (_, reject) {
+    timer = setTimeout(function () { reject(new Error('timeout')); }, ms);
+  });
+  return Promise.race([promise, t]).finally(function () { clearTimeout(timer); });
+}
 // 读操作：在线=网络优先+写缓存；离线/失败=读缓存
 async function cacheRead(key, fetcher) {
   if (!window.Offline || !window.Offline.online) {
@@ -732,7 +743,7 @@ async function loadWall() {
   let wallData = null;
   try {
     if ((!window.Offline || window.Offline.online)) {
-      const r = await supabase.rpc('get_wall_data', (sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls });
+      const r = await withTimeout(supabase.rpc('get_wall_data', (sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls }), DATA_TIMEOUT);
       if (r && !r.error && r.data && r.data.ok !== false) wallData = r.data;
     }
   } catch (e) { wallData = null; }
@@ -770,7 +781,7 @@ async function loadWall() {
   if (sem && sem !== '全部') recQ.eq('semester', sem);
   let rosterRes = {}, recordRes = {}, taskDefRes = {};
   try {
-    [rosterRes, recordRes, taskDefRes] = await Promise.all([
+    [rosterRes, recordRes, taskDefRes] = await withTimeout(Promise.all([
       supabase.from('student_directory')
         .select('*')
         .eq('class', cls)
@@ -782,7 +793,7 @@ async function loadWall() {
       supabase.from('daily_task')
         .select('id,title,task_type')
         .eq('class', cls).eq('task_date', todayStr())
-    ]);
+    ]), DATA_TIMEOUT);
   } catch (e) {
     // 断网/网络错误：标记失败，走缓存（已在上面渲染过缓存则不打扰）
     rosterRes.error = { message: 'offline' };
@@ -1920,6 +1931,8 @@ function calcUnlockedFrames(profile) {
   /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
   if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
   if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
+  /* v163(RSK-20)：4 款 Lv.8 头像框（与 103 号迁移同口径）——此前漏加，等级 8 也不解锁 */
+  if (lv >= 8) { ['cyber','pulse','unicorn','onyx'].forEach(k => un.add(k)); }
   return un;
 }
 
