@@ -122,11 +122,11 @@ const SVG_AVATAR_KEYS = new Set([
 const AVATAR_SM_KEYS = new Set([
   'fantasy1','fantasy3','fantasy5','fantasy6','fantasy7',
   'game1','game2','game3','game4','game5','game6','game7','game8',
-  'mecha1','mecha2','mecha4','nature1','nature2','nature3',
+  'mecha1','mecha2','mecha4','mecha5','nature1','nature2','nature3',
   'sweet1','sweet2','sweet5','sweet6','sweet7','sweet8','sweet9','sweet10',
   'game16','game17','nature5','nature6','nature7','nature8',
   'sweet19','sweet20','sweet21','sweet22',
-  'warrior1','warrior2','warrior3','warrior4','warrior5',
+  'warrior1','warrior2','warrior3','warrior4','warrior5','warrior6',
   'fantasy8','fantasy9','fantasy10','fantasy11',
   'xian1','xian2','xian3','xian4','xian5'
 ]);
