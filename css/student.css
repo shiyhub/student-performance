@@ -1021,7 +1021,8 @@ html,body{background:#e8e6e1 !important;}
 .frame-goth.framed::after,
 .frame-broken.framed::after,
 .frame-mono.framed::after,
-.frame-tech.framed::after {
+.frame-tech.framed::after,
+.frame-ribbon.framed::after {
   content: ''; position: absolute; inset: -21%; border-radius: 50%;
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
@@ -1041,6 +1042,7 @@ html,body{background:#e8e6e1 !important;}
 .frame-broken.framed::after { background-image: url("../assets/frames/frame-broken.png"); }
 .frame-mono.framed::after { background-image: url("../assets/frames/frame-mono.png"); }
 .frame-tech.framed::after { background-image: url("../assets/frames/frame-tech.png"); }
+.frame-ribbon.framed::after { background-image: url("../assets/frames/frame-ribbon.png"); }
 .frame-choice.fc-ice .fc-ring { background: url("../assets/frames/frame-ice.png") center / contain no-repeat; }
 .frame-choice.fc-moon .fc-ring { background: url("../assets/frames/frame-moon.png") center / contain no-repeat; }
 .frame-choice.fc-crystal .fc-ring { background: url("../assets/frames/frame-crystal.png") center / contain no-repeat; }
@@ -1056,6 +1058,25 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-broken .fc-ring { background: url("../assets/frames/frame-broken.png") center / contain no-repeat; }
 .frame-choice.fc-mono .fc-ring { background: url("../assets/frames/frame-mono.png") center / contain no-repeat; }
 .frame-choice.fc-tech .fc-ring { background: url("../assets/frames/frame-tech.png") center / contain no-repeat; }
+.frame-choice.fc-ribbon .fc-ring { background: url("../assets/frames/frame-ribbon.png") center / contain no-repeat; }
+
+/* ============================================================
+   v162：Lv.8 四款新头像框（用户定制素材）
+   ============================================================ */
+.frame-cyber.framed::after, .frame-pulse.framed::after, .frame-unicorn.framed::after,
+.frame-onyx.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 50%;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-cyber.framed::after { background-image: url("../assets/frames/frame-cyber.png"); }
+.frame-pulse.framed::after { background-image: url("../assets/frames/frame-pulse.png"); }
+.frame-unicorn.framed::after { background-image: url("../assets/frames/frame-unicorn.png"); }
+.frame-onyx.framed::after { background-image: url("../assets/frames/frame-onyx.png"); }
+.frame-choice.fc-cyber .fc-ring { background: url("../assets/frames/frame-cyber.png") center / contain no-repeat; }
+.frame-choice.fc-pulse .fc-ring { background: url("../assets/frames/frame-pulse.png") center / contain no-repeat; }
+.frame-choice.fc-unicorn .fc-ring { background: url("../assets/frames/frame-unicorn.png") center / contain no-repeat; }
+.frame-choice.fc-onyx .fc-ring { background: url("../assets/frames/frame-onyx.png") center / contain no-repeat; }
 
 /* v155：魔法星空排名装饰（TOP3 专属，保留原金色角标） */
 .mate .rank-deco { position:absolute; right:-14px; top:-14px; width:96px; height:96px; pointer-events:none; z-index:4; background-repeat:no-repeat; background-position:center; background-size:contain; }
