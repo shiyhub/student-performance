@@ -2065,6 +2065,7 @@ async function onChooseFrame(key, btn) {
     if (row) row.frame = key;
     els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
     applyFrameTo(els.identityAvatarEmoji, key);
+    if (els.frameView && !els.frameView.hidden) renderFramePage();
     persistWallCache(); renderWall();
     toast('已离线选好，联网后自动同步 ✅');
     setTimeout(() => els.avatarModal.classList.remove('show'), 260);
@@ -2079,6 +2080,7 @@ async function onChooseFrame(key, btn) {
   if (row) row.frame = key;
   els.avatarPicker.querySelectorAll('.frame-choice').forEach(x => x.classList.toggle('selected', x === btn));
   applyFrameTo(els.identityAvatarEmoji, key);
+  if (els.frameView && !els.frameView.hidden) renderFramePage();
   persistWallCache(); renderWall();
   toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
   setTimeout(() => els.avatarModal.classList.remove('show'), 260);
