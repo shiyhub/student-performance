@@ -532,6 +532,78 @@
         </div>
       </div>
 
+      <!-- ===== 成绩单批量导入（v153） ===== -->
+      <div class="card">
+        <div class="card-title">📊 导入成绩单（整班批量）</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          输入考试名称（可附说明），再选一种导入方式：<b>上传成绩单图片自动识别姓名和分数</b>，或用
+          <b>Excel 模板</b>填写后导入。结果会填入下方表格，<b>可逐行手动修改</b>；保存后该生家长可在「成绩单」里看到本次成绩。
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="ebClass">班级</label>
+            <select class="input" id="ebClass"></select>
+          </div>
+          <div class="field">
+            <label for="ebName">考试名称（必填）</label>
+            <input class="input" id="ebName" type="text" maxlength="40"
+                   placeholder="如：期中考试 / 第三单元测验">
+          </div>
+          <div class="field">
+            <label for="ebSubject">科目（选填）</label>
+            <input class="input" id="ebSubject" type="text" maxlength="20"
+                   placeholder="如：数学" list="examSubjectList">
+          </div>
+          <div class="field">
+            <label for="ebDate">考试日期</label>
+            <input class="input" id="ebDate" type="date">
+          </div>
+          <div class="field full">
+            <label for="ebNote">说明（选填，家长可见）</label>
+            <textarea class="input" id="ebNote" rows="2" maxlength="200"
+                      placeholder="如：本次满分 100 分，班级平均分 86.5"></textarea>
+          </div>
+        </div>
+
+        <div class="batch-import-grid">
+          <div class="batch-import-box">
+            <div class="bi-title">📷 成绩单图片识别</div>
+            <p class="bi-tip">拍/选一张有「姓名+分数」的成绩单，自动识别并填入下表。</p>
+            <input class="input" id="ebImg" type="file" accept="image/*" capture="environment">
+            <div id="ebImgStatus" class="exam-ocr-status"></div>
+          </div>
+          <div class="batch-import-box">
+            <div class="bi-title">📑 Excel 导入</div>
+            <p class="bi-tip">先下载模板（已按本班名单预填姓名），填好分数后导入（.xlsx / .csv）。</p>
+            <div class="bi-actions">
+              <button class="btn btn-ghost btn-sm" id="btnEbTpl" type="button">⬇️ 下载模板</button>
+              <input class="input" id="ebXlsx" type="file" accept=".xlsx,.xls,.csv">
+            </div>
+            <div id="ebXlsxStatus" class="exam-ocr-status"></div>
+          </div>
+        </div>
+
+        <div id="ebTableWrap" hidden>
+          <div class="batch-summary" id="ebSummary"></div>
+          <div class="batch-table-scroll">
+            <table class="batch-table">
+              <thead>
+                <tr><th>#</th><th>学生</th><th>分数</th><th>状态</th></tr>
+              </thead>
+              <tbody id="ebTableBody"></tbody>
+            </table>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="btnEbSave" type="button">保存本次成绩并发送给家长</button>
+            <button class="btn btn-ghost" id="btnEbClear" type="button">清空表格</button>
+          </div>
+        </div>
+        <div id="ebUnmatched" class="batch-unmatched" hidden></div>
+      </div>
+
+      <div class="sec-label">已导入成绩单</div>
+      <div id="ebBox" class="exam-box"></div>
+
       <div class="sec-label">已上传试卷</div>
       <div id="examBox" class="exam-box"></div>
     </section>
@@ -942,6 +1014,7 @@
 <script src="js/precache.js"></script>
 <script src="js/vendor/qrcode.min.js"></script>
 <script src="js/vendor/tesseract/tesseract.min.js"></script>
+<script src="js/vendor/xlsx.mini.min.js"></script>
 <script src="js/teacher.js"></script>
 <script src="js/exam.js"></script>
 <script>document.addEventListener("contextmenu",function(e){e.preventDefault();});</script>
