@@ -315,6 +315,58 @@ body { background: #f3f6f5; }
 @media (max-width: 560px) {
   .exam-form-grid { grid-template-columns: 1fr; }
 }
+/* v153：成绩单批量导入 */
+.batch-import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 4px; }
+.batch-import-box {
+  background: #f7faf8; border: 1px dashed #cfdcd4; border-radius: 12px;
+  padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.bi-title { font-weight: 700; font-size: 14.5px; color: #33513f; }
+.bi-tip { margin: 0; font-size: 12.5px; color: #7d8f86; line-height: 1.5; }
+.bi-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bi-actions .input { flex: 1 1 180px; }
+.batch-summary {
+  font-size: 13px; color: #3f5749; background: #eef5f0;
+  border-radius: 10px; padding: 8px 12px; margin: 10px 0 8px; line-height: 1.5;
+}
+.batch-table-scroll {
+  max-height: 430px; overflow: auto; border: 1px solid #e4ebe7; border-radius: 12px; background: #fff;
+}
+.batch-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.batch-table th, .batch-table td { padding: 7px 10px; border-bottom: 1px solid #eff3f1; text-align: left; }
+.batch-table thead th {
+  position: sticky; top: 0; background: #f4f8f5; z-index: 1; font-weight: 700; color: #4c6156;
+}
+.batch-table .idx-col { width: 44px; color: #9aa8a0; }
+.batch-table .score-cell { width: 96px; }
+.batch-table .score-input {
+  width: 74px; border: 1px solid #dbe4df; border-radius: 8px;
+  padding: 4px 8px; font-size: 13.5px; background: #fff;
+}
+.batch-table .score-input:focus { outline: 2px solid #b9d8c6; border-color: #9cc7ae; }
+.batch-table .st-cell { width: 118px; font-size: 12.5px; }
+.batch-table tr.matched .st-cell { color: #2e7d4f; }
+.batch-table tr.unmatched .st-cell { color: #b4761f; }
+.batch-table tr.unmatched { background: #fffdf6; }
+.batch-unmatched {
+  margin-top: 10px; font-size: 13px; color: #9a6216; background: #fff7e8;
+  border: 1px solid #f0d8a8; border-radius: 10px; padding: 10px 12px; line-height: 1.6;
+}
+.batch-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: #fff; border: 1px solid #e4ebe7; border-radius: 14px; padding: 10px 12px;
+}
+.batch-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.batch-item-title { font-size: 14.5px; font-weight: 700; color: #2f4a3b; }
+.batch-item-title span { font-weight: 400; color: #8fa098; font-size: 12.5px; margin-left: 6px; }
+.batch-item-sub { font-size: 12.5px; color: #6c7d74; line-height: 1.5; }
+.batch-item-note { font-size: 12.5px; color: #8fa098; }
+.batch-item-actions { flex: 0 0 auto; display: flex; gap: 6px; flex-direction: column; }
+
+@media (max-width: 560px) {
+  .exam-form-grid { grid-template-columns: 1fr; }
+  .batch-import-grid { grid-template-columns: 1fr; }
+}
 
 /* 每日任务 */
 .task-banner { background:#fff7e6; border:1.5px solid #f0c66a; border-radius:12px; padding:12px 14px; margin-bottom:14px; line-height:1.6; }

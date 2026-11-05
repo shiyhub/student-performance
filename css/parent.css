@@ -173,6 +173,20 @@
 .paper-score b { font-size: 18px; }
 .paper-note { color: #7d8a83; font-size: 12.5px; line-height: 1.4; }
 
+/* v153：成绩单 */
+.exam-batch-list { display: flex; flex-direction: column; gap: 10px; }
+.exam-batch-row {
+  border: 1px solid #ece6d8; border-radius: 14px; background: #fff;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.eb-line1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14.5px; }
+.eb-line1 b { color: #6f4a18; }
+.eb-line2 { font-size: 13px; color: #7d8a83; }
+.eb-score { color: #d2691e; }
+.eb-score b { font-size: 17px; }
+.eb-note { font-size: 12.5px; color: #8d9891; line-height: 1.5; }
+.eb-img-link { font-size: 12.5px; color: #3a7bd5; text-decoration: underline; }
+
 .paper-view-modal { max-width: 92vw; max-height: 90vh; padding: 12px; }
 .paper-view-modal img { max-width: 100%; max-height: 74vh; border-radius: 10px; display: block; margin: 0 auto; }
 
