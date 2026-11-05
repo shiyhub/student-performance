@@ -235,6 +235,46 @@ async function syncRunner(op) {
       const r = await supabase.from('exam_paper').delete().eq('id', p.id);
       return { ok: !r.error, error: r.error };
     }
+    if (op.name === 'exam_batch_save') {
+      // v153：成绩单批次 —— 可选成绩单原图上传 + exam_batch + exam_score
+      let imageUrl = null;
+      if (p.imageBlob && p.fileName) {
+        const { error: upErr } = await supabase.storage
+          .from('exam-papers')
+          .upload(p.fileName, p.imageBlob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
+        if (upErr) return { ok: false, error: upErr };
+        const { data: pub } = supabase.storage.from('exam-papers').getPublicUrl(p.fileName);
+        if (!pub || !pub.publicUrl) return { ok: false };
+        imageUrl = pub.publicUrl;
+      }
+      const ins = await supabase.from('exam_batch').insert({
+        class: p.class,
+        exam_name: p.exam_name,
+        subject: p.subject || null,
+        exam_date: p.exam_date,
+        note: p.note || null,
+        image_url: imageUrl
+      }).select('id').single();
+      if (ins.error) return { ok: false, error: ins.error };
+      const batchId = ins.data && ins.data.id;
+      const rows = (p.rows || []).map(r => ({
+        batch_id: batchId,
+        student_id: r.student_id || null,
+        class: p.class,
+        student_name: r.student_name,
+        score: r.score
+      }));
+      if (rows.length) {
+        const sr = await supabase.from('exam_score').insert(rows);
+        if (sr.error) return { ok: false, error: sr.error };
+      }
+      return { ok: true, data: { batch_id: batchId } };
+    }
+    if (op.name === 'exam_batch_delete') {
+      if (p.path) { await supabase.storage.from('exam-papers').remove([p.path]); }
+      const r = await supabase.from('exam_batch').delete().eq('id', p.id);
+      return { ok: !r.error, error: r.error };
+    }
     if (op.name === 'seat_save') {
       const del = await supabase.from('seat_grid').delete().eq('class', p.class);
       if (del.error) return { ok: false };

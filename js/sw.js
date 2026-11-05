@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v50';
+const CACHE = 'sp-cache-v70';
 const ASSETS = [
   './',
   './index.html',
@@ -21,6 +21,7 @@ const ASSETS = [
   './js/parent.js',
   './js/teacher.js',
   './js/vendor/supabase.js',
+  './js/vendor/xlsx.mini.min.js',
   './assets/avatars/animal1.webp',
   './assets/avatars/animal2.webp',
   './assets/avatars/animal3.webp',
@@ -95,6 +96,14 @@ const ASSETS = [
   './assets/avatars/sweet16.svg',
   './assets/avatars/sweet17.svg',
   './assets/avatars/sweet18.svg',
+  './assets/avatars/sweet19.webp',
+  './assets/avatars/sweet20.webp',
+  './assets/avatars/sweet21.webp',
+  './assets/avatars/sweet22.webp',
+  './assets/avatars/sweet19-s.webp',
+  './assets/avatars/sweet20-s.webp',
+  './assets/avatars/sweet21-s.webp',
+  './assets/avatars/sweet22-s.webp',
   './assets/avatars/game1.webp',
   './assets/avatars/game1-s.webp',
   './assets/avatars/game2.webp',
@@ -132,6 +141,8 @@ const ASSETS = [
   './assets/avatars/mecha3.webp',
   './assets/avatars/mecha4.webp',
   './assets/avatars/mecha4-s.webp',
+  './assets/avatars/mecha5.webp',
+  './assets/avatars/mecha5-s.webp',
   './assets/avatars/fantasy1.webp',
   './assets/avatars/fantasy1-s.webp',
   './assets/avatars/fantasy2.webp',
@@ -144,6 +155,36 @@ const ASSETS = [
   './assets/avatars/fantasy6-s.webp',
   './assets/avatars/fantasy7.webp',
   './assets/avatars/fantasy7-s.webp',
+  './assets/avatars/fantasy8.webp',
+  './assets/avatars/fantasy8-s.webp',
+  './assets/avatars/fantasy9.webp',
+  './assets/avatars/fantasy9-s.webp',
+  './assets/avatars/fantasy10.webp',
+  './assets/avatars/fantasy10-s.webp',
+  './assets/avatars/fantasy11.webp',
+  './assets/avatars/fantasy11-s.webp',
+  './assets/avatars/warrior1.webp',
+  './assets/avatars/warrior1-s.webp',
+  './assets/avatars/warrior2.webp',
+  './assets/avatars/warrior2-s.webp',
+  './assets/avatars/warrior3.webp',
+  './assets/avatars/warrior3-s.webp',
+  './assets/avatars/warrior4.webp',
+  './assets/avatars/warrior4-s.webp',
+  './assets/avatars/warrior5.webp',
+  './assets/avatars/warrior5-s.webp',
+  './assets/avatars/warrior6.webp',
+  './assets/avatars/warrior6-s.webp',
+  './assets/avatars/xian1.webp',
+  './assets/avatars/xian1-s.webp',
+  './assets/avatars/xian2.webp',
+  './assets/avatars/xian2-s.webp',
+  './assets/avatars/xian3.webp',
+  './assets/avatars/xian3-s.webp',
+  './assets/avatars/xian4.webp',
+  './assets/avatars/xian4-s.webp',
+  './assets/avatars/xian5.webp',
+  './assets/avatars/xian5-s.webp',
   './assets/frames/frame-bronze.png',
   './assets/frames/frame-silver.png',
   './assets/frames/frame-gold.png',
@@ -163,6 +204,17 @@ const ASSETS = [
   './assets/frames/frame-rose.png',
   './assets/frames/frame-fairy.png',
   './assets/frames/frame-pixie.png',
+  './assets/frames/frame-huadian.png',
+  './assets/frames/frame-blossom.png',
+  './assets/frames/frame-ink.png',
+  './assets/frames/frame-spring.png',
+  './assets/frames/frame-redlily.png',
+  './assets/frames/frame-mask.png',
+  './assets/frames/frame-neonwolf.png',
+  './assets/frames/frame-cyber.png',
+  './assets/frames/frame-pulse.png',
+  './assets/frames/frame-unicorn.png',
+  './assets/frames/frame-onyx.png',
   './assets/frames/corner-gold.webp',
   './assets/avatars/game16.webp',
   './assets/avatars/game16-s.webp',
@@ -209,13 +261,15 @@ self.addEventListener('fetch', e => {
           new Promise((_, rej) => setTimeout(() => rej(new Error('sw-api-timeout')), 8000))
         ]);
         if (res && res.ok) {
-          const copy = res.clone();
-          const headers = new Headers(copy.headers);
-          headers.set('x-sp-ts', String(Date.now()));
-          headers.delete('content-encoding');
-          headers.delete('content-length');
-          const body = await copy.arrayBuffer();
-          cache.put(e.request, new Response(body, { status: copy.status, statusText: copy.statusText, headers }));
+          try {
+            const copy = res.clone();
+            const headers = new Headers(copy.headers);
+            headers.set('x-sp-ts', String(Date.now()));
+            headers.delete('content-encoding');
+            headers.delete('content-length');
+            const body = await copy.arrayBuffer();
+            await cache.put(e.request, new Response(body, { status: copy.status, statusText: copy.statusText, headers }));
+          } catch (ce) { /* 缓存写入失败不影响返回网络数据 */ }
         }
         return res;
       } catch (err) {

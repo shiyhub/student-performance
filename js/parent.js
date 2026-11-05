@@ -40,6 +40,7 @@ function NavBack() {
   if (els.resultCard && !els.resultCard.hidden) {
     els.resultCard.hidden = true;
     els.papersCard.hidden = true;
+    if (els.examBatchesCard) els.examBatchesCard.hidden = true;
     els.mismatchBanner.hidden = true;
     els.queryCard.hidden = false;
     window.scrollTo({ top: 0 });
@@ -102,6 +103,8 @@ const els = {
   // 试卷
   papersCard: $('#papersCard'),
   papersList: $('#papersList'),
+  examBatchesCard: $('#examBatchesCard'),
+  examBatchesList: $('#examBatchesList'),
   paperViewModal: $('#paperViewModal'),
   paperViewImg: $('#paperViewImg'),
   paperViewOpen: $('#paperViewOpen'),
@@ -121,6 +124,7 @@ const state = {
   scanCode: '',   // 学生个人二维码带来的密码（优先作凭据）
   allRows: [],          // 该生全部在校记录（RPC 返回，已按日期倒序）
   papers: [],           // 该生试卷（独立 RPC，学生端不开放）
+  examBatches: [],      // v153：老师导入的成绩单批次
   homeNotes: [],        // v50：我的留言与老师回复线程
   quick: 'all',         // all | week | lastweek | 4w | custom
   picked: null,         // 自选日期 Set（null=未启用自选）
@@ -214,6 +218,7 @@ function init() {
   els.btnBack.addEventListener('click', () => {
     els.resultCard.hidden = true;
     els.papersCard.hidden = true;
+    if (els.examBatchesCard) els.examBatchesCard.hidden = true;
     els.mismatchBanner.hidden = true;
     els.queryCard.hidden = false;
     window.scrollTo({ top: 0 });
@@ -314,6 +319,7 @@ async function onQuery() {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
+      renderExamBatches(v.examBatches || []);
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
         const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
@@ -345,15 +351,17 @@ async function onQuery() {
       state.ctx = { cls, student, birth };
       renderResults(student, fastCache.records || []);
       renderPapers(fastCache.papers || []);
+      renderExamBatches(fastCache.examBatches || []);
       renderTasks(fastCache.tasks || []);
       renderHomeThread(fastCache.homeNotes || []);
     }
     // 记录为关键数据必须成功；试卷/任务/留言失败降级为空，不阻断查询（弱网下尽量先出记录）
-    const [recRes, paperRes, taskRes, noteRes] = await Promise.all([
+    const [recRes, paperRes, taskRes, noteRes, batchRes] = await Promise.all([
       rpcRetry(() => supabase.rpc('get_student_records', { p_class: cls, p_student: student, p_birth: birth }), 12000, '记录'),
       rpcRetry(() => supabase.rpc('get_student_papers', { p_class: cls, p_student: student, p_birth: birth }), 12000, '试卷').catch(() => ({ error: true })),
       rpcRetry(() => supabase.rpc('get_student_tasks', { p_class: cls, p_student: student, p_birth: birth }), 12000, '任务').catch(() => ({ error: true })),
-      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 12000, '留言').then(r => r, () => null)
+      rpcRetry(() => supabase.rpc('get_my_home_notes', { p_class: cls, p_student: student, p_birth: birth }), 12000, '留言').then(r => r, () => null),
+      rpcRetry(() => supabase.rpc('get_student_exam_batches', { p_class: cls, p_student: student, p_birth: birth }), 12000, '成绩单').catch(() => ({ error: true }))
     ]);
     if (recRes.error) throw recRes.error;
     // 建立 小项 -> 一级标签 映射（如 语文作业 -> 欠作业）
@@ -365,11 +373,12 @@ async function onQuery() {
     } catch (e) {}
     const records = recRes.data || [];
     const papers = (!paperRes.error && paperRes.data) ? paperRes.data : [];
+    const examBatches = (!batchRes || batchRes.error || !batchRes.data) ? [] : batchRes.data;
     const taskData = (!taskRes.error && taskRes.data) ? taskRes.data : { ok: false, tasks: [] };
     const tasks = taskData.tasks || [];
     const noteData = (noteRes && noteRes.data && noteRes.data.ok) ? noteRes.data : { notes: [] };
     const homeNotes = noteData.notes || [];
-    if (!records.length && !papers.length && !tasks.length && !homeNotes.length) {
+    if (!records.length && !papers.length && !examBatches.length && !tasks.length && !homeNotes.length) {
       els.mismatchBanner.textContent = '校验通过，但还没有任何记录；稍后再来看看。';
       els.mismatchBanner.hidden = false;
       return;
@@ -378,9 +387,10 @@ async function onQuery() {
     const partialFailed = paperRes.error || taskRes.error || (noteRes && noteRes.error);
     state.ctx = { cls, student, birth };
     state.homeNotes = homeNotes;
-    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, tasks, homeNotes, cachedAt: Date.now() });
+    await window.Offline.set('parent_' + cls + '_' + student + '_' + birth, { records, papers, examBatches, tasks, homeNotes, cachedAt: Date.now() });
     renderResults(student, records);
     renderPapers(papers);
+    renderExamBatches(examBatches);
     renderTasks(tasks);
     renderHomeThread(homeNotes);
     if (partialFailed) toast('网络较慢：在校表现已加载，试卷/任务等部分内容稍后自动更新，可再点「查询记录」刷新。');
@@ -392,6 +402,7 @@ async function onQuery() {
         state.ctx = { cls, student, birth };
         renderResults(student, v.records || []);
         renderPapers(v.papers || []);
+      renderExamBatches(v.examBatches || []);
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
         const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
@@ -979,6 +990,7 @@ function renderPapers(papers) {
   state.papers = papers || [];
   if (!state.papers.length) {
     els.papersCard.hidden = true;
+    if (els.examBatchesCard) els.examBatchesCard.hidden = true;
     els.papersList.innerHTML = '';
     return;
   }
@@ -1000,6 +1012,33 @@ function renderPapers(papers) {
   els.papersList.querySelectorAll('.paper-card').forEach(card => {
     card.addEventListener('click', () => openPaper(card.dataset.url));
   });
+}
+
+/* v153：成绩单（老师整班导入的考试成绩） */
+function renderExamBatches(list) {
+  state.examBatches = list || [];
+  if (!state.examBatches.length) {
+    if (els.examBatchesCard) els.examBatchesCard.hidden = true;
+    if (els.examBatchesList) els.examBatchesList.innerHTML = '';
+    return;
+  }
+  if (els.examBatchesCard) els.examBatchesCard.hidden = false;
+  els.examBatchesList.innerHTML = state.examBatches.map(b => {
+    const subject = (b.subject || '').trim();
+    const note = (b.note || '').trim();
+    const scoreTxt = (b.score !== null && b.score !== undefined && b.score !== '')
+      ? '成绩：<b>' + String(parseFloat(Number(b.score).toFixed(1))) + ' 分</b>'
+      : '成绩待老师补充';
+    const img = b.image_url
+      ? `<a class="eb-img-link" href="${esc(b.image_url)}" target="_blank" rel="noopener">查看成绩单图</a>`
+      : '';
+    return `<div class="exam-batch-row">
+      <div class="eb-line1"><b>${esc(b.exam_name || '考试')}</b><span class="paper-date">${esc(shortPaperDate(b.exam_date))}</span></div>
+      <div class="eb-line2">${esc(subject || '综合')} · <span class="eb-score">${scoreTxt}</span></div>
+      ${note ? `<div class="eb-note">${esc(note)}</div>` : ''}
+      ${img}
+    </div>`;
+  }).join('');
 }
 
 function formatScore(score, scoreText) {
