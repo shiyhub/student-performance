@@ -521,7 +521,7 @@
     } catch (err) {
       setStatus(els.batchImgStatus, (err && err.message === 'TIMEOUT')
         ? '识别超时，请改用 Excel 模板，或直接在表格里手动填写。'
-        : '识别失败（可能是中文识别包未加载成功），可改用 Excel 模板或手动填写。');
+        : '识别失败：请确认站点已上传 js/vendor/tesseract/chi_sim.traineddata.gz（中文识别包），或改用 Excel 模板。');
     }
   }
 
@@ -596,10 +596,34 @@
   }
 
   /* ---------- Excel 模板下载 / 导入 ---------- */
-  function downloadTemplate() {
+  // 兜底：xlsx 组件若未随页面加载（文件缺失/首次缓存未命中），按需再拉一次
+  let xlsxLoading = null;
+  function ensureXlsx() {
+    if (window.XLSX) return Promise.resolve(true);
+    if (xlsxLoading) return xlsxLoading;
+    xlsxLoading = new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = 'js/vendor/xlsx.mini.min.js';
+      s.onload = () => resolve(!!window.XLSX);
+      s.onerror = () => { xlsxLoading = null; resolve(false); };
+      document.head.appendChild(s);
+      setTimeout(() => { if (!window.XLSX) resolve(false); }, 8000);
+    });
+    return xlsxLoading;
+  }
+
+  function xlsxMissingHint(where) {
+    const msg = 'Excel 组件加载失败：请确认站点根目录下已上传 js/vendor/xlsx.mini.min.js';
+    if (where === 'status') setStatus(els.batchXlsxStatus, msg);
+    else toast(msg);
+  }
+  async function downloadTemplate() {
     const cls = els.batchClass.value;
     if (!cls) { toast('请先选择班级'); return; }
-    if (!window.XLSX) { toast('Excel 组件未加载，请刷新页面后重试'); return; }
+    if (!window.XLSX) {
+      const ok = await ensureXlsx();
+      if (!ok || !window.XLSX) { xlsxMissingHint(); return; }
+    }
     const aoa = [['姓名', '分数']].concat(state.batchRows.map(r => [r.student_name, '']));
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [{ wch: 14 }, { wch: 10 }];
@@ -609,10 +633,13 @@
     toast('模板已下载，填好分数后在上方选择文件导入');
   }
 
-  function onXlsxPicked(e) {
+  async function onXlsxPicked(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (!window.XLSX) { setStatus(els.batchXlsxStatus, 'Excel 组件未加载，请刷新页面后重试'); return; }
+    if (!window.XLSX) {
+      const ok = await ensureXlsx();
+      if (!ok || !window.XLSX) { xlsxMissingHint('status'); return; }
+    }
     setStatus(els.batchXlsxStatus, '正在读取表格…');
     const reader = new FileReader();
     reader.onload = () => {
