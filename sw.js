@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v72';
+const CACHE = 'sp-cache-v73';
 const ASSETS = [
   './',
   './index.html',
@@ -193,6 +193,26 @@ const ASSETS = [
   './assets/avatars/chibi3-s.webp',
   './assets/avatars/chibi4.webp',
   './assets/avatars/chibi4-s.webp',
+  './assets/avatars/moe1.webp',
+  './assets/avatars/moe1-s.webp',
+  './assets/avatars/moe2.webp',
+  './assets/avatars/moe2-s.webp',
+  './assets/avatars/moe3.webp',
+  './assets/avatars/moe3-s.webp',
+  './assets/avatars/moe4.webp',
+  './assets/avatars/moe4-s.webp',
+  './assets/avatars/moe5.webp',
+  './assets/avatars/moe5-s.webp',
+  './assets/avatars/moe6.webp',
+  './assets/avatars/moe6-s.webp',
+  './assets/avatars/moe7.webp',
+  './assets/avatars/moe7-s.webp',
+  './assets/avatars/moe8.webp',
+  './assets/avatars/moe8-s.webp',
+  './assets/avatars/moe9.webp',
+  './assets/avatars/moe9-s.webp',
+  './assets/avatars/moe10.webp',
+  './assets/avatars/moe10-s.webp',
   './assets/frames/frame-bronze.png',
   './assets/frames/frame-silver.png',
   './assets/frames/frame-gold.png',
