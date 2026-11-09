@@ -128,7 +128,8 @@ const AVATAR_SM_KEYS = new Set([
   'sweet19','sweet20','sweet21','sweet22',
   'warrior1','warrior2','warrior3','warrior4','warrior5','warrior6',
   'fantasy8','fantasy9','fantasy10','fantasy11',
-  'xian1','xian2','xian3','xian4','xian5'
+  'xian1','xian2','xian3','xian4','xian5',
+  'chibi1','chibi2','chibi3','chibi4'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
@@ -168,6 +169,14 @@ const LEGEND_AVATARS = [
 ];
 LEGEND_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
 const LEGEND_LEVEL = 9;
+// v165：萌趣Q版——独立分区，chibi1 需 Lv.5，chibi2/3/4 需 Lv.6
+const CHIBI_AVATARS = [
+  { key: 'chibi1', level: 5 },
+  { key: 'chibi2', level: 6 },
+  { key: 'chibi3', level: 6 },
+  { key: 'chibi4', level: 6 }
+];
+CHIBI_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
 
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
@@ -273,10 +282,10 @@ function ensureMobileGate() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
   input.focus();
 }
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4])$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -1678,6 +1687,21 @@ async function openAvatarPicker() {
     sec.appendChild(grid);
     els.avatarPicker.appendChild(sec);
   }
+  // —— v165：萌趣Q版（chibi1 Lv.5 / chibi2-4 Lv.6，独立分区）——
+  {
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier';
+    sec.innerHTML = `<div class="avatar-sec-title">🐸 萌趣Q版<span class="avatar-sec-tip">chibi1 升到 Lv.5，其余升到 Lv.6 解锁</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    CHIBI_AVATARS.forEach(x => {
+      const unlocked = lv >= x.level;
+      grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level));
+    });
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  }
+
 
   // v160：头像框已独立成单独页面（个人主页头像下方「更换头像框」入口），弹窗只保留头像
 
