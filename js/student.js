@@ -129,7 +129,8 @@ const AVATAR_SM_KEYS = new Set([
   'warrior1','warrior2','warrior3','warrior4','warrior5','warrior6',
   'fantasy8','fantasy9','fantasy10','fantasy11',
   'xian1','xian2','xian3','xian4','xian5',
-  'chibi1','chibi2','chibi3','chibi4'
+  'chibi1','chibi2','chibi3','chibi4',
+  'moe1','moe2','moe3','moe4','moe5','moe6','moe7','moe8','moe9','moe10'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
@@ -177,6 +178,20 @@ const CHIBI_AVATARS = [
   { key: 'chibi4', level: 6 }
 ];
 CHIBI_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
+// v166：萌系日常——独立分区，moe1/moe2 需 Lv.5，moe3-10 需 Lv.6
+const MOE_AVATARS = [
+  { key: 'moe1', level: 5 },
+  { key: 'moe2', level: 5 },
+  { key: 'moe3', level: 6 },
+  { key: 'moe4', level: 6 },
+  { key: 'moe5', level: 6 },
+  { key: 'moe6', level: 6 },
+  { key: 'moe7', level: 6 },
+  { key: 'moe8', level: 6 },
+  { key: 'moe9', level: 6 },
+  { key: 'moe10', level: 6 }
+];
+MOE_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
 
 const EMOJI_CHANGE_LIMIT = 2;
 // 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
@@ -282,10 +297,10 @@ function ensureMobileGate() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
   input.focus();
 }
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4])$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4])$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -1695,6 +1710,21 @@ async function openAvatarPicker() {
     const grid = document.createElement('div');
     grid.className = 'avatar-grid avatar-grid-img';
     CHIBI_AVATARS.forEach(x => {
+      const unlocked = lv >= x.level;
+      grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level));
+    });
+    sec.appendChild(grid);
+    els.avatarPicker.appendChild(sec);
+  }
+
+  // —— v166：萌系日常（moe1/moe2 Lv.5 / moe3-10 Lv.6，独立分区）——
+  {
+    const sec = document.createElement('div');
+    sec.className = 'avatar-sec newtier';
+    sec.innerHTML = `<div class="avatar-sec-title">🌸 萌系日常<span class="avatar-sec-tip">moe1、moe2 升到 Lv.5，其余升到 Lv.6 解锁</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'avatar-grid avatar-grid-img';
+    MOE_AVATARS.forEach(x => {
       const unlocked = lv >= x.level;
       grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level));
     });
