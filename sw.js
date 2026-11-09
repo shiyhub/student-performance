@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v69';
+const CACHE = 'sp-cache-v72';
 const ASSETS = [
   './',
   './index.html',
@@ -21,6 +21,7 @@ const ASSETS = [
   './js/parent.js',
   './js/teacher.js',
   './js/vendor/supabase.js',
+  './js/vendor/xlsx.mini.min.js',
   './assets/avatars/animal1.webp',
   './assets/avatars/animal2.webp',
   './assets/avatars/animal3.webp',
@@ -184,6 +185,14 @@ const ASSETS = [
   './assets/avatars/xian4-s.webp',
   './assets/avatars/xian5.webp',
   './assets/avatars/xian5-s.webp',
+  './assets/avatars/chibi1.webp',
+  './assets/avatars/chibi1-s.webp',
+  './assets/avatars/chibi2.webp',
+  './assets/avatars/chibi2-s.webp',
+  './assets/avatars/chibi3.webp',
+  './assets/avatars/chibi3-s.webp',
+  './assets/avatars/chibi4.webp',
+  './assets/avatars/chibi4-s.webp',
   './assets/frames/frame-bronze.png',
   './assets/frames/frame-silver.png',
   './assets/frames/frame-gold.png',
@@ -230,7 +239,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    try {
+      const c = await caches.open(CACHE);
+      // 逐条预缓存：单个资源缺失（如某文件 404）不再让整批 addAll 失败、拖垮离线缓存
+      await Promise.all(ASSETS.map(u => c.add(u).catch(() => {})));
+    } catch (err) {}
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {
