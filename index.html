@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>我们班的在校表现</title>
+<script src="js/config.js"></script>
+<script>
+/* 配置加载兜底：config.js 请求被中断时给出明确提示，避免白屏 */
+addEventListener('DOMContentLoaded', function () {
+  if (window.SUPABASE_CONFIG) return;
+  document.querySelectorAll('.banner-error').forEach(function (el) {
+    el.textContent = '配置未加载，请刷新页面';
+  });
+});
+</script>
 <link rel="stylesheet" href="css/common.css">
 <link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/student.css">
@@ -413,13 +423,13 @@
 <canvas id="wxCanvas" aria-hidden="true"></canvas>
 
 <div class="plant plant-left" title="点击查看星光榜">
-  <img id="flowerLeft" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
-  <img id="cloudLeft" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
+  <img id="flowerLeft" class="wx-flower" src="assets/flowers/flower-sunny.webp" alt="">
+  <img id="cloudLeft" class="wx-cloud" src="assets/flowers/cloud.webp" alt="">
 </div>
 
 <div class="plant plant-right" title="点击查看挑战榜">
-  <img id="flowerRight" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
-  <img id="cloudRight" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
+  <img id="flowerRight" class="wx-flower" src="assets/flowers/flower-sunny.webp" alt="">
+  <img id="cloudRight" class="wx-cloud" src="assets/flowers/cloud.webp" alt="">
 </div>
 
 <!-- 天气主题切换（自动按洞口县天气，可手动演示兜底） -->
@@ -427,7 +437,6 @@
   <svg class="ico ico-lg" aria-hidden="true"><use href="#i-sun"/></svg>
 </button>
 
-<script src="js/config.js"></script>
 <script src="js/vendor/supabase.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/precache.js"></script>

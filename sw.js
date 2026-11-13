@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v79';
+const CACHE = 'sp-cache-v80';
 const ASSETS = [
   './',
   './index.html',
@@ -215,37 +215,37 @@ const ASSETS = [
   './assets/avatars/moe9-s.webp',
   './assets/avatars/moe10.webp',
   './assets/avatars/moe10-s.webp',
-  './assets/frames/frame-bronze.png',
-  './assets/frames/frame-silver.png',
-  './assets/frames/frame-gold.png',
-  './assets/frames/frame-rainbow.png',
-  './assets/frames/frame-star.png',
-  './assets/frames/frame-heart.png',
-  './assets/frames/frame-crown.png',
-  './assets/frames/frame-tac.png',
-  './assets/frames/frame-gun.png',
-  './assets/frames/frame-dragon.png',
-  './assets/frames/frame-mecha.png',
-  './assets/frames/frame-wolf.png',
-  './assets/frames/frame-sakura.png',
-  './assets/frames/frame-magic.png',
-  './assets/frames/frame-princess.png',
-  './assets/frames/frame-queen.png',
-  './assets/frames/frame-rose.png',
-  './assets/frames/frame-fairy.png',
-  './assets/frames/frame-pixie.png',
-  './assets/frames/frame-huadian.png',
-  './assets/frames/frame-blossom.png',
-  './assets/frames/frame-ink.png',
-  './assets/frames/frame-spring.png',
-  './assets/frames/frame-redlily.png',
-  './assets/frames/frame-mask.png',
-  './assets/frames/frame-neonwolf.png',
-  './assets/frames/frame-cyber.png',
-  './assets/frames/frame-pulse.png',
-  './assets/frames/frame-unicorn.png',
-  './assets/frames/frame-onyx.png',
-  './assets/frames/frame-rosefeather.png',
+  './assets/frames/frame-bronze.webp',
+  './assets/frames/frame-silver.webp',
+  './assets/frames/frame-gold.webp',
+  './assets/frames/frame-rainbow.webp',
+  './assets/frames/frame-star.webp',
+  './assets/frames/frame-heart.webp',
+  './assets/frames/frame-crown.webp',
+  './assets/frames/frame-tac.webp',
+  './assets/frames/frame-gun.webp',
+  './assets/frames/frame-dragon.webp',
+  './assets/frames/frame-mecha.webp',
+  './assets/frames/frame-wolf.webp',
+  './assets/frames/frame-sakura.webp',
+  './assets/frames/frame-magic.webp',
+  './assets/frames/frame-princess.webp',
+  './assets/frames/frame-queen.webp',
+  './assets/frames/frame-rose.webp',
+  './assets/frames/frame-fairy.webp',
+  './assets/frames/frame-pixie.webp',
+  './assets/frames/frame-huadian.webp',
+  './assets/frames/frame-blossom.webp',
+  './assets/frames/frame-ink.webp',
+  './assets/frames/frame-spring.webp',
+  './assets/frames/frame-redlily.webp',
+  './assets/frames/frame-mask.webp',
+  './assets/frames/frame-neonwolf.webp',
+  './assets/frames/frame-cyber.webp',
+  './assets/frames/frame-pulse.webp',
+  './assets/frames/frame-unicorn.webp',
+  './assets/frames/frame-onyx.webp',
+  './assets/frames/frame-rosefeather.webp',
   './assets/frames/corner-gold.webp',
   './assets/avatars/game16.webp',
   './assets/avatars/game16-s.webp',
@@ -259,16 +259,47 @@ const ASSETS = [
   './assets/avatars/nature7-s.webp',
   './assets/avatars/nature8.webp',
   './assets/avatars/nature8-s.webp',
+  './assets/avatars/doll.webp',
+  './assets/avatars/doll-s.webp',
+  './assets/avatars/flower.webp',
+  './assets/avatars/flower-s.webp',
+  './assets/avatars/twin.webp',
+  './assets/avatars/twin-s.webp',
+  './assets/avatars/lotus.webp',
+  './assets/avatars/lotus-s.webp',
+  './assets/avatars/horn.webp',
+  './assets/avatars/horn-s.webp',
+  './assets/avatars/bunny.webp',
+  './assets/avatars/bunny-s.webp',
+  './assets/avatars/gothic.webp',
+  './assets/avatars/gothic-s.webp',
 ];
+
+/* v170：预缓存分层 + 限并发
+ * 旧实现 Promise.all(254 条) 会瞬间发起 250+ 个请求（合计 13MB），
+ * 在校园网/热点下会挤占连接池，把页面自己的 js/config.js 等关键请求挤到超时或被重置。
+ * 现改为：核心资源（外壳 + 小动物头像）限并发 4 先装；装扮类大图延后限并发 2 补装。 */
+const CORE_ASSETS = ASSETS.filter(u => !/\/assets\/(frames\/frame-|avatars\/(?!animal[0-9]+(-s)?\.))/.test(u));
+const EXTRA_ASSETS = ASSETS.filter(u => CORE_ASSETS.indexOf(u) === -1);
+
+async function precache(list, limit) {
+  const c = await caches.open(CACHE);
+  let i = 0;
+  const worker = async () => {
+    while (i < list.length) {
+      const u = list[i++];
+      try { await c.add(u); } catch (e) { /* 单个缺失不影响其余 */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker));
+}
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
-    try {
-      const c = await caches.open(CACHE);
-      // 逐条预缓存：单个资源缺失（如某文件 404）不再让整批 addAll 失败、拖垮离线缓存
-      await Promise.all(ASSETS.map(u => c.add(u).catch(() => {})));
-    } catch (err) {}
+    try { await precache(CORE_ASSETS, 4); } catch (err) {}
     await self.skipWaiting();
+    // 页面加载完、网络空闲后再补装装扮类资源；失败无影响（用到时会按需缓存）
+    setTimeout(() => { precache(EXTRA_ASSETS, 2).catch(() => {}); }, 15000);
   })());
 });
 
