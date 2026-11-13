@@ -906,12 +906,14 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(31,157,107,.28); }
 .frame-choice .fc-ring { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; }
 .frame-choice .fc-lock {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: rgba(255,255,255,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align:center; padding:0 4px;
-  font-size: 12px; color: #8a9a92; gap: 1px;
+  /* v163(RSK-21)：锁标签改为底部小角标，不再全格遮罩——图案清晰可见 */
+  position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
+  background: rgba(255,255,255,.88); box-shadow: 0 1px 4px rgba(60,70,60,.16);
+  border-radius: 10px; padding: 1px 7px; white-space: nowrap;
+  display: flex; align-items: center; gap: 3px;
+  font-size: 10.5px; color: #8a9a92;
 }
-.frame-choice .fc-lock em { font-style: normal; font-size: 10px; }
+.frame-choice .fc-lock em { font-style: normal; font-size: 9.5px; }
 .frame-choice.fc-none .fc-ring { border: 2px dashed #d8cfc4; }
 /* ============================================================
    v130（RSK-11）：12 款游戏风头像框（透明 PNG 素材叠加）
@@ -1077,6 +1079,16 @@ html,body{background:#e8e6e1 !important;}
 .frame-choice.fc-pulse .fc-ring { background: url("../assets/frames/frame-pulse.png") center / contain no-repeat; }
 .frame-choice.fc-unicorn .fc-ring { background: url("../assets/frames/frame-unicorn.png") center / contain no-repeat; }
 .frame-choice.fc-onyx .fc-ring { background: url("../assets/frames/frame-onyx.png") center / contain no-repeat; }
+/* ============================================================
+   v164：白玫瑰黑羽（用户定制素材，Lv.7）
+   ============================================================ */
+.frame-rosefeather.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 50%;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-rosefeather.framed::after { background-image: url("../assets/frames/frame-rosefeather.png"); }
+.frame-choice.fc-rosefeather .fc-ring { background: url("../assets/frames/frame-rosefeather.png") center / contain no-repeat; }
 
 /* v155：魔法星空排名装饰（TOP3 专属，保留原金色角标） */
 .mate .rank-deco { position:absolute; right:-14px; top:-14px; width:96px; height:96px; pointer-events:none; z-index:4; background-repeat:no-repeat; background-position:center; background-size:contain; }
