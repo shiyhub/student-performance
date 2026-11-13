@@ -16,14 +16,14 @@
 <div id="deviceGate" class="device-gate" hidden>
   <div class="gate-card">
     <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wave"/></svg> 你好呀，你是哪位同学？</h2>
-    <p class="text-muted">第一次在这台设备上使用，请选你的名字（这台设备会记住你，下次直接进）</p>
+    <p class="text-muted">选你的名字，这台设备会记住你</p>
     <div class="field">
       <label>班级</label>
       <select class="input" id="gateClass"></select>
     </div>
     <div class="field">
-      <label>你的姓名（必须和名单一致）</label>
-      <input class="input" id="gateName" type="text" maxlength="20" placeholder="输入你的真实姓名">
+      <label>你的姓名</label>
+      <input class="input" id="gateName" type="text" maxlength="20" placeholder="与名单上完全一致">
     </div>
     <button class="btn btn-primary" id="gateGo" style="margin-top:10px;">进班级墙</button>
     <div id="gateError" class="text-muted" style="color:#c0392b;margin-top:8px;"></div>
@@ -42,7 +42,7 @@
   </header>
 
   <div id="wallConfigBanner" class="banner banner-error" hidden>
-    系统还没有连接数据库（Supabase 未配置），暂时不能查看，请联系老师完成部署。
+    尚未连接数据库，请联系老师。
   </div>
 
   <div class="wall-top">
@@ -75,7 +75,7 @@
   <div id="wallLoading" class="loading-row"><span class="spinner"></span>正在加载同学们…</div>
   <div id="matesGrid" class="mates" hidden></div>
   <div id="wallEmpty" class="empty" hidden>
-    这个班还没有同学名单，请让老师先在后台录入学生。
+    还没有学生名单，请联系老师。
   </div>
 
 </div>
@@ -92,7 +92,7 @@
   </header>
 
   <div id="configBanner" class="banner banner-error" hidden>
-    系统还没有连接数据库（Supabase 未配置），暂时不能提交，请联系老师完成部署。
+    尚未连接数据库，请联系老师。
   </div>
 
   <!-- 三栏布局 -->
@@ -117,7 +117,7 @@
         <button type="button" class="is-shop-btn" id="btnOpenShop"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shop"/></svg> 星光商店</button>
       </div>
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
-      <div class="identity-xp-text" id="identityXpText">累计获得 0 星光值 · 星光等级 Lv.1</div>
+      <div class="identity-xp-text" id="identityXpText">累计 0 · Lv.1</div>
     </div>
     <div class="field">
       <label for="inpClass">我的班级</label>
@@ -126,7 +126,7 @@
     </div>
     <div class="field">
       <label for="inpName">我的姓名</label>
-      <input class="input" id="inpName" type="text" placeholder="请写和名单上一样的名字"
+      <input class="input" id="inpName" type="text" placeholder="与名单上完全一致"
              autocomplete="off" maxlength="20">
     </div>
   </section>
@@ -224,11 +224,11 @@
   <header class="s-header">
     <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-image"/></svg></div>
     <h1 class="s-title">我的头像框</h1>
-    <div class="s-date" id="frameHintLabel">点一下佩戴 · 回主页就能看到</div>
+    <div class="s-date" id="frameHintLabel">点一下佩戴</div>
   </header>
 
   <div id="frameConfigBanner" class="banner banner-error" hidden>
-    系统还没有连接数据库（Supabase 未配置），暂时不能佩戴头像框，请联系老师完成部署。
+    尚未连接数据库，请联系老师。
   </div>
 
   <!-- 当前佩戴预览 -->
@@ -241,7 +241,7 @@
     </div>
     <div class="frame-preview-meta">
       <div class="frame-preview-name" id="framePreviewName">未选择学生</div>
-      <div class="frame-preview-tip" id="framePreviewTip">先回主页填好班级和姓名，再进来挑头像框</div>
+      <div class="frame-preview-tip" id="framePreviewTip">请先填写姓名</div>
     </div>
   </section>
 
@@ -254,7 +254,7 @@
     <div class="frame-grid" id="framePageGrid"></div>
   </section>
 
-  <div class="frame-page-foot">头像框用星光值在商店兑换 · 已拥有的可随时更换</div>
+  <div class="frame-page-foot">商店兑换 · 可随时更换</div>
 </div>
 
 <!-- ================= 视图五：星光商店 ================= -->
@@ -269,7 +269,7 @@
   </header>
 
   <div id="shopConfigBanner" class="banner banner-error" hidden>
-    系统还没有连接数据库（Supabase 未配置），暂时不能兑换，请联系老师完成部署。
+    尚未连接数据库，请联系老师。
   </div>
 
   <section class="card shop-wallet-card">
@@ -288,7 +288,7 @@
 
   <div id="shopLoading" class="loading-row"><span class="spinner"></span>正在加载商品…</div>
   <div class="shop-groups" id="shopGroups" hidden></div>
-  <div class="shop-tip">用星光值兑换后即可永久使用 · 上课表现越棒，星光值越多 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></div>
+  <div class="shop-tip">兑换后永久使用</div>
 </div>
 
 <!-- ================= 视图六：班级转盘抽奖 ================= -->
@@ -299,11 +299,11 @@
   <header class="s-header">
     <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wheel"/></svg></div>
     <h1 class="s-title">班级升级转盘</h1>
-    <div class="s-date" id="lotterySub">班级每升 1 级，就有 1 次抽奖机会</div>
+    <div class="s-date" id="lotterySub">每升 1 级得 1 次机会</div>
   </header>
 
   <div id="lotteryConfigBanner" class="banner banner-error" hidden>
-    系统还没有连接数据库（Supabase 未配置），暂时不能抽奖，请联系老师完成部署。
+    尚未连接数据库，请联系老师。
   </div>
 
   <section class="card lottery-card">
@@ -323,7 +323,7 @@
       <button type="button" class="btn btn-warn" id="btnSpinMain">开始抽奖 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-gift"/></svg></button>
       <button type="button" class="btn btn-ghost" id="btnLotteryHistory">抽奖记录</button>
     </div>
-    <div class="lottery-tip" id="lotteryTip">班级星光值每升 1 级获得 1 次机会，机会可累计</div>
+    <div class="lottery-tip" id="lotteryTip">机会可累计</div>
   </section>
 
   <section class="card" id="lotteryHistoryCard" hidden>
@@ -366,7 +366,7 @@
   <div class="success-box">
     <div class="success-emoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></div>
     <h2>提交成功！</h2>
-    <p id="successMsg">你今天真棒，继续保持哦！</p>
+    <p id="successMsg">已记入今天的记录</p>
     <button class="btn btn-warn" id="btnWallFromSuccess">回到班级墙看看 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rainbow"/></svg></button>
     <button class="btn btn-ghost" id="btnAgain" style="margin-top:10px;">再记录一条 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></button>
   </div>
@@ -379,7 +379,7 @@
       <div class="detail-avatar" id="avatarModalEmoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></div>
       <div class="detail-who">
         <h3>选一个喜欢的头像</h3>
-        <div class="text-muted">点一下就保存好啦</div>
+        <div class="text-muted">点选即保存</div>
       </div>
       <button class="detail-close" id="btnAvatarClose" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </div>
