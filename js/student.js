@@ -959,7 +959,7 @@ function renderWall() {
       <div class="class-card-info">
         <div class="class-card-name">${esc(state.currentClass)} 全班</div>
         <div class="class-card-xp">🧡 班级星光值 <b>${classXp}</b> · ${classLvText}</div>
-        <div class="class-card-sub">共 ${state.roster.length} 人 · 今日已填 ${classToday} 人${chances > 0 ? ` · 可抽奖 ${chances} 次` : ''}</div>
+        <div class="class-card-sub">共 ${state.roster.length} 人${chances > 0 ? ` · 可抽奖 ${chances} 次` : ''}</div>
       </div>
       <button type="button" class="class-detail-btn" data-detail="__all__">全班记录 ›</button>
     </div>`;
@@ -989,10 +989,14 @@ function renderWall() {
   } else {
     state.roster.forEach(s=>ordered.push(s));
   }
-  // v150：星光值榜 TOP5 角花装饰（按总星光值降序）
+  // v167.3：星光值榜 TOP5 角花装饰——只有真正获得过星光值（xp>0）的同学参与排名，
+  //         全班都是 0 时不排名，避免开局人人挂角标。
   const rankMap = {};
-  state.roster.slice().sort((a,b) => (Number(b.xp)||0) - (Number(a.xp)||0))
-    .slice(0,5).forEach((s,idx) => { rankMap[s.student_name] = idx + 1; });
+  const rankedRoster = state.roster.filter(x => (Number(x.xp) || 0) > 0)
+    .sort((a,b) => (Number(b.xp)||0) - (Number(a.xp)||0));
+  if (rankedRoster.length) {
+    rankedRoster.slice(0,5).forEach((s,idx) => { rankMap[s.student_name] = idx + 1; });
+  }
   ordered.forEach((s) => {
     if (!s) { html += `<div class="mate seat-empty"></div>`; return; }
     const mine = recs.filter(r => r.student_name === s.student_name);
@@ -1029,7 +1033,6 @@ function renderWall() {
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
-        <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
         <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">⭐${Number(s.star) || 0}</span></span>
       </button>`;
@@ -1039,20 +1042,13 @@ function renderWall() {
   els.matesGrid.innerHTML = html;
   els.matesGrid.hidden = false;
 
-  // 班级星光值进度 + 今日完成进度
-  const doneToday = state.roster.filter(s => recs.some(r => r.student_name === s.student_name && r.record_date === today)).length;
-  const total = state.roster.length || 1;
+  // 班级星光值进度（v167.3：移除「今日已填写 x/y 人」进度，避免新周期全是 0 的空统计）
   const cp = id => document.getElementById(id);
   if (cp('cpXp')) {
     cp('cpXp').textContent = classXp;
     cp('cpNext').textContent = nextNeed ? `Lv${classLv} → 再${leftNeed} 升 Lv${classLv + 1}${chances ? ` · 可抽奖 ${chances} 次` : ''}` : `Lv${classLv} 满级`;
     const pct = prog ? (Number(prog.pct) || 0) : (nextNeed ? Math.min(100, classXp / nextNeed * 100) : 100);
     cp('cpFill').style.width = pct + '%';
-    cp('cpDone').textContent = doneToday;
-    cp('cpTotal').textContent = state.roster.length;
-    const p2 = Math.round(doneToday / total * 100);
-    cp('cpPct').textContent = p2 + '%';
-    cp('cpFillGreen').style.width = p2 + '%';
   }
 
   $$('.mate', els.matesGrid).forEach(btn => {
@@ -3677,14 +3673,27 @@ async function loadLeaderboardXp(cls) {
     if (!r.error) rows = r.data || [];
   } catch (e) {}
   if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无学生数据。</div>'; return; }
+  // v167.3：没有星光值就不排名——只对有星光值（xp>0）的同学排位，相同星光值并列同名次
+  const ranked = rows.filter(s => (Number(s.xp) || 0) > 0);
+  if (!ranked.length) {
+    box.innerHTML = '<div class="lb-empty">还没有同学获得星光值，暂时不排名。<br>完成表现记录或任务后，这里会按累积星光值排位。</div>';
+    return;
+  }
   const medal = ['🥇', '🥈', '🥉'];
-  box.innerHTML = rows.map((s, i) => `
+  let rank = 0, prevXp = null;
+  box.innerHTML = ranked.map((s, i) => {
+    const xp = Number(s.xp) || 0;
+    if (prevXp === null || xp !== prevXp) { rank = i + 1; prevXp = xp; }
+    const topCls = rank <= 3 ? `top${rank}` : '';
+    const rankTxt = rank <= 3 ? medal[rank - 1] : rank;
+    return `
     <div class="lb-row ${s.student_name === lbCurrentStudent ? 'me' : ''}">
-      <span class="lb-rank ${i < 3 ? 'top' + (i + 1) : ''}">${i < 3 ? medal[i] : (i + 1)}</span>
+      <span class="lb-rank ${topCls}">${rankTxt}</span>
       <span class="lb-name">${esc(s.student_name)}</span>
       <span class="lb-val">Lv.${s.level}</span>
-      <span class="lb-val">⭐${s.xp}</span>
-    </div>`).join('');
+      <span class="lb-val">⭐${xp}</span>
+    </div>`;
+  }).join('');
 }
 
 async function loadLeaderboardChallenge(cls) {
