@@ -114,7 +114,7 @@ const els = {
   addTagOptions: $('#addTagOptions'),
   addTagXp: $('#addTagXp'),
   tagBox: $('#tagBox'),
-  // 自动化任务（五维经验自动加分）
+  // 自动化任务（五维星光值自动加分）
   autoRuleForm: $('#autoRuleForm'),
   autoRuleName: $('#autoRuleName'),
   autoRuleType: $('#autoRuleType'),
@@ -167,6 +167,21 @@ const els = {
   xpAnomalyZoneList: $('#xpAnomalyZoneList'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
+  // v167：星光管理
+  starClass: $('#starClass'),
+  btnStarRefresh: $('#btnStarRefresh'),
+  starProgressBox: $('#starProgressBox'),
+  starAddXp: $('#starAddXp'),
+  btnStarAddXp: $('#btnStarAddXp'),
+  starDrawBox: $('#starDrawBox'),
+  shopItemSel: $('#shopItemSel'),
+  shopItemPrice: $('#shopItemPrice'),
+  btnShopPriceSave: $('#btnShopPriceSave'),
+  shopAdminMsg: $('#shopAdminMsg'),
+  archiveLabel: $('#archiveLabel'),
+  btnArchive: $('#btnArchive'),
+  archiveResult: $('#archiveResult'),
+  archiveBatchList: $('#archiveBatchList'),
   // 新增 / 修改记录
   btnAddRecord: $('#btnAddRecord'),
   recordModal: $('#recordModal'),
@@ -548,7 +563,8 @@ function switchTab(name) {
   const panes = {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     personal: 'tabPersonal', challenge: 'tabChallenge',
-    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog', tools: 'tabTools', seat: 'tabSeat'
+    exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog',
+    star: 'tabStar', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
   //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
@@ -586,6 +602,7 @@ function switchTab(name) {
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
   if (name === 'xpLog') fillXpLogClasses();
+  if (name === 'star') activateStarTab();
   if (name === 'seat') activateSeatTab();
 }
 
@@ -603,6 +620,7 @@ const PANE_DYNAMIC = {
   task: ['taskReportBox', 'tagReportBox'],
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
   stats: ['statsOut'],
+  star: ['starProgressBox', 'starDrawBox', 'archiveResult', 'archiveBatchList', 'shopAdminMsg'],
   tools: [],
   seat: ['seatBoard', 'seatPool']
 };
@@ -854,7 +872,7 @@ document.getElementById('btnRecCheckAll')?.addEventListener('click', () => {
 document.getElementById('btnBatchDelRec')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.rec-check:checked')].map(b => b.value);
   if (!ids.length) return toast('请先勾选要删除的记录');
-  if (!confirm(`确定删除选中的 ${ids.length} 条记录吗？删除后不可恢复，经验也会相应扣回。`)) return;
+  if (!confirm(`确定删除选中的 ${ids.length} 条记录吗？删除后不可恢复，星光值也会相应扣回。`)) return;
   const { error } = await supabase.from('daily_record').delete().in('id', ids);
   if (error) { toast('批量删除失败：' + error.message); return; }
   toast('已删除 ' + ids.length + ' 条');
@@ -1389,10 +1407,10 @@ async function loadStudents() {
       html += `<div class="roster-row">
                  <div class="roster-who">
                    <div class="sname">${esc(s.student_name)}
-                     <span class="xp-badge" title="经验 ${xp}">Lv${lv} · ${xp}XP</span>
+                     <span class="xp-badge" title="累计星光值 ${xp}">Lv${lv} · ⭐${xp}</span>
                      <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
                              data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
-                             data-xp-cur="${xp}" title="手动调整该学生经验">✏️ 调经验</button>
+                             data-xp-cur="${xp}" title="手动调整该学生星光值">✏️ 调星光值</button>
                      <button type="button" class="btn btn-ghost btn-sm stu-qr-btn"
                              data-stu-cls="${esc(s.class)}" data-stu-name="${esc(s.student_name)}"
                              title="设置密码并生成学生个人二维码">🔑 个人码</button>
@@ -1431,11 +1449,11 @@ async function loadStudents() {
       loadClassesAndRecords();
     });
   });
-  // 手动调整学生经验
+  // 手动调整学生星光值
   $$('[data-xp-id]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', async () => {
       const cur = Number(btn.dataset.xpCur) || 0;
-      const input = prompt(`给「${btn.dataset.xpName}」设置经验值：\n（当前 ${cur} 点；等级会自动重算，Lv3=60 经验）`, String(cur));
+      const input = prompt(`给「${btn.dataset.xpName}」设置星光值：\n（当前 ${cur} 点；等级会自动重算，Lv3=60 星光值）`, String(cur));
       if (input == null) return;
       const newXp = parseInt(input, 10);
       if (isNaN(newXp) || newXp < 0) { toast('请输入 0 以上的数字'); return; }
@@ -1446,7 +1464,7 @@ async function loadStudents() {
       });
       if (error) { toast('调整失败：' + error.message); return; }
       if (data && data.ok === false) { toast('没找到这个学生'); return; }
-      toast(`已设为 ${data.xp} 经验（Lv${data.level}）`);
+      toast(`已设为 ${data.xp} 星光值（Lv${data.level}）`);
       invalidateRecCache();
       loadStudents();
     });
@@ -1985,7 +2003,7 @@ async function renderTags() {
         <option value="positive"${t.category === 'positive' ? ' selected' : ''}>🌟 积极</option>
         <option value="negative"${t.category === 'negative' ? ' selected' : ''}>💧 消极</option>
       </select>
-      <select class="tag-dim" title="加分维度（经验值加进该维度）">${DIM_OPT('', t.dim)}</select>
+      <select class="tag-dim" title="加分维度（星光值加进该维度）">${DIM_OPT('', t.dim)}</select>
       <span class="tag-type-badge" title="仅支持勾选型">勾选型</span>
       <label class="tag-off-toggle" title="可重复提交：每天/多次都能选；不勾选=不可重复，同一具体项一生只能记一次">
         <input type="checkbox" class="tag-repeat" ${t.history_unique === false ? 'checked' : ''}> 可重复提交
@@ -1994,7 +2012,7 @@ async function renderTags() {
         <input type="checkbox" class="tag-active" ${t.is_active ? 'checked' : ''}> 启用
       </label>
       <input type="number" class="tag-sort" value="${Number(t.sort_order) || 0}" min="0" max="9999" title="排序，数字越小越靠前">
-      <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="经验值，老师可自定义（消极建议0）">
+      <input type="number" class="tag-xp" value="${t.xp_value == null ? 2 : Number(t.xp_value)}" min="0" max="100" title="星光值，老师可自定义（消极建议0）">
       <div class="tag-row-actions">
         <button class="btn btn-primary btn-sm tag-save">保存</button>
         <button class="btn btn-danger-ghost btn-sm tag-delete">删除</button>
@@ -2012,7 +2030,7 @@ async function renderTags() {
       const options = parseTagOptions($('.tag-options', row).value);
       const category = $('.tag-cat', row).value === 'negative' ? 'negative' : 'positive';
       const score = category === 'negative' ? -1 : 1;
-      // 经验值老师可自定义：积极/消极都不强制（0~100）
+      // 星光值老师可自定义：积极/消极都不强制（0~100）
       const xpVal = Math.max(0, Math.min(100, parseInt($('.tag-xp', row).value, 10) || 0));
       const dim = $('.tag-dim', row).value || 'zhi';
       const btn = $('.tag-save', row);
@@ -2103,7 +2121,7 @@ async function onAddTag(e) {
   if (loaded.tags) renderTags();
 }
 
-/* ---------------- 自动化任务（五维经验自动加分） ---------------- */
+/* ---------------- 自动化任务（五维星光值自动加分） ---------------- */
 
 const DIM_LABEL = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
 const DIM_ICON = { de: '❤️', zhi: '🧠', ti: '💪', mei: '🎨', lao: '🧹' };
@@ -2329,7 +2347,7 @@ document.getElementById('btnPersonalAssign')?.addEventListener('click', async ()
   if (!content) { toast('请填写任务内容'); return; }
   if (!date) { toast('请选择任务日期'); return; }
   if (deadline < date) { toast('截止日期不能早于任务日期'); return; }
-  if (!(xp >= 1 && xp <= 100)) { toast('经验分值需在 1-100 之间'); return; }
+  if (!(xp >= 1 && xp <= 100)) { toast('星光值分值需在 1-100 之间'); return; }
   if (!personalState.students.length) { toast('请至少选择一名学生'); return; }
   const btn = document.getElementById('btnPersonalAssign');
   btn.disabled = true;
@@ -2387,33 +2405,33 @@ async function loadPersonalTasks() {
       <div class="rule-actions">
         ${t.status === 'pending' ? `
           <button class="btn btn-warn btn-sm" data-fill-ptask="${t.id}" style="margin-right:6px;">代填</button>` : ''}
-          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}" style="${t.status === 'done' ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${t.status === 'done' ? '删除（回退经验）' : '取消'}</button>
+          <button class="btn btn-ghost btn-sm" data-del-ptask="${t.id}" style="${t.status === 'done' ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${t.status === 'done' ? '删除（回退星光值）' : '取消'}</button>
       </div>
     </div>`).join('');
   box.querySelectorAll('[data-fill-ptask]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.fillPtask;
-    if (!confirm('确认为该生代填此任务？将立即按分值加经验。')) return;
+    if (!confirm('确认为该生代填此任务？将立即按分值加星光值。')) return;
     const wr = await runWrite({ name: 'teacher_fill_personal_task', params: { p_task_id: id } });
     if (!wr.ok) { toast('代填失败，请重试'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('代填失败：' + (d.reason || '')); return; }
-    toast(`已代填，经验+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''} ✅`);
+    toast(`已代填，星光值+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''} ✅`);
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('删除这条个人任务？已完成任务的已加经验将自动回退。')) return;
+    if (!confirm('删除这条个人任务？已完成任务的已加星光值将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
     if (!wr.ok) { toast('删除失败，请重试'); return; }
     const d2 = wr.res || {};
     if (d2.ok === false) { toast('删除失败：' + (d2.reason || '')); return; }
     const refund2 = Number(d2.refund_xp) || 0;
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund2 ? '已删除，回退经验 ' + refund2 + 'xp' : '已删除'));
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund2 ? '已删除，回退星光值 ' + refund2 + 'xp' : '已删除'));
     loadPersonalTasks();
   }));
   box.querySelectorAll('input[data-sel-ptask]').forEach(cb => cb.addEventListener('change', refreshPtaskSel));
 }
 
-/* ================= 挑战任务（档位制，教师可自定义档位与经验） ================= */
+/* ================= 挑战任务（档位制，教师可自定义档位与星光值） ================= */
 const DEFAULT_CHALLENGE_LEVELS = (() => { const a = []; for (let lv = 10; lv <= 110; lv += 5) a.push([lv, lv / 5]); return a; })();
 const challengeState = { students: [], allStudents: [], levels: DEFAULT_CHALLENGE_LEVELS.map(x => x.slice()) };
 
@@ -2423,7 +2441,7 @@ function renderChallengeLevels() {
     <span style="display:inline-flex;align-items:center;gap:4px;background:#f7f3ec;border:1px solid #e6d9c3;border-radius:8px;padding:4px 6px;">
       <input type="number" data-lv-n="${i}" value="${lv[0]}" style="width:64px;padding:3px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;" title="档位数值">
       <span style="font-size:12px;color:#8a7a66;">档</span>
-      <input type="number" data-lv-xp="${i}" value="${lv[1]}" style="width:56px;padding:3px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;" title="经验值">
+      <input type="number" data-lv-xp="${i}" value="${lv[1]}" style="width:56px;padding:3px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;" title="星光值">
       <span style="font-size:12px;color:#8a7a66;">xp</span>
       <button type="button" data-lv-del="${i}" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:14px;padding:0 2px;">×</button>
     </span>`).join('');
@@ -2561,7 +2579,7 @@ async function loadChallengeTasks() {
   const today = todayStr();
   box.innerHTML = rows.map(t => {
     if (t.status === 'cancelled') return '';
-    // v152：档位方案 levels=[[档位,经验],...]；已达成 done_levels=[档位,...]（82 号 SQL 新增列）
+    // v152：档位方案 levels=[[档位,星光值],...]；已达成 done_levels=[档位,...]（82 号 SQL 新增列）
     const scheme = Array.isArray(t.levels) && t.levels.length
       ? t.levels
       : DEFAULT_CHALLENGE_LEVELS.map(x => x.slice());
@@ -2588,7 +2606,7 @@ async function loadChallengeTasks() {
       </div>
       <div class="rule-actions">
         ${(subsMap.get(t.id) || []).length ? `<button class="btn btn-ghost btn-sm" data-sub-toggle="${t.id}">填报记录 ${(subsMap.get(t.id) || []).length} 次</button>` : ''}
-        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}" style="${allDone ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${allDone ? '删除（回退经验）' : '取消'}</button>
+        <button class="btn btn-ghost btn-sm" data-del-challenge="${t.id}" style="${allDone ? 'color:#c0392b;border-color:#e0b4b0;' : ''}">${allDone ? '删除（回退星光值）' : '取消'}</button>
       </div>
       ${(subsMap.get(t.id) || []).length ? `<div class="sub-list" data-sub-box="${t.id}" style="display:none;margin:6px 0 0 44px;padding:6px 10px;background:#faf6ef;border:1px solid #e8dcc6;border-radius:8px;font-size:12px;">
         ${(subsMap.get(t.id) || []).map(sub => `
@@ -2606,7 +2624,7 @@ async function loadChallengeTasks() {
     if (b) b.style.display = (b.style.display === 'none') ? '' : 'none';
   }));
   box.querySelectorAll('[data-cancel-sub]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消本次填报？该次所得经验将回退，对应档位从已达成中移除。')) return;
+    if (!confirm('取消本次填报？该次所得星光值将回退，对应档位从已达成中移除。')) return;
     const wr = await runWrite({ name: 'cancel_challenge_submission', params: { p_submission_id: btn.dataset.cancelSub } });
     if (!wr.ok) { toast('取消失败，请重试'); return; }
     const d4 = wr.res || {};
@@ -2616,13 +2634,13 @@ async function loadChallengeTasks() {
     loadChallengeTasks();
   }));
   box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('删除这条挑战？已达成档位加过的经验将自动回退。')) return;
+    if (!confirm('删除这条挑战？已达成档位加过的星光值将自动回退。')) return;
     const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
     if (!wr.ok) { toast('删除失败，请重试'); return; }
     const d3 = wr.res || {};
     if (d3.ok === false) { toast('删除失败：' + (d3.reason || '')); return; }
     const refund3 = Number(d3.refund_xp) || 0;
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund3 ? '已删除，回退经验 ' + refund3 + 'xp' : '已删除'));
+    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund3 ? '已删除，回退星光值 ' + refund3 + 'xp' : '已删除'));
     loadChallengeTasks();
   }));
   box.querySelectorAll('input[data-sel-challenge]').forEach(cb => cb.addEventListener('change', refreshChallengeSel));
@@ -2723,7 +2741,7 @@ if (els.autoRuleForm) {
 /* ---------------- 测试工具 ---------------- */
 
 async function onRecalcXp() {
-  if (!confirm('将按历史记录重新累加全班的经验和等级。\n不会删除任何记录，只是重算经验。确定继续吗？')) return;
+  if (!confirm('将按历史记录重新累加全班的星光值和等级。\n不会删除任何记录，只是重算星光值。确定继续吗？')) return;
   const btn = els.btnRecalcXp;
   if (btn.disabled) return;   // v128(RSK-06)：重入保护（含 RPC 异常路径）
   btn.disabled = true;
@@ -2736,18 +2754,18 @@ async function onRecalcXp() {
       return;
     }
     els.recalcResult.textContent = `✅ 完成，重放了 ${data && data.records_replayed} 条记录`;
-    toast('经验已重算');
+    toast('星光值已重算');
     loadStudents();
   } catch (e) {
     els.recalcResult.textContent = '失败：' + ((e && e.message) || '网络异常，请重试');
     toast('重算失败：' + ((e && e.message) || '网络异常，请重试'));
   } finally {
     btn.disabled = false;
-    btn.textContent = '一键重算全班经验';
+    btn.textContent = '一键重算全班星光值';
   }
 }
 
-// v152.8：异常经验排查（经验记录页）
+// v152.8：异常星光值排查（星光记录页）
 async function scanXpAnomaly() {
   const btn = els.btnXpAnomaly, hint = els.xpAnomalyHint, box = els.xpAnomalyList;
   if (!btn || !box) return;
@@ -2766,15 +2784,15 @@ async function scanXpAnomaly() {
     const rows = (data && data.rows) || [];
     if (hint) hint.textContent = '';
     if (!rows.length) {
-      box.innerHTML = '<div class="banner">✅ 全班当前经验与流水应得一致，无异常差额。</div>';
+      box.innerHTML = '<div class="banner">✅ 全班当前星光值与流水应得一致，无异常差额。</div>';
       return;
     }
     const rowsHtml = rows.map(r => {
       const d = r.diff || 0;
       let reason;
       if (r.log_total === 0) reason = '无流水记录（未注入或纯手动调整）';
-      else if (d > 0) reason = `经验偏多 +${d}：可能手动调经验 / 删除未回退`;
-      else reason = `经验偏少 ${d}：可能删除回退过头 / 手动扣减`;
+      else if (d > 0) reason = `星光值偏多 +${d}：可能手动调星光值 / 删除未回退`;
+      else reason = `星光值偏少 ${d}：可能删除回退过头 / 手动扣减`;
       const color = d > 0 ? '#b84c3a' : '#a93b36';
       return `<tr>
         <td><b>${esc(r.student)}</b></td>
@@ -2786,13 +2804,13 @@ async function scanXpAnomaly() {
       </tr>`;
     }).join('');
     box.innerHTML = `
-      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 名经验异常学生：</div>
+      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 名星光值异常学生：</div>
       <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead><tr style="background:#f4f4f5;">
             <th style="padding:8px 10px;text-align:left;">学生</th>
             <th style="padding:8px 10px;text-align:center;">等级</th>
-            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">当前星光值</th>
             <th style="padding:8px 10px;text-align:right;">流水应得</th>
             <th style="padding:8px 10px;text-align:right;">差额</th>
             <th style="padding:8px 10px;text-align:left;">可能原因</th>
@@ -2808,7 +2826,7 @@ async function scanXpAnomaly() {
   }
 }
 
-// v153：学生经验日志（全班日志总览，点击行查该生流水）
+// v153：学生星光值日志（全班日志总览，点击行查该生流水）
 async function loadAllStudentLogs() {
   const cls = els.xpLogClass.value;
   if (!cls) { toast('请先选择班级'); return; }
@@ -2837,13 +2855,13 @@ async function loadAllStudentLogs() {
       </tr>`;
     }).join('');
     box.innerHTML = `
-      <div style="margin-bottom:8px;font-size:14px;">全班 <b>${rows.length}</b> 名学生经验日志（点击学生行查看该生流水明细）：</div>
+      <div style="margin-bottom:8px;font-size:14px;">全班 <b>${rows.length}</b> 名学生星光值日志（点击学生行查看该生流水明细）：</div>
       <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead><tr style="background:#f4f4f5;">
             <th style="padding:8px 10px;text-align:left;">学生</th>
             <th style="padding:8px 10px;text-align:center;">等级</th>
-            <th style="padding:8px 10px;text-align:right;">当前经验</th>
+            <th style="padding:8px 10px;text-align:right;">当前星光值</th>
             <th style="padding:8px 10px;text-align:right;">流水应得</th>
             <th style="padding:8px 10px;text-align:right;">差额</th>
             <th style="padding:8px 10px;text-align:center;">流水条数</th>
@@ -2870,10 +2888,10 @@ async function loadAllStudentLogs() {
   }
 }
 
-// v153：经验异常区（自动上报清单）
+// v153：星光值异常区（自动上报清单）
 const XP_ANOMALY_TYPE = {
   missing_tag: '标签已删除',
-  bad_xp_value: '经验值配置异常',
+  bad_xp_value: '星光值配置异常',
   negative_clip: '扣减致负截断',
   xp_mismatch: '加分链路异常'
 };
@@ -2892,13 +2910,13 @@ async function loadXpAnomalyZone() {
     const rows = (data && data.rows) || [];
     const cnt = (data && data.open_count) || 0;
     if (badge) badge.textContent = cnt ? cnt + ' 条待处理' : '无待处理';
-    if (!rows.length) { box.innerHTML = '<div class="banner">✅ 暂无自动上报的经验异常。</div>'; return; }
+    if (!rows.length) { box.innerHTML = '<div class="banner">✅ 暂无自动上报的星光值异常。</div>'; return; }
     const rowsHtml = rows.map(r => {
       const d = r.detail || {};
       let extra = '';
       if (r.type === 'missing_tag' && d.tag_id) extra = '标签ID：<code>' + esc(String(d.tag_id).slice(0, 8)) + '</code>';
       if (r.type === 'bad_xp_value') extra = (esc(d.label || '') + ' = ' + (d.xp_value === undefined ? '' : d.xp_value) + ' xp');
-      if (r.type === 'negative_clip') extra = '原经验 ' + d.before + '，扣 ' + d.delta;
+      if (r.type === 'negative_clip') extra = '原星光值 ' + d.before + '，扣 ' + d.delta;
       if (r.type === 'xp_mismatch') extra = '应得 ' + d.expected + '，实际 ' + d.actual;
       return `<tr>
         <td><b>${esc(r.student)}</b></td>
@@ -2946,21 +2964,21 @@ async function resolveXpAnomaly(id) {
 }
 
 
-// v152.7：经验流水注入（测试工具）
+// v152.7：星光值流水注入（测试工具）
 async function injectXpLog() {
-  if (!confirm('将按真实经验值把现有全部加分写入经验流水（可重复执行，不会重复）。确定继续吗？')) return;
+  if (!confirm('将按真实星光值把现有全部加分写入星光值流水（可重复执行，不会重复）。确定继续吗？')) return;
   const btn = els.btnInjectXpLog, out = els.injectXpLogResult;
   if (btn) btn.disabled = true;
   if (out) out.textContent = '注入中…';
   try {
     const { data, error } = await supabase.rpc('inject_xp_log');
     if (error) { if (out) out.textContent = '失败：' + error.message; return; }
-    if (out) out.textContent = '注入完成，共写入 ' + ((data && data.injected) || 0) + ' 条经验记录';
+    if (out) out.textContent = '注入完成，共写入 ' + ((data && data.injected) || 0) + ' 条星光记录';
   } catch (e) { if (out) out.textContent = '失败：' + e.message; }
   finally { if (btn) btn.disabled = false; }
 }
 
-// v152.7：经验记录查询
+// v152.7：星光记录查询
 const XP_LOG_SRC = { daily: '日常表现', task: '每日任务', personal: '个人任务', challenge: '挑战任务', manual: '手动任务' };
 const XP_LOG_DIM = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
 async function fillXpLogClasses() {
@@ -2995,7 +3013,7 @@ async function queryXpLog() {
     .from('student_info').select('xp').eq('class', cls).eq('student_name', name).single();
   if (info) cur = info.xp || 0;
   if (!rows.length) {
-    box.innerHTML = '<div class="banner">该生暂无经验流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
+    box.innerHTML = '<div class="banner">该生暂无星光值流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
     return;
   }
   let acc = 0;
@@ -3012,8 +3030,8 @@ async function queryXpLog() {
   }).join('');
   box.innerHTML = `
     <div style="margin-bottom:8px;font-size:14px;">
-      流水合计 <b>${total} xp</b> ｜ 当前经验 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
-      <span class="text-muted">（差额为教师手动调整或删除回退等无流水操作；流水合计即「真实经验值」参照）</span>
+      流水合计 <b>${total} xp</b> ｜ 当前星光值 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
+      <span class="text-muted">（差额为教师手动调整或删除回退等无流水操作；流水合计即「真实星光值」参照）</span>
     </div>
     <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -3022,7 +3040,7 @@ async function queryXpLog() {
           <th style="padding:8px 10px;text-align:left;">渠道</th>
           <th style="padding:8px 10px;text-align:left;">说明</th>
           <th style="padding:8px 10px;text-align:center;">维度</th>
-          <th style="padding:8px 10px;text-align:right;">经验</th>
+          <th style="padding:8px 10px;text-align:right;">星光值</th>
           <th style="padding:8px 10px;text-align:right;">累计</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
@@ -3358,7 +3376,7 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
   });
   box.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('确定删除这条任务吗？学生已获得的经验会保留。')) return;
+      if (!confirm('确定删除这条任务吗？学生已获得的星光值会保留。')) return;
       const wr = await runWrite({ name: 'task_delete', params: { p_task_id: btn.dataset.del } });
       if (!wr.ok) { toast('删除失败，请重试'); return; }
       toast(wr.queued ? '已离线删除，联网后同步 ✅' : '已删除'); loadTaskReport();
@@ -3618,7 +3636,7 @@ async function loadBatchTagsAndStudents() {
   tagSel.innerHTML = '<option value="">请选择标签</option>' +
     batchState.tagList.map(t => {
       const n = (t.options || []).length;
-      return `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·经验${t.xp_value}] ${esc(t.label)}${n?`（含${n}小项）`:''}</option>`;
+      return `<option value="${t.id}">[${t.category==='negative'?'消极':'积极'}·星光值${t.xp_value}] ${esc(t.label)}${n?`（含${n}小项）`:''}</option>`;
     }).join('');
   renderAwardOptionPick();
   loadAwardTasks(cls);
@@ -3997,7 +4015,7 @@ document.getElementById('btnPtaskSelNone')?.addEventListener('click', () => {
 document.getElementById('btnPtaskDelBatch')?.addEventListener('click', async () => {
   const ids = Array.from(els.personalTaskBox.querySelectorAll('input[data-sel-ptask]:checked')).map(cb => cb.value);
   if (!ids.length) { toast('请先勾选要删除的个人任务'); return; }
-  if (!confirm(`删除所选 ${ids.length} 条个人任务？已完成任务的已加经验将自动回退。`)) return;
+  if (!confirm(`删除所选 ${ids.length} 条个人任务？已完成任务的已加星光值将自动回退。`)) return;
   const btn = document.getElementById('btnPtaskDelBatch');
   btn.disabled = true;
   try {
@@ -4008,7 +4026,7 @@ document.getElementById('btnPtaskDelBatch')?.addEventListener('click', async () 
     const refund = Number(d.refund_xp) || 0;
     const del = Number(d.deleted) || 0;
     const fail = Number(d.failed) || 0;
-    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
     loadPersonalTasks();
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
@@ -4031,7 +4049,7 @@ document.getElementById('btnChallengeSelNone')?.addEventListener('click', () => 
 document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async () => {
   const ids = Array.from(els.challengeTaskBox.querySelectorAll('input[data-sel-challenge]:checked')).map(cb => cb.value);
   if (!ids.length) { toast('请先勾选要删除的挑战任务'); return; }
-  if (!confirm(`删除所选 ${ids.length} 条挑战任务？已达成档位加过的经验将自动回退。`)) return;
+  if (!confirm(`删除所选 ${ids.length} 条挑战任务？已达成档位加过的星光值将自动回退。`)) return;
   const btn = document.getElementById('btnChallengeDelBatch');
   btn.disabled = true;
   try {
@@ -4042,8 +4060,204 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
     const refund = Number(d.refund_xp) || 0;
     const del = Number(d.deleted) || 0;
     const fail = Number(d.failed) || 0;
-    toast(`已删除 ${del} 条${refund ? '，回退经验 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
     loadChallengeTasks();
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
 });
+
+/* ============================================================
+   v167：星光管理（班级星光值 / 抽奖 / 商店 / 封存重置）
+   ============================================================ */
+async function activateStarTab() {
+  await fillStarClasses();
+  await Promise.all([loadStarProgress(), loadShopAdmin(), loadArchiveBatches()]);
+}
+
+async function fillStarClasses() {
+  if (!els.starClass) return;
+  const cur = els.starClass.value;
+  let classes = [];
+  try {
+    const r = await supabase.from('student_info').select('class');
+    if (!r.error) classes = Array.from(new Set((r.data || []).map(x => x.class))).filter(Boolean).sort();
+  } catch (e) { /* 离线 */ }
+  if (!classes.length) {
+    try {
+      const v = await window.Offline.get('classes_all');
+      classes = Array.from(new Set(((v && v.data) || []).map(x => x.class))).filter(Boolean).sort();
+    } catch (e2) {}
+  }
+  els.starClass.innerHTML = '<option value="">请选择班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (cur) els.starClass.value = cur;
+}
+
+async function loadStarProgress() {
+  const cls = els.starClass && els.starClass.value;
+  if (!els.starProgressBox) return;
+  if (!cls) { els.starProgressBox.innerHTML = '<div class="text-muted">请先选择班级。</div>'; return; }
+  let d = null;
+  try {
+    const r = await supabase.rpc('get_class_progress', { p_class: cls });
+    if (!r.error) d = r.data;
+  } catch (e) {}
+  if (!d || d.ok === false) { els.starProgressBox.innerHTML = '<div class="text-muted">读取失败，请确认已执行 109 号 SQL。</div>'; return; }
+  const pct = Math.max(0, Math.min(100, Number(d.pct) || 0));
+  els.starProgressBox.innerHTML = `
+    <div class="star-progress">
+      <div class="sp-head"><span class="sp-lv">Lv.${d.level || 1}</span>
+        <span class="sp-xp">班级星光值 <b>${d.xp || 0}</b>${d.next_need ? ` / ${d.next_need}` : ' · 满级'}</span></div>
+      <div class="sp-bar"><i style="width:${pct}%"></i></div>
+      <div class="sp-foot">
+        <span>${d.next_need ? `再 ${d.next_level_need} 点升 Lv.${(d.level || 1) + 1}` : '已达最高等级'}</span>
+        <span class="${d.chances ? 'sp-chance has' : 'sp-chance'}">🎡 可抽奖 ${d.chances || 0} 次</span>
+      </div>
+    </div>`;
+  loadStarDraws();
+}
+
+async function loadStarDraws() {
+  const cls = els.starClass && els.starClass.value;
+  if (!els.starDrawBox) return;
+  if (!cls) { els.starDrawBox.innerHTML = ''; return; }
+  let rows = [];
+  try {
+    const r = await supabase.rpc('get_class_draw_history', { p_class: cls, p_limit: 20 });
+    if (!r.error && Array.isArray(r.data)) rows = r.data;
+  } catch (e) {}
+  if (!rows.length) { els.starDrawBox.innerHTML = '<div class="text-muted">还没有抽奖记录。</div>'; return; }
+  els.starDrawBox.innerHTML = `<table class="star-table"><thead><tr>
+      <th>时间</th><th>升级</th><th>奖品</th><th>抽奖学生</th></tr></thead><tbody>` +
+    rows.map(x => `<tr><td>${fmtTime(x.drawn_at)}</td><td>Lv.${x.level}</td>
+      <td>${x.icon || '🎁'} ${esc(x.name || '')}</td><td>${esc(x.student_name || '—')}</td></tr>`).join('') +
+    `</tbody></table>`;
+}
+
+async function loadShopAdmin() {
+  if (!els.shopItemSel) return;
+  let items = [];
+  try {
+    const r = await supabase.from('shop_item').select('item_key,item_type,name,price,group_name')
+      .order('item_type').order('sort_order');
+    if (!r.error) items = r.data || [];
+  } catch (e) {}
+  if (!items.length) {
+    els.shopItemSel.innerHTML = '<option value="">暂无商品（请执行 110 号 SQL）</option>';
+    return;
+  }
+  els.shopItemSel.innerHTML = items.map(x =>
+    `<option value="${esc(x.item_key)}" data-price="${x.price}">${x.item_type === 'avatar' ? '👤' : '🖼️'} ${esc(x.name)} · ${x.price}</option>`).join('');
+  syncShopPriceInput();
+}
+
+function syncShopPriceInput() {
+  if (!els.shopItemSel || !els.shopItemPrice) return;
+  const opt = els.shopItemSel.selectedOptions[0];
+  if (opt && opt.dataset.price != null) els.shopItemPrice.value = opt.dataset.price;
+}
+
+async function saveShopPrice() {
+  const key = els.shopItemSel && els.shopItemSel.value;
+  const price = Number(els.shopItemPrice && els.shopItemPrice.value);
+  if (!key) return toast('请先选择商品');
+  if (!Number.isFinite(price) || price < 0) return toast('价格需为不小于 0 的整数');
+  const r = await supabase.from('shop_item').update({ price: Math.round(price), updated_at: new Date().toISOString() }).eq('item_key', key);
+  if (r.error) return toast('保存失败：' + r.error.message);
+  if (els.shopAdminMsg) els.shopAdminMsg.textContent = `已更新价格：${key} → ${Math.round(price)} 星光值`;
+  toast('价格已更新 ✅');
+  loadShopAdmin();
+}
+
+async function loadArchiveBatches() {
+  if (!els.archiveBatchList) return;
+  let rows = [];
+  try {
+    const r = await supabase.rpc('get_archive_batches');
+    if (!r.error && Array.isArray(r.data)) rows = r.data;
+  } catch (e) {}
+  if (!rows.length) { els.archiveBatchList.innerHTML = '<div class="text-muted">还没有封存记录。</div>'; return; }
+  els.archiveBatchList.innerHTML = rows.map(b => {
+    const st = b.stats || {};
+    const parts = Object.entries(st).filter(([k]) => k !== 'ok').map(([k, v]) => `${k}:${v}`).join(' · ');
+    return `<div class="archive-row">
+      <div class="ar-head"><b>${esc(b.label || '')}</b><span>${fmtTime(b.created_at)}</span></div>
+      <div class="ar-stats">${esc(parts)}</div>
+      <button type="button" class="btn btn-ghost btn-sm" data-arch-view="${b.id}">查看记录</button>
+      <div class="ar-body" id="archBody-${b.id}"></div>
+    </div>`;
+  }).join('');
+  $$('[data-arch-view]', els.archiveBatchList).forEach(btn => {
+    btn.addEventListener('click', () => showArchiveRecords(btn.dataset.archView, btn));
+  });
+}
+
+async function showArchiveRecords(batchId, btn) {
+  const box = document.getElementById('archBody-' + batchId);
+  if (!box) return;
+  if (box.dataset.loaded === '1') { box.hidden = !box.hidden; return; }
+  box.innerHTML = '<div class="text-muted">正在读取归档…</div>';
+  let rows = [];
+  try {
+    const r = await supabase.rpc('get_archive_records', { p_batch: batchId });
+    if (!r.error && r.data && r.data.ok) rows = r.data.records || [];
+  } catch (e) {}
+  if (!rows.length) { box.innerHTML = '<div class="text-muted">该批次没有可显示的表现记录。</div>'; box.dataset.loaded = '1'; return; }
+  const byStu = {};
+  rows.forEach(x => { const k = x.class + '|' + x.student_name; byStu[k] = (byStu[k] || 0) + 1; });
+  box.innerHTML = `<div class="text-muted" style="margin:6px 0;">共 ${rows.length} 条记录，涉及 ${Object.keys(byStu).length} 名学生（仅展示前 200 条）</div>` +
+    `<table class="star-table"><thead><tr><th>日期</th><th>班级</th><th>学生</th><th>星级</th></tr></thead><tbody>` +
+    rows.slice(0, 200).map(x => `<tr><td>${x.record_date || ''}</td><td>${esc(x.class || '')}</td>
+      <td>${esc(x.student_name || '')}</td><td>${x.self_evaluation || '—'}</td></tr>`).join('') +
+    '</tbody></table>';
+  box.dataset.loaded = '1';
+}
+
+async function doArchiveAll() {
+  const label = (els.archiveLabel && els.archiveLabel.value || '').trim();
+  const tip = `即将封存并重置全部学生数据：\n\n· 表现记录、任务、挑战、试卷、留言、成就、星光流水、抽奖记录 → 归档\n· 学生星光值、班级星光值 → 归零\n· 名单 / 头像 / 头像框 / 家长凭据 → 保留\n\n此操作不可撤销，确定继续吗？`;
+  if (!confirm(tip)) return;
+  if (!confirm('再次确认：现在执行封存与重置？')) return;
+  if (els.btnArchive) els.btnArchive.disabled = true;
+  try {
+    const r = await supabase.rpc('archive_all_and_reset', { p_label: label || null, p_note: null });
+    if (r.error) { toast('封存失败：' + r.error.message); return; }
+    const d = r.data || {};
+    if (d.ok === false) { toast('封存失败：' + (d.reason || '')); return; }
+    const st = d.stats || {};
+    els.archiveResult.innerHTML = `<div class="banner banner-info">✅ 已封存「${esc(d.label || '')}」：` +
+      Object.entries(st).filter(([k]) => k !== 'ok').map(([k, v]) => `${k} ${v} 条`).join('、') + `</div>`;
+    toast('封存完成，已开始新一轮统计 ✅');
+    await Promise.all([loadStarProgress(), loadArchiveBatches()]);
+  } catch (e) {
+    toast('封存失败，请检查网络');
+  } finally {
+    if (els.btnArchive) els.btnArchive.disabled = false;
+  }
+}
+
+function fmtTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return String(v).slice(0, 16);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* 绑定 */
+if (els.starClass) els.starClass.addEventListener('change', () => { loadStarProgress(); });
+if (els.btnStarRefresh) els.btnStarRefresh.addEventListener('click', () => { fillStarClasses().then(loadStarProgress); });
+if (els.btnStarAddXp) els.btnStarAddXp.addEventListener('click', async () => {
+  const cls = els.starClass && els.starClass.value;
+  const n = Number(els.starAddXp && els.starAddXp.value);
+  if (!cls) return toast('请先选择班级');
+  if (!Number.isFinite(n) || n <= 0) return toast('请输入大于 0 的星光值');
+  const r = await supabase.rpc('class_add_xp', { p_class: cls, p_amount: Math.round(n) });
+  if (r.error) return toast('发放失败：' + r.error.message);
+  toast(`已为 ${cls} 发放 ${Math.round(n)} 班级星光值${r.data && r.data.gained_level ? `，升了 ${r.data.gained_level} 级 🎉` : ''}`);
+  if (els.starAddXp) els.starAddXp.value = '';
+  loadStarProgress();
+});
+if (els.shopItemSel) els.shopItemSel.addEventListener('change', syncShopPriceInput);
+if (els.btnShopPriceSave) els.btnShopPriceSave.addEventListener('click', saveShopPrice);
+if (els.btnArchive) els.btnArchive.addEventListener('click', doArchiveAll);

@@ -43,6 +43,11 @@ function NavBack() {
   if (els.detailModal.classList.contains('show')) { els.detailModal.classList.remove('show'); return true; }
   if (els.avatarModal.classList.contains('show')) { els.avatarModal.classList.remove('show'); return true; }
   if (els.successOverlay.classList.contains('show')) { els.successOverlay.classList.remove('show'); return true; }
+  if (els.prizeModal && els.prizeModal.classList.contains('show')) { els.prizeModal.classList.remove('show'); return true; }
+  // v167：商店 / 转盘 / 头像框页 → 回个人主页
+  if (els.frameView && !els.frameView.hidden) { closeFramePage(); return true; }
+  if (els.shopView && !els.shopView.hidden) { closeShop(); return true; }
+  if (els.lotteryView && !els.lotteryView.hidden) { closeLottery(); return true; }
   if (els.formView && !els.formView.hidden) {
     els.formView.hidden = true; els.wallView.hidden = false;
     window.scrollTo({ top: 0 }); loadWall();
@@ -110,7 +115,7 @@ const PRAISE = {
 };
 const AVATARS = Array.from({ length: 24 }, (_, i) => 'animal' + (i + 1));
 
-/* ---------- 校园头像（24 款，3 级解锁）与经验等级 ---------- */
+/* ---------- 校园头像（24 款，星光商店兑换）与星光等级 ---------- */
 const AVATAR_BASE = 'assets/avatars/';
 /* v46：新增 sweet11~18 / game9~15 头像以 SVG(内嵌 webp) 形式提供，旧头像仍为 webp */
 const SVG_AVATAR_KEYS = new Set([
@@ -194,7 +199,7 @@ const MOE_AVATARS = [
 MOE_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
 
 const EMOJI_CHANGE_LIMIT = 2;
-// 各级所需经验下限：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
+// 星光等级门槛（按累计星光值）：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
 // v164(RSK-22)：等级上限提升至 Lv.99 —— 前 9 级保留原节奏，Lv.10 起每级固定 500（与数据库 104 号迁移同口径）
 const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2300, 2800, 3300, 3800, 4300, 4800, 5300, 5800, 6300, 6800, 7300, 7800, 8300, 8800, 9300, 9800, 10300, 10800, 11300, 11800, 12300, 12800, 13300, 13800, 14300, 14800, 15300, 15800, 16300, 16800, 17300, 17800, 18300, 18800, 19300, 19800, 20300, 20800, 21300, 21800, 22300, 22800, 23300, 23800, 24300, 24800, 25300, 25800, 26300, 26800, 27300, 27800, 28300, 28800, 29300, 29800, 30300, 30800, 31300, 31800, 32300, 32800, 33300, 33800, 34300, 34800, 35300, 35800, 36300, 36800, 37300, 37800, 38300, 38800, 39300, 39800, 40300, 40800, 41300, 41800, 42300, 42800, 43300, 43800, 44300, 44800, 45300, 45800, 46300];
 
@@ -202,61 +207,68 @@ const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2300, 2800, 3
 // 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
 const FRAMES = [
   { key: 'none',    name: '无框',   icon: '⚪', need: '默认佩戴' },
-  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '累计记录 10 天' },
-  { key: 'silver',  name: '银环',   icon: '🥈', need: '累计记录 30 天' },
-  { key: 'gold',    name: '金环',   icon: '🥇', need: '升到 Lv.5' },
-  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '升到 Lv.7' },
-  { key: 'star',    name: '星光环', icon: '⭐', need: '累计 20 次积极表现' },
-  { key: 'heart',   name: '爱心环', icon: '💗', need: '获得 5 次完美 A+' },
-  { key: 'crown',   name: '皇冠环', icon: '👑', need: '班级经验前三' },
+  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '星光商店兑换' },
+  { key: 'silver',  name: '银环',   icon: '🥈', need: '星光商店兑换' },
+  { key: 'gold',    name: '金环',   icon: '🥇', need: '星光商店兑换' },
+  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '星光商店兑换' },
+  { key: 'star',    name: '星光环', icon: '⭐', need: '星光商店兑换' },
+  { key: 'heart',   name: '爱心环', icon: '💗', need: '星光商店兑换' },
+  { key: 'crown',   name: '皇冠环', icon: '👑', need: '星光商店兑换' },
   /* v130(RSK-11)：12 款游戏风头像框，按等级开放 */
-  { key: 'tac',     name: '军事战术', icon: '🎖️', need: '升到 Lv.2' },
-  { key: 'sakura',  name: '樱花甜心', icon: '🌸', need: '升到 Lv.2' },
-  { key: 'gun',     name: '射击战士', icon: '🎯', need: '升到 Lv.3' },
-  { key: 'pixie',   name: '花漾精灵', icon: '🧚', need: '升到 Lv.3' },
-  { key: 'mecha',   name: '雷霆机甲', icon: '🤖', need: '升到 Lv.4' },
-  { key: 'magic',   name: '魔法星梦', icon: '✨', need: '升到 Lv.4' },
-  { key: 'wolf',    name: '战狼之王', icon: '🐺', need: '升到 Lv.5' },
-  { key: 'rose',    name: '玫瑰公主', icon: '🌹', need: '升到 Lv.5' },
-  { key: 'fairy',   name: '花灵仙子', icon: '🌿', need: '升到 Lv.5' },
-  { key: 'dragon',  name: '龙魂战甲', icon: '🐉', need: '升到 Lv.6' },
-  { key: 'queen',   name: '星光女王', icon: '🌙', need: '升到 Lv.6' },
-  { key: 'princess', name: '梦幻公主', icon: '👸', need: '升到 Lv.6' },
+  { key: 'tac',     name: '军事战术', icon: '🎖️', need: '星光商店兑换' },
+  { key: 'sakura',  name: '樱花甜心', icon: '🌸', need: '星光商店兑换' },
+  { key: 'gun',     name: '射击战士', icon: '🎯', need: '星光商店兑换' },
+  { key: 'pixie',   name: '花漾精灵', icon: '🧚', need: '星光商店兑换' },
+  { key: 'mecha',   name: '雷霆机甲', icon: '🤖', need: '星光商店兑换' },
+  { key: 'magic',   name: '魔法星梦', icon: '✨', need: '星光商店兑换' },
+  { key: 'wolf',    name: '战狼之王', icon: '🐺', need: '星光商店兑换' },
+  { key: 'rose',    name: '玫瑰公主', icon: '🌹', need: '星光商店兑换' },
+  { key: 'fairy',   name: '花灵仙子', icon: '🌿', need: '星光商店兑换' },
+  { key: 'dragon',  name: '龙魂战甲', icon: '🐉', need: '星光商店兑换' },
+  { key: 'queen',   name: '星光女王', icon: '🌙', need: '星光商店兑换' },
+  { key: 'princess', name: '梦幻公主', icon: '👸', need: '星光商店兑换' },
   /* v142：七风格进阶头像框（Lv.7-10 开放） */
-  { key: 'huadian',  name: '鎏金蝶舞', icon: '🦋', need: '升到 Lv.7' },
-  { key: 'blossom',  name: '樱吹雪',   icon: '🗡️', need: '升到 Lv.7' },
-  { key: 'ink',      name: '水墨国韵', icon: '🖌️', need: '升到 Lv.8' },
-  { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '升到 Lv.8' },
-  { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '升到 Lv.9' },
-  { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '升到 Lv.9' },
-  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '升到 Lv.10' },
+  { key: 'huadian',  name: '鎏金蝶舞', icon: '🦋', need: '星光商店兑换' },
+  { key: 'blossom',  name: '樱吹雪',   icon: '🗡️', need: '星光商店兑换' },
+  { key: 'ink',      name: '水墨国韵', icon: '🖌️', need: '星光商店兑换' },
+  { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '星光商店兑换' },
+  { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '星光商店兑换' },
+  { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '星光商店兑换' },
+  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '星光商店兑换' },
   /* v155：魔法星空 6 款 + 兽耳小铺 9 款（新增款式，原 27 款不变） */
-  { key: 'ice',      name: '冰晶雪翼', icon: '❄️', need: '升到 Lv.7' },
-  { key: 'moon',     name: '月神羽翼', icon: '🌙', need: '升到 Lv.7' },
-  { key: 'crystal',  name: '水晶星梦', icon: '💎', need: '升到 Lv.7' },
-  { key: 'silk',     name: '丝带蝶舞', icon: '🎀', need: '升到 Lv.7' },
-  { key: 'goldwing', name: '鎏金圣翼', icon: '🪽', need: '升到 Lv.7' },
-  { key: 'kitty',    name: '月眠猫咪', icon: '🐱', need: '升到 Lv.7' },
-  { key: 'devilcat', name: '恶魔小猫', icon: '😈', need: '升到 Lv.8' },
-  { key: 'angelcat', name: '天使小猫', icon: '😇', need: '升到 Lv.8' },
-  { key: 'clover',   name: '四叶祝福', icon: '🍀', need: '升到 Lv.8' },
-  { key: 'neko',     name: '奇幻猫耳', icon: '🐾', need: '升到 Lv.8' },
-  { key: 'sweets',   name: '甜心点心', icon: '🍩', need: '升到 Lv.8' },
-  { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '升到 Lv.8' },
-  { key: 'broken',   name: '破碎之心', icon: '💔', need: '升到 Lv.8' },
-  { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '升到 Lv.8' },
-  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '升到 Lv.8' },
+  { key: 'ice',      name: '冰晶雪翼', icon: '❄️', need: '星光商店兑换' },
+  { key: 'moon',     name: '月神羽翼', icon: '🌙', need: '星光商店兑换' },
+  { key: 'crystal',  name: '水晶星梦', icon: '💎', need: '星光商店兑换' },
+  { key: 'silk',     name: '丝带蝶舞', icon: '🎀', need: '星光商店兑换' },
+  { key: 'goldwing', name: '鎏金圣翼', icon: '🪽', need: '星光商店兑换' },
+  { key: 'kitty',    name: '月眠猫咪', icon: '🐱', need: '星光商店兑换' },
+  { key: 'devilcat', name: '恶魔小猫', icon: '😈', need: '星光商店兑换' },
+  { key: 'angelcat', name: '天使小猫', icon: '😇', need: '星光商店兑换' },
+  { key: 'clover',   name: '四叶祝福', icon: '🍀', need: '星光商店兑换' },
+  { key: 'neko',     name: '奇幻猫耳', icon: '🐾', need: '星光商店兑换' },
+  { key: 'sweets',   name: '甜心点心', icon: '🍩', need: '星光商店兑换' },
+  { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '星光商店兑换' },
+  { key: 'broken',   name: '破碎之心', icon: '💔', need: '星光商店兑换' },
+  { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '星光商店兑换' },
+  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '星光商店兑换' },
   /* v161：紫晶蝶梦（新增款式，Lv.8 开放） */
-  { key: 'ribbon',   name: '紫晶蝶梦', icon: '🪻', need: '升到 Lv.8' },
+  { key: 'ribbon',   name: '紫晶蝶梦', icon: '🪻', need: '星光商店兑换' },
   /* v162：Lv.8 四款新头像框（用户定制素材：赛博幻梦/霓虹脉冲/彩虹独角兽/黑金曜石） */
-  { key: 'cyber',   name: '赛博幻梦', icon: '🤖', need: '升到 Lv.8' },
-  { key: 'pulse',   name: '霓虹脉冲', icon: '⚡', need: '升到 Lv.8' },
-  { key: 'unicorn', name: '彩虹独角兽', icon: '🦄', need: '升到 Lv.8' },
-  { key: 'onyx',    name: '黑金曜石', icon: '💫', need: '升到 Lv.8' },
+  { key: 'cyber',   name: '赛博幻梦', icon: '🤖', need: '星光商店兑换' },
+  { key: 'pulse',   name: '霓虹脉冲', icon: '⚡', need: '星光商店兑换' },
+  { key: 'unicorn', name: '彩虹独角兽', icon: '🦄', need: '星光商店兑换' },
+  { key: 'onyx',    name: '黑金曜石', icon: '💫', need: '星光商店兑换' },
   /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
-  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '🪶', need: '升到 Lv.7' }
+  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '🪶', need: '星光商店兑换' }
 ];
 const XP_PER_POSITIVE = 2;
+
+/* ---------- v167：星光值体系（原「经验值」整体改为「星光值」） ---------- */
+// 说明：数据库 student_info.xp 保留为「累计获得星光值」（只增不减，用于星光等级与排行）；
+//      student_wallet.balance 为可消费余额（货币），兑换只扣余额。
+const STAR_LABEL = '星光值';
+const STAR_ICON = '⭐';
+
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
 const MOBILE_ACCESS_KEY = 'teacher2026';
 const MOBILE_UNLOCK_KEY = 'sp_mobile_unlocked';
@@ -449,8 +461,40 @@ const els = {
   btnPickAvatar: $('#btnPickAvatar'),
   identityAvatarEmoji: $('#identityAvatarEmoji'),
   identityLevel: $('#identityLevel'),
+  identityStar: $('#identityStar'),
   identityXpFill: $('#identityXpFill'),
   identityXpText: $('#identityXpText'),
+  btnOpenShop: $('#btnOpenShop'),
+  // v167：星光商店
+  shopView: $('#shopView'),
+  btnShopBack: $('#btnShopBack'),
+  shopConfigBanner: $('#shopConfigBanner'),
+  shopWalletLabel: $('#shopWalletLabel'),
+  shopWalletValue: $('#shopWalletValue'),
+  shopWalletSub: $('#shopWalletSub'),
+  shopTabs: $('#shopTabs'),
+  shopLoading: $('#shopLoading'),
+  shopGroups: $('#shopGroups'),
+  // v167：班级转盘
+  lotteryView: $('#lotteryView'),
+  btnLotteryBack: $('#btnLotteryBack'),
+  lotteryConfigBanner: $('#lotteryConfigBanner'),
+  lotteryClassName: $('#lotteryClassName'),
+  lotteryClassLv: $('#lotteryClassLv'),
+  lotteryChance: $('#lotteryChance'),
+  lotteryWheel: $('#lotteryWheel'),
+  btnSpin: $('#btnSpin'),
+  btnSpinMain: $('#btnSpinMain'),
+  btnLotteryHistory: $('#btnLotteryHistory'),
+  lotteryTip: $('#lotteryTip'),
+  lotterySub: $('#lotterySub'),
+  lotteryHistoryCard: $('#lotteryHistoryCard'),
+  lotteryHistoryBody: $('#lotteryHistoryBody'),
+  prizeModal: $('#prizeModal'),
+  prizeIcon: $('#prizeIcon'),
+  prizeName: $('#prizeName'),
+  prizeDesc: $('#prizeDesc'),
+  btnPrizeClose: $('#btnPrizeClose'),
   avatarModal: $('#avatarModal'),
   // v160：头像框独立页面（个人主页头像下方入口）
   btnOpenFrames: $('#btnOpenFrames'),
@@ -535,6 +579,15 @@ const state = {
   checkOption: {},   // 勾选型标签选中的二级选项：{ [tagId]: '数学课堂作业' }
   textValues: {},
   doneItems: {}   // 当天已提交过的二级项：{ [tagId]: Set(已选value) }
+  ,
+  // v167：星光值 / 商店 / 班级转盘
+  wallet: { balance: 0, total_earned: 0, total_spent: 0 },  // 我的星光值钱包
+  owned: { avatar: new Set(), frame: new Set(['none']) },   // 已拥有（可佩戴）的装扮
+  shopItems: [],          // 商店商品缓存
+  shopTab: 'avatar',      // 商店当前分类
+  classProgress: null,    // 班级星光值/等级/抽奖机会
+  wheelPrizes: [],        // 转盘奖项
+  spinning: false         // 转盘动画中
 };
 
 init();
@@ -785,6 +838,7 @@ async function loadWall() {
     }
     state.todayTaskDefs = wallData.tasks || [];
     state.todayTaskSubs = wallData.subs || [];
+    if (wallData.progress && wallData.progress.ok !== false) state.classProgress = wallData.progress;
     try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
     await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now() });
     if (!state.roster.length) {
@@ -836,6 +890,7 @@ async function loadWall() {
   }
   state.roster = rosterRes.data || [];
   state.records = recordRes.data || [];
+  try { await loadClassProgress(); } catch (e) {}
   // 座位表：只有在线真正拿到数据才重建；离线/失败保留缓存值（否则座位布局丢失且会被空表覆盖）
   try {
     const seatRes = await supabase.from('seat_grid').select('seat_row,seat_col,student_name').eq('class', state.currentClass);
@@ -882,22 +937,32 @@ function renderWall() {
     : null;
   const classToday = recs.filter(r => r.record_date === today).length;
 
-  // 班级整体经验 = 全班学生经验总和；v164(RSK-22)：班级等级上限提升至 Lv.99 —— 每级固定 3000 经验升级
-  const classXp = state.roster.reduce((s, x) => s + (Number(x.xp) || 0), 0);
-  const CLASS_LEVELS = [0, 3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000, 33000, 36000, 39000, 42000, 45000, 48000, 51000, 54000, 57000, 60000, 63000, 66000, 69000, 72000, 75000, 78000, 81000, 84000, 87000, 90000, 93000, 96000, 99000, 102000, 105000, 108000, 111000, 114000, 117000, 120000, 123000, 126000, 129000, 132000, 135000, 138000, 141000, 144000, 147000, 150000, 153000, 156000, 159000, 162000, 165000, 168000, 171000, 174000, 177000, 180000, 183000, 186000, 189000, 192000, 195000, 198000, 201000, 204000, 207000, 210000, 213000, 216000, 219000, 222000, 225000, 228000, 231000, 234000, 237000, 240000, 243000, 246000, 249000, 252000, 255000, 258000, 261000, 264000, 267000, 270000, 273000, 276000, 279000, 282000, 285000, 288000, 291000, 294000];
-  let classLv = 1;
-  CLASS_LEVELS.forEach((th, i) => { if (classXp >= th) classLv = i + 1; });
-  const nextNeed = CLASS_LEVELS[classLv] || null;
-  const classLvText = nextNeed ? `Lv${classLv} · 再${nextNeed - classXp}升Lv${classLv+1}` : `Lv${classLv} · 满级`;
+  // v167：班级星光值 = 学生星光值转化累计（服务端 class_progress，学生消费不影响班级星光值）
+  const prog = state.classProgress || null;
+  const classXp = prog ? (Number(prog.xp) || 0) : state.roster.reduce((s2, x) => s2 + (Number(x.xp) || 0), 0);
+  const CLASS_STEP = 3000;
+  const classLv = prog ? (Number(prog.level) || 1) : Math.max(1, Math.floor(classXp / CLASS_STEP) + 1);
+  const nextNeed = prog && prog.next_need != null ? Number(prog.next_need) : (classLv * CLASS_STEP);
+  const leftNeed = prog && prog.next_level_need != null ? Number(prog.next_level_need) : Math.max(0, nextNeed - classXp);
+  const chances = prog ? (Number(prog.chances) || 0) : 0;
+  const classLvText = nextNeed ? `Lv${classLv} · 再${leftNeed}升Lv${classLv + 1}` : `Lv${classLv} · 满级`;
 
   let html = '';
 
-  // 全班汇总卡放到标题栏左侧
-  const classCard = `<button class="mate mate-class-all" data-detail="__all__" style="width:100%;margin:0;">
-      <span class="mate-avatar">🌈</span>
-      <span class="mate-badge xp-badge">🧡 ${classXp} 经验</span>
-      <span class="mate-name">全班 ${classLvText}</span>
-    </button>`;
+  // 全班汇总卡：点班级头像 → 转盘抽奖（v167）
+  const classCard = `<div class="class-card-inner">
+      <button type="button" class="class-avatar-btn" data-classdraw="1" title="点击班级头像进入转盘抽奖">
+        <span class="class-avatar-emoji">🌈</span>
+        <span class="class-lv-badge">Lv.${classLv}</span>
+        ${chances > 0 ? `<span class="class-chance-dot" title="可抽奖 ${chances} 次">🎡${chances}</span>` : ''}
+      </button>
+      <div class="class-card-info">
+        <div class="class-card-name">${esc(state.currentClass)} 全班</div>
+        <div class="class-card-xp">🧡 班级星光值 <b>${classXp}</b> · ${classLvText}</div>
+        <div class="class-card-sub">共 ${state.roster.length} 人 · 今日已填 ${classToday} 人${chances > 0 ? ` · 可抽奖 ${chances} 次` : ''}</div>
+      </div>
+      <button type="button" class="class-detail-btn" data-detail="__all__">全班记录 ›</button>
+    </div>`;
   const slot = document.getElementById('wallClassCard');
   if (slot) slot.innerHTML = classCard;
 
@@ -924,7 +989,7 @@ function renderWall() {
   } else {
     state.roster.forEach(s=>ordered.push(s));
   }
-  // v150：经验榜 TOP5 角花装饰（按总经验降序）
+  // v150：星光值榜 TOP5 角花装饰（按总星光值降序）
   const rankMap = {};
   state.roster.slice().sort((a,b) => (Number(b.xp)||0) - (Number(a.xp)||0))
     .slice(0,5).forEach((s,idx) => { rankMap[s.student_name] = idx + 1; });
@@ -957,7 +1022,7 @@ function renderWall() {
     const moodInline = todayMood
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
 
-    const rank = rankMap[s.student_name] || 0;   // v150：经验榜名次（1-5）
+    const rank = rankMap[s.student_name] || 0;   // v150：星光值榜名次（1-5）
     // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
     const rankDeco = (rank >= 1 && rank <= 3) ? `<span class="rank-deco deco-${rank}"></span>` : '';
     html += `<button class="mate${rank ? ` rank-${rank}` : ''}" data-detail="${esc(s.student_name)}">
@@ -966,7 +1031,7 @@ function renderWall() {
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         <span class="mate-badge ${todayRecs.length ? 'done-badge' : 'count-badge'}">今日${todayRecs.length}条</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}</span>
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">⭐${Number(s.star) || 0}</span></span>
       </button>`;
   });
 
@@ -974,16 +1039,14 @@ function renderWall() {
   els.matesGrid.innerHTML = html;
   els.matesGrid.hidden = false;
 
-  // 班级经验进度 + 今日完成进度
+  // 班级星光值进度 + 今日完成进度
   const doneToday = state.roster.filter(s => recs.some(r => r.student_name === s.student_name && r.record_date === today)).length;
   const total = state.roster.length || 1;
   const cp = id => document.getElementById(id);
   if (cp('cpXp')) {
     cp('cpXp').textContent = classXp;
-    const prevXp = CLASS_LEVELS[classLv - 1] || 0;
-    const nextXp = CLASS_LEVELS[classLv] || null;
-    cp('cpNext').textContent = nextXp ? `Lv${classLv} → 再${nextXp - classXp} 升 Lv${classLv+1}` : `Lv${classLv} 满级`;
-    const pct = nextXp ? Math.min(100, (classXp - prevXp) / (nextXp - prevXp) * 100) : 100;
+    cp('cpNext').textContent = nextNeed ? `Lv${classLv} → 再${leftNeed} 升 Lv${classLv + 1}${chances ? ` · 可抽奖 ${chances} 次` : ''}` : `Lv${classLv} 满级`;
+    const pct = prog ? (Number(prog.pct) || 0) : (nextNeed ? Math.min(100, classXp / nextNeed * 100) : 100);
     cp('cpFill').style.width = pct + '%';
     cp('cpDone').textContent = doneToday;
     cp('cpTotal').textContent = state.roster.length;
@@ -1000,6 +1063,15 @@ function renderWall() {
       else openStudentDetail(key);
     });
   });
+
+  // v167：点班级头像 → 转盘抽奖
+  const classSlot = document.getElementById('wallClassCard');
+  if (classSlot) {
+    const avBtn = classSlot.querySelector('[data-classdraw]');
+    if (avBtn) avBtn.addEventListener('click', () => { sfx.tap(); openLottery(); });
+    const detailBtn = classSlot.querySelector('[data-detail="__all__"]');
+    if (detailBtn) detailBtn.addEventListener('click', () => { sfx.tap(); openClassDetail(classAvg, classToday); });
+  }
 }
 
 function openStudentDetail(name) {
@@ -1016,9 +1088,10 @@ function openStudentDetail(name) {
   const avg = rated.length
     ? (rated.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated.length).toFixed(1)
     : null;
-  els.detailSub.textContent = rows.length
+  const starOf = rosterRow ? (Number(rosterRow.star) || 0) : 0;
+  els.detailSub.textContent = (rows.length
     ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
-    : '还没有提交过表现记录';
+    : '还没有提交过表现记录') + ` · ⭐${starOf} 星光值`;
   // v146(RSK-16)：墙 records 已瘦身（不含 items/teacher_comment），明细点开详情时按需拉取
   els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载详细记录…</div>';
   state.detailName = name;
@@ -1218,7 +1291,7 @@ function currentAvatar() {
   return avatarForName(name || '我', row && row.avatar);
 }
 
-// 当前学生的等级/经验（名单行）
+// 当前学生的等级/星光值（名单行）
 // v152：老缓存/旧 RPC 名单可能没有 class 字段——先按"班级+姓名"匹配，匹配不到再退化为"仅姓名"匹配
 function currentRosterRow() {
   const name = (els.inpName && els.inpName.value || '').trim();
@@ -1273,26 +1346,24 @@ function renderMoodPreview() {
   }
 }
 
-// 身份卡上的等级徽章 + 经验进度条（外层 frame 槽位为后续头像框预留）
+// 身份卡：星光值余额 + 累计星光值（决定星光等级）
+// v167：经验值体系整体改为星光值体系——余额可消费，累计值只增不减
 function renderIdentityLevel() {
   const row = currentRosterRow();
   const lv = row ? (Number(row.level) || 1) : 1;
-  const xp = row ? (Number(row.xp) || 0) : 0;
-  const p = xpProgress(xp, lv);
+  const cum = row ? (Number(row.xp) || 0) : 0;            // 累计获得星光值
+  const bal = Number(state.wallet && state.wallet.balance) || 0;  // 可消费余额
+  const p = xpProgress(cum, lv);
   if (els.identityLevel) els.identityLevel.textContent = 'Lv.' + lv;
+  if (els.identityStar) els.identityStar.textContent = bal;
   if (els.identityXpFill) els.identityXpFill.style.width = p.pct + '%';
   if (els.identityXpText) {
     els.identityXpText.textContent = p.maxed
-      ? `经验 ${xp} · 已满级 🏆`
-      : `经验 ${xp} · 再得 ${p.left} 点升到 Lv.${lv + 1}`;
+      ? `累计获得 ${cum} 星光值 · 星光等级 Lv.${lv}（满级）`
+      : `累计获得 ${cum} 星光值 · 再得 ${p.left} 升到 Lv.${lv + 1}`;
   }
   const wrap = document.querySelector('.identity-avatar');
-  if (wrap) {
-    wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
-    if (!row || !row.frame) {
-      if (lv >= 3) wrap.classList.add('frame-l' + Math.min(5, lv));
-    }
-  }
+  if (wrap) wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
 }
 
@@ -1592,7 +1663,7 @@ function bindEvents() {
     if (e.target === els.avatarModal) { sfx.back(); els.avatarModal.classList.remove('show'); }
   });
 
-  // v152.3：雏菊榜单（左：经验榜 / 右：挑战榜）
+  // v152.3：雏菊榜单（左：星光榜 / 右：挑战榜）
   const flowerLeft = document.getElementById('flowerLeft');
   const flowerRight = document.getElementById('flowerRight');
   if (flowerLeft) flowerLeft.addEventListener('click', () => { sfx.tap(); openLeaderboard('xp'); });
@@ -1615,6 +1686,29 @@ function bindEvents() {
   els.btnSubmit.addEventListener('click', onSubmit);
   els.btnAgain.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); });
   els.btnWallFromSuccess.addEventListener('click', () => { sfx.tap(); els.successOverlay.classList.remove('show'); showWall(); });
+
+  // v167：星光商店 / 班级转盘
+  if (els.btnOpenShop) els.btnOpenShop.addEventListener('click', openShop);
+  if (els.btnShopBack) els.btnShopBack.addEventListener('click', closeShop);
+  if (els.shopTabs) els.shopTabs.addEventListener('click', e => {
+    const b = e.target.closest('[data-shop-tab]');
+    if (!b) return;
+    state.shopTab = b.dataset.shopTab;
+    sfx.tap();
+    renderShop();
+  });
+  if (els.btnLotteryBack) els.btnLotteryBack.addEventListener('click', closeLottery);
+  if (els.btnSpin) els.btnSpin.addEventListener('click', spinLottery);
+  if (els.btnSpinMain) els.btnSpinMain.addEventListener('click', spinLottery);
+  if (els.btnLotteryHistory) els.btnLotteryHistory.addEventListener('click', () => {
+    if (!els.lotteryHistoryCard) return;
+    els.lotteryHistoryCard.hidden = !els.lotteryHistoryCard.hidden;
+    if (!els.lotteryHistoryCard.hidden) { loadLotteryHistory(); els.lotteryHistoryCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  });
+  if (els.btnPrizeClose) els.btnPrizeClose.addEventListener('click', () => { sfx.back(); els.prizeModal.classList.remove('show'); });
+  if (els.prizeModal) els.prizeModal.addEventListener('click', e => {
+    if (e.target === els.prizeModal) { sfx.back(); els.prizeModal.classList.remove('show'); }
+  });
 }
 
 function updateSoundButton() {
@@ -1627,120 +1721,67 @@ function updateSoundButton() {
 
 async function openAvatarPicker() {
   const cur = currentAvatar();
-  const row = currentRosterRow();
-  let lv = row ? (Number(row.level) || 1) : 1;
-  // v146：打开弹窗时并发拉一次该生最新等级，避免墙缓存(60s新鲜期)
-  // 或页面停留导致"已升级却显示未解锁"（如升到 Lv4 仍提示要升到四级）
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (cls && name) {
-    try {
-      const r = await supabase.from('student_directory').select('level,xp').eq('class', cls).eq('student_name', name).limit(1);
-      if (r && !r.error && r.data && r.data[0] && Number(r.data[0].level)) {
-        lv = Number(r.data[0].level);
-        if (row) { row.level = lv; if (r.data[0].xp != null) row.xp = r.data[0].xp; }
-      }
-    } catch (e) {}
-  }
+  if (!cls || !name) { toast('请先在下面填好班级和姓名，再换头像'); return; }
+  if (ready) { els.avatarModal.classList.add('show'); }
+  if (ready) await Promise.all([loadWallet(), loadShopCatalog()]);
   els.avatarPicker.innerHTML = '';
 
-  // —— 小动物头像（免费，每天限换 2 次）——
+  // 顶部：星光值 + 商店入口（v167：不再按等级解锁，改为星光值兑换）
+  const tip = document.createElement('div');
+  tip.className = 'avatar-shop-tip';
+  tip.innerHTML = `<span>⭐ 我的星光值 <b>${state.wallet.balance}</b> · 头像与头像框都在星光商店兑换</span>
+    <button type="button" class="avatar-shop-go">去商店 🛍️</button>`;
+  els.avatarPicker.appendChild(tip);
+  tip.querySelector('.avatar-shop-go').addEventListener('click', () => {
+    els.avatarModal.classList.remove('show');
+    openShop();
+  });
+
+  // —— 免费小动物头像（默认拥有）——
   const emojiSec = document.createElement('div');
   emojiSec.className = 'avatar-sec';
-  emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 小动物头像<span class="avatar-sec-tip">每天可换 ${EMOJI_CHANGE_LIMIT} 次</span></div>`;
+  emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 免费头像<span class="avatar-sec-tip ok">默认拥有，可随意更换</span></div>`;
   const emojiGrid = document.createElement('div');
   emojiGrid.className = 'avatar-grid avatar-grid-img';
-  AVATARS.forEach(key => {
-    emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0));
-  });
+  AVATARS.forEach(key => emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0)));
   emojiSec.appendChild(emojiGrid);
   els.avatarPicker.appendChild(emojiSec);
 
-  // —— 校园头像（3 级解锁）——
-  const campusUnlocked = lv >= CAMPUS_UNLOCK_LEVEL;
-  const campusSec = document.createElement('div');
-  campusSec.className = 'avatar-sec campus';
-  campusSec.innerHTML = campusUnlocked
-    ? `<div class="avatar-sec-title">🏫 校园头像<span class="avatar-sec-tip ok">已解锁，可随意更换</span></div>`
-    : `<div class="avatar-sec-title">🔒 校园头像<span class="avatar-sec-tip">升到 Lv.${CAMPUS_UNLOCK_LEVEL} 解锁（多记录积极表现赚经验吧）</span></div>`;
-  const campusGrid = document.createElement('div');
-  campusGrid.className = 'avatar-grid avatar-grid-img';
-  CAMPUS_GROUPS.forEach(g => {
-    for (let i = 1; i <= g.count; i++) {
-      campusGrid.appendChild(buildImgChoice(g.prefix + i, cur.key, campusUnlocked, CAMPUS_UNLOCK_LEVEL));
-    }
+  // —— 商店头像（拥有即可佩戴）——
+  const list = (state.shopItems || []).filter(x => x.item_type === 'avatar');
+  const groups = [];
+  list.forEach(it => {
+    const g = it.group_name || '其他';
+    let box = groups.find(x => x.name === g);
+    if (!box) { box = { name: g, items: [] }; groups.push(box); }
+    box.items.push(it);
   });
-  campusSec.appendChild(campusGrid);
-  els.avatarPicker.appendChild(campusSec);
-
-  // —— v2.0：新头像四档（Lv4-7 按图片质量解锁）——
-  NEW_GROUPS.forEach(g => {
-    const unlocked = lv >= g.level;
+  if (!groups.length && ready) {
+    const warn = document.createElement('div');
+    warn.className = 'avatar-sec';
+    warn.innerHTML = '<div class="avatar-sec-tip">商店商品还没加载出来，请老师执行 110 号 SQL 初始化商店。</div>';
+    els.avatarPicker.appendChild(warn);
+  }
+  groups.forEach(g => {
+    const ownedCount = g.items.filter(it => it.owned || ownsItem('avatar', it.item_key)).length;
     const sec = document.createElement('div');
-    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
-    sec.innerHTML = unlocked
-      ? `<div class="avatar-sec-title">${g.emoji} ${g.name}<span class="avatar-sec-tip ok">Lv.${g.level} 已解锁，可随意更换</span></div>`
-      : `<div class="avatar-sec-title">🔒 ${g.emoji} ${g.name}<span class="avatar-sec-tip">升到 Lv.${g.level} 解锁（品质更高的头像）</span></div>`;
+    sec.className = 'avatar-sec';
+    sec.innerHTML = `<div class="avatar-sec-title">${esc(g.name)}<span class="avatar-sec-tip">${ownedCount}/${g.items.length} 已拥有</span></div>`;
     const grid = document.createElement('div');
     grid.className = 'avatar-grid avatar-grid-img';
-    for (let i = 1; i <= g.count; i++) {
-      grid.appendChild(buildImgChoice(g.prefix + i, cur.key, unlocked, g.level));
-    }
+    g.items.forEach(it => grid.appendChild(
+      buildImgChoice(it.item_key, cur.key, it.owned || ownsItem('avatar', it.item_key), Number(it.price) || 0)));
     sec.appendChild(grid);
     els.avatarPicker.appendChild(sec);
   });
-
-  // —— v160：传说神将（Lv.9 专属新头像，独立分区）——
-  {
-    const unlocked = lv >= LEGEND_LEVEL;
-    const sec = document.createElement('div');
-    sec.className = 'avatar-sec newtier' + (unlocked ? '' : ' locked-sec');
-    sec.innerHTML = unlocked
-      ? `<div class="avatar-sec-title">🌟 传说神将<span class="avatar-sec-tip ok">Lv.${LEGEND_LEVEL} 已解锁，可随意更换</span></div>`
-      : `<div class="avatar-sec-title">🔒 🌟 传说神将<span class="avatar-sec-tip">升到 Lv.${LEGEND_LEVEL} 解锁（品质更高的头像）</span></div>`;
-    const grid = document.createElement('div');
-    grid.className = 'avatar-grid avatar-grid-img';
-    LEGEND_AVATARS.forEach(x => grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level)));
-    sec.appendChild(grid);
-    els.avatarPicker.appendChild(sec);
-  }
-  // —— v165：萌趣Q版（chibi1 Lv.5 / chibi2-4 Lv.6，独立分区）——
-  {
-    const sec = document.createElement('div');
-    sec.className = 'avatar-sec newtier';
-    sec.innerHTML = `<div class="avatar-sec-title">🐸 萌趣Q版<span class="avatar-sec-tip">chibi1 升到 Lv.5，其余升到 Lv.6 解锁</span></div>`;
-    const grid = document.createElement('div');
-    grid.className = 'avatar-grid avatar-grid-img';
-    CHIBI_AVATARS.forEach(x => {
-      const unlocked = lv >= x.level;
-      grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level));
-    });
-    sec.appendChild(grid);
-    els.avatarPicker.appendChild(sec);
-  }
-
-  // —— v166：萌系日常（moe1/moe2 Lv.5 / moe3-10 Lv.6，独立分区）——
-  {
-    const sec = document.createElement('div');
-    sec.className = 'avatar-sec newtier';
-    sec.innerHTML = `<div class="avatar-sec-title">🌸 萌系日常<span class="avatar-sec-tip">moe1、moe2 升到 Lv.5，其余升到 Lv.6 解锁</span></div>`;
-    const grid = document.createElement('div');
-    grid.className = 'avatar-grid avatar-grid-img';
-    MOE_AVATARS.forEach(x => {
-      const unlocked = lv >= x.level;
-      grid.appendChild(buildImgChoice(x.key, cur.key, unlocked, x.level));
-    });
-    sec.appendChild(grid);
-    els.avatarPicker.appendChild(sec);
-  }
-
-
-  // v160：头像框已独立成单独页面（个人主页头像下方「更换头像框」入口），弹窗只保留头像
 
   renderMoodPreview();
   els.avatarModal.classList.add('show');
-  Nav.push('avatar');   // RSK-10：打开换头像弹窗
+  Nav.push('avatar');
 }
+
 
 function buildEmojiChoice(emoji, selectedKey) {
   const b = document.createElement('button');
@@ -1751,19 +1792,19 @@ function buildEmojiChoice(emoji, selectedKey) {
   return b;
 }
 
-function buildImgChoice(key, selectedKey, unlocked, lockLevel) {
+function buildImgChoice(key, selectedKey, owned, price) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'avatar-choice avatar-choice-img'
     + (key === selectedKey ? ' selected' : '')
-    + (unlocked ? '' : ' locked');
-  b.innerHTML = unlocked
+    + (owned ? '' : ' locked');
+  b.innerHTML = owned
     ? `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy">`
-    : `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy"><span class="avatar-lock">🔒<em>Lv${lockLevel}</em></span>`;
+    : `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy"><span class="avatar-lock">🔒<em>⭐${price || 0}</em></span>`;
   b.addEventListener('click', () => {
-    if (!unlocked) {
+    if (!owned) {
       sfx.oops();
-      toast(`这款头像要升到 Lv.${lockLevel} 才能用哦，继续加油～`);
+      toast(`这款头像还没拥有，去星光商店用 ${price || 0} 星光值兑换吧～`);
       return;
     }
     onChooseAvatar(key, b);
@@ -1789,17 +1830,8 @@ async function onChooseAvatar(key, btn) {
   if (!res || res.ok === false) {
     const reason = res && res.reason;
     sfx.oops();
-    if (reason === 'locked') {
-      toast(`校园头像要升到 Lv.${CAMPUS_UNLOCK_LEVEL} 才能用哦`);
-    } else if (reason === 'locked_tier') {
-      // v147：仅服务端明确返回等级不足才提示"升到Lv.X"；
-      // 不再用 isNewKey 兜底——否则保存失败(网络等)会被误报成等级不够
-      const need = NEW_LEVEL_MAP[key] || 4;
-      toast(`这款${need >= 6 ? '高' : '精'}品质头像要升到 Lv.${need} 才能用哦，继续加油～`);
-    } else if (reason === 'limit') {
-      toast(isAnimalKey(key)
-        ? `小动物头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`
-        : `表情头像今天只能换 ${EMOJI_CHANGE_LIMIT} 次，明天再来换吧～`);
+    if (reason === 'not_owned') {
+      toast('这款头像还没拥有，去星光商店兑换后就能用啦～');
     } else if (reason === 'no_student') {
       toast('请先在下面填好班级和姓名，再换头像');
     } else if (reason === 'error') {
@@ -1822,10 +1854,7 @@ async function onChooseAvatar(key, btn) {
   // v152.9：同步刷新墙卡片与缓存，避免刷新页面后显示旧头像
   persistWallCache();
   renderWall();
-
-  if (typeof res.changes_left === 'number' && res.changes_left >= 0 && !isImgKey(key)) {
-    toast(res.changes_left > 0 ? `换好啦！今天还能换 ${res.changes_left} 次` : '换好啦！今天的更换次数用完了');
-  }
+  loadWallet();
   // 稍作停留让孩子看到"选中"反馈，再关闭
   setTimeout(() => els.avatarModal.classList.remove('show'), 260);
 }
@@ -1960,49 +1989,18 @@ function attachParticles(el, key) {
    学生端头像框从头像区拆出：个人主页头像下方「更换头像框」入口 → 独立页面 #frameView。
    解锁集合 calcUnlockedFrames 与 95/96 号服务端口径完全一致；
    打开页面时强制 loadProfile() 刷新，避免旧缓存导致 7 级不解锁。 */
-function calcUnlockedFrames(profile) {
-  const achs = (profile && profile.achievements) || [];
-  const lv = Number(profile && profile.level) || 1;
-  const has = k => achs.some(a => a.key === k && a.unlocked);
-  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
-  const totD = Number(profile && profile.metrics && profile.metrics.total_days) || 0;
+// v167：头像框不再按等级/成就解锁——改为星光商店兑换，拥有即可佩戴
+function ownedFrameKeys() {
   const un = new Set(['none']);
-  if (totD >= 10) un.add('bronze');
-  if (totD >= 30) un.add('silver');
-  if (lv >= 5) un.add('gold');
-  if (lv >= 7) un.add('rainbow');   // 服务端 43/47/29：rainbow = Lv.7 满级
-  if (has('active20')) un.add('star');
-  if (has('perfect5')) un.add('heart');
-  if (has('top3')) un.add('crown');
-  /* v130：12 款游戏风（服务端 43 号同口径） */
-  if (lv >= 2) { un.add('tac'); un.add('sakura'); }
-  if (lv >= 3) { un.add('gun'); un.add('pixie'); }
-  if (lv >= 4) { un.add('mecha'); un.add('magic'); }
-  if (lv >= 5) { un.add('wolf'); un.add('rose'); un.add('fairy'); }
-  if (lv >= 6) { un.add('dragon'); un.add('queen'); un.add('princess'); }
-  /* v142：七风格进阶（v160 补全，原来 7 级以上全漏） */
-  if (lv >= 7) { un.add('huadian'); un.add('blossom'); }
-  if (lv >= 8) { un.add('ink'); un.add('spring'); }
-  if (lv >= 9) { un.add('redlily'); un.add('mask'); }
-  if (lv >= 10) { un.add('neonwolf'); }
-  /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
-  if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty','rosefeather'].forEach(k => un.add(k)); }
-  if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
-  /* v163(RSK-20)：4 款 Lv.8 头像框（与 103 号迁移同口径）——此前漏加，等级 8 也不解锁 */
-  if (lv >= 8) { ['cyber','pulse','unicorn','onyx'].forEach(k => un.add(k)); }
+  const st = state.owned && state.owned.frame;
+  if (st) st.forEach(k => un.add(k));
   return un;
 }
 
-// 解锁兜底：档案接口失败/缓存为空时，用班级墙 roster 里的真实等级重算，
-// 避免"进入页面全部锁定"的误导（roster 来自 get_wall_data，必带 level）
+// 兼容旧调用名：档案接口失败时也用本地已拥有集合兜底
 function ensureProfileUnlocked() {
-  const p = state.profile;
-  if (p && Array.isArray(p.unlocked_frames) && p.unlocked_frames.length > 0) return;
-  const row = currentRosterRow();
-  const lv = (row && Number(row.level)) || 1;
-  state.profile = Object.assign({}, p || {}, {
-    level: lv,
-    unlocked_frames: Array.from(calcUnlockedFrames({ level: lv, metrics: {}, achievements: [] }))
+  state.profile = Object.assign({}, state.profile || {}, {
+    unlocked_frames: Array.from(ownedFrameKeys())
   });
 }
 
@@ -2017,7 +2015,7 @@ function updateFramePreview(frameKey) {
   paintAvatar(els.framePreviewAvatar, av);
   applyFrameTo(els.framePreviewAvatar, frameKey || state.myFrame || 'none');
   if (els.framePreviewLevel) {
-    els.framePreviewLevel.textContent = 'Lv.' + (Number(state.profile && state.profile.level) || 1);
+    els.framePreviewLevel.textContent = '⭐' + (Number(state.wallet && state.wallet.balance) || 0);
   }
 }
 
@@ -2027,7 +2025,7 @@ function renderFramePage() {
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
   ensureProfileUnlocked();
-  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || ['none']);
+  const ownedSet = ownedFrameKeys();
   updateFramePreview(curFrame);
   if (els.framePreviewName) {
     const cls = (els.inpClass.value || '').trim();
@@ -2035,27 +2033,32 @@ function renderFramePage() {
     els.framePreviewName.textContent = cls ? cls + ' · ' + nm : (nm || '未选择学生');
   }
   if (els.framePreviewTip) {
-    els.framePreviewTip.textContent =
-      (state.profile && state.profile.ok !== false) ? `当前佩戴：${frameNameOf(curFrame)}` : '先回主页填好班级和姓名，再进来挑头像框';
+    els.framePreviewTip.textContent = `当前佩戴：${frameNameOf(curFrame)} · 我的星光值 ${state.wallet.balance}`;
   }
   grid.innerHTML = '';
   FRAMES.forEach(f => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
-    const unlocked = f.key === 'none' || unlockedSet.has(f.key);
+    const owned = f.key === 'none' || ownedSet.has(f.key);
+    const price = f.key === 'none' ? 0 : shopPriceOf('frame', f.key);
     b.innerHTML = `<span class="fc-ring"></span>` +
-      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+      (owned ? `<span class="fc-owned">✓</span>` : `<span class="fc-lock">🔒<em>⭐${price}</em></span>`);
+    b.title = f.name + (owned ? '（已拥有）' : `（${price} 星光值兑换）`);
     b.addEventListener('click', () => {
-      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      if (!owned) {
+        sfx.oops();
+        toast(`这个头像框还没拥有，去星光商店用 ${price} 星光值兑换吧～`);
+        return;
+      }
       onChooseFrame(f.key, b);
     });
     grid.appendChild(b);
   });
   if (els.frameCountTip) {
     const total = FRAMES.length;
-    const got = FRAMES.filter(f => f.key === 'none' || unlockedSet.has(f.key)).length;
-    els.frameCountTip.textContent = `已解锁 ${got}/${total}`;
+    const got = FRAMES.filter(f => f.key === 'none' || ownedSet.has(f.key)).length;
+    els.frameCountTip.textContent = `已拥有 ${got}/${total}`;
   }
 }
 
@@ -2069,8 +2072,8 @@ async function openFramePage() {
   if (els.frameView) els.frameView.hidden = false;
   window.scrollTo(0, 0);
   if (els.frameConfigBanner) els.frameConfigBanner.hidden = !!ready;
-  await loadProfile();          // 关键：打开即刷新，不再吃旧缓存
-  ensureProfileUnlocked();      // 档案失败时用 roster 等级兜底，避免全锁定
+  await Promise.all([loadProfile(), loadWallet(), loadShopCatalog()]);  // 打开即刷新，含星光值/已拥有装扮
+  ensureProfileUnlocked();
   renderFramePage();
   if (typeof Nav !== 'undefined' && Nav.push) Nav.push('frames');
 }
@@ -2086,12 +2089,12 @@ function closeFramePage() {
 function buildFrameSection() {
   const sec = document.createElement('div');
   sec.className = 'avatar-sec';
-  sec.innerHTML = `<div class="avatar-sec-title">✨ 头像框<span class="avatar-sec-tip">达成成就自动解锁，点一下佩戴</span></div>`;
+  sec.innerHTML = `<div class="avatar-sec-title">✨ 头像框<span class="avatar-sec-tip">星光商店兑换后即可佩戴</span></div>`;
   const grid = document.createElement('div');
   grid.className = 'frame-grid';
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
-  const unlockedSet = new Set((state.profile && state.profile.unlocked_frames) || calcUnlockedFrames(state.profile));
+  const unlockedSet = ownedFrameKeys();
   FRAMES.forEach(f => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -2100,7 +2103,7 @@ function buildFrameSection() {
     b.innerHTML = `<span class="fc-ring"></span>` +
       (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
     b.addEventListener('click', () => {
-      if (!unlocked) { sfx.oops(); toast(`这个头像框还没解锁：${f.need}`); return; }
+      if (!unlocked) { sfx.oops(); toast(`这个头像框还没拥有，去星光商店兑换吧～`); return; }
       onChooseFrame(f.key, b);
     });
     grid.appendChild(b);
@@ -2129,7 +2132,7 @@ async function onChooseFrame(key, btn) {
     return;
   }
   if (!wr.res || wr.res.ok === false) {
-    toast(wr.res && wr.res.reason === 'locked' ? '这个头像框还没解锁哦，继续加油～' : '保存失败，请重试');
+    toast(wr.res && wr.res.reason === 'not_owned' ? '这个头像框还没拥有，去星光商店兑换吧～' : '保存失败，请重试');
     return;
   }
   state.myFrame = key;
@@ -2172,7 +2175,7 @@ async function loadProfile() {
   const totD = Number(data.metrics && data.metrics.total_days) || 0;
   if (totD >= 10) un.add('bronze');
   if (totD >= 30) un.add('silver');
-  data.unlocked_frames = Array.from(calcUnlockedFrames(data));
+  data.unlocked_frames = Array.from(ownedFrameKeys());
 
   renderAchievements(achs);
   applyFrameTo(els.identityAvatarEmoji, state.myFrame);
@@ -2201,6 +2204,421 @@ function renderAchievements(achs) {
     </div>`).join('');
 }
 
+/* ============================================================
+   v167：星光值钱包 / 星光商店 / 班级转盘
+   ============================================================ */
+function starHintNoIdentity() {
+  toast('请先在个人主页填好班级和姓名');
+}
+
+// 拉取我的钱包（余额 / 累计 / 已拥有装扮）
+async function loadWallet() {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!ready || !cls || !name) { renderIdentityLevel(); return null; }
+  try {
+    const r = await withTimeout(supabase.rpc('get_student_wallet', { p_class: cls, p_student: name }), DATA_TIMEOUT);
+    if (r.error) throw r.error;
+    const d = r.data;
+    if (!d || d.ok === false) { renderIdentityLevel(); return null; }
+    state.wallet = { balance: Number(d.balance) || 0, total_earned: Number(d.total_earned) || 0, total_spent: Number(d.total_spent) || 0 };
+    state.owned = { avatar: new Set(), frame: new Set(['none']) };
+    (d.inventory || []).forEach(x => { if (state.owned[x.item_type]) state.owned[x.item_type].add(x.item_key); });
+    const row = currentRosterRow();
+    if (row) { row.xp = d.xp; row.level = d.level; row.star = Number(d.balance) || 0; }
+    if (d.class && d.class.ok !== false) state.classProgress = d.class;
+    renderIdentityLevel();
+    return d;
+  } catch (e) {
+    renderIdentityLevel();
+    return null;
+  }
+}
+
+// 是否拥有某件装扮（免费小动物头像默认拥有）
+function ownsItem(type, key) {
+  if (type === 'avatar' && isAnimalKey(key)) return true;
+  if (type === 'frame' && key === 'none') return true;
+  return !!(state.owned && state.owned[type] && state.owned[type].has(key));
+}
+
+function shopPriceOf(type, key) {
+  const it = (state.shopItems || []).find(x => x.item_type === type && x.item_key === key);
+  return it ? Number(it.price) || 0 : 0;
+}
+
+/* ---------------- 星光商店 ---------------- */
+async function openShop() {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return starHintNoIdentity();
+  sfx.tap();
+  if (els.wallView) els.wallView.hidden = true;
+  if (els.formView) els.formView.hidden = true;
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.lotteryView) els.lotteryView.hidden = true;
+  if (els.shopView) els.shopView.hidden = false;
+  if (els.shopConfigBanner) els.shopConfigBanner.hidden = !!ready;
+  window.scrollTo(0, 0);
+  if (els.shopLoading) els.shopLoading.hidden = false;
+  if (els.shopGroups) els.shopGroups.hidden = true;
+  await Promise.all([loadWallet(), loadShopCatalog()]);
+  renderShop();
+  if (typeof Nav !== 'undefined' && Nav.push) Nav.push('shop');
+}
+
+function closeShop() {
+  sfx.back();
+  if (els.shopView) els.shopView.hidden = true;
+  if (els.formView) els.formView.hidden = false;
+  window.scrollTo(0, 0);
+  renderIdentityLevel();
+  if (typeof Nav !== 'undefined' && Nav.pop) Nav.pop();
+}
+
+async function loadShopCatalog() {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!ready || !cls || !name) { state.shopItems = []; return; }
+  try {
+    const r = await withTimeout(supabase.rpc('get_shop_catalog', { p_class: cls, p_student: name }), DATA_TIMEOUT);
+    if (!r.error && r.data && r.data.ok !== false) {
+      state.shopItems = r.data.items || [];
+      if (r.data.balance != null) state.wallet.balance = Number(r.data.balance) || 0;
+    }
+  } catch (e) { /* 保留旧缓存 */ }
+}
+
+function shopItemTile(it) {
+  const owned = it.owned || ownsItem(it.item_type, it.item_key);
+  const equipped = it.equipped;
+  const price = Number(it.price) || 0;
+  const afford = state.wallet.balance >= price;
+  let thumb;
+  if (it.item_type === 'avatar') {
+    thumb = `<span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(it.item_key)}" alt="" loading="lazy"></span>`;
+  } else {
+    thumb = `<span class="shop-thumb frame-choice fc-${it.item_key}"><span class="fc-ring"></span></span>`;
+  }
+  const btn = equipped
+    ? `<span class="shop-btn equipped">已佩戴</span>`
+    : owned
+      ? `<button type="button" class="shop-btn use" data-use="${it.item_type}:${it.item_key}">使用</button>`
+      : price === 0
+        ? `<button type="button" class="shop-btn use" data-buy="${it.item_key}">领取</button>`
+        : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">⭐ ${price}</button>`;
+  return `<div class="shop-item${owned ? ' owned' : ''}">
+      ${thumb}
+      <div class="shop-name">${esc(it.name || it.item_key)}</div>
+      ${btn}
+    </div>`;
+}
+
+function renderShop() {
+  if (!els.shopGroups) return;
+  if (els.shopLoading) els.shopLoading.hidden = true;
+  els.shopGroups.hidden = false;
+  if (els.shopWalletLabel) els.shopWalletLabel.textContent = `我的星光值：${state.wallet.balance}`;
+  if (els.shopWalletValue) els.shopWalletValue.textContent = state.wallet.balance;
+  if (els.shopWalletSub) els.shopWalletSub.textContent =
+    `累计获得 ${state.wallet.total_earned} · 已消费 ${state.wallet.total_spent}`;
+  $$('.shop-tab', els.shopTabs || document).forEach(b =>
+    b.classList.toggle('active', b.dataset.shopTab === state.shopTab));
+
+  const list = (state.shopItems || []).filter(x => x.item_type === state.shopTab);
+  const groups = [];
+  list.forEach(it => {
+    const g = it.group_name || '其他';
+    let box = groups.find(x => x.name === g);
+    if (!box) { box = { name: g, items: [] }; groups.push(box); }
+    box.items.push(it);
+  });
+
+  let html = '';
+  // 免费头像区（小动物 24 款，默认拥有）
+  if (state.shopTab === 'avatar') {
+    html += `<section class="shop-group"><div class="shop-group-title">🐾 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
+      <div class="shop-grid">` +
+      AVATARS.map(k => `<div class="shop-item owned${ownsItem('avatar', k) ? '' : ''}">
+        <span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(k)}" alt="" loading="lazy"></span>
+        <div class="shop-name">小动物</div>
+        <button type="button" class="shop-btn use" data-use="avatar:${k}">使用</button>
+      </div>`).join('') + `</div></section>`;
+  }
+
+  groups.forEach(g => {
+    html += `<section class="shop-group"><div class="shop-group-title">${esc(g.name)}<span class="shop-group-tip">${g.items.length} 件</span></div>
+      <div class="shop-grid">${g.items.map(shopItemTile).join('')}</div></section>`;
+  });
+
+  if (!groups.length && state.shopTab !== 'avatar') {
+    html += `<div class="empty">商店暂时没有商品，请老师执行 110 号 SQL 初始化。</div>`;
+  }
+  els.shopGroups.innerHTML = html;
+
+  $$('[data-buy]', els.shopGroups).forEach(b => b.addEventListener('click', () => buyShopItem(b.dataset.buy, b)));
+  $$('[data-use]', els.shopGroups).forEach(b => b.addEventListener('click', () => {
+    const [type, key] = b.dataset.use.split(':');
+    if (type === 'avatar') doChooseAvatar(key);
+    else doChooseFrame(key);
+  }));
+}
+
+async function buyShopItem(key, btn) {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return starHintNoIdentity();
+  const it = (state.shopItems || []).find(x => x.item_key === key);
+  if (!it) return;
+  if (state.wallet.balance < Number(it.price || 0)) {
+    sfx.oops();
+    return toast(`星光值不够啦，还差 ${Number(it.price) - state.wallet.balance} 点，继续加油～`);
+  }
+  if (btn) btn.disabled = true;
+  try {
+    const r = await supabase.rpc('buy_shop_item', { p_class: cls, p_student: name, p_item_key: key });
+    if (r.error) throw r.error;
+    const res = r.data || {};
+    if (!res.ok) {
+      sfx.oops();
+      if (res.reason === 'not_enough') toast(`星光值不够啦，还差 ${Number(res.price || 0) - Number(res.balance || 0)} 点`);
+      else if (res.reason === 'owned') toast('这件已经拥有啦');
+      else toast('兑换失败，请稍后再试');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    sfx.success();
+    toast(`兑换成功！${it.name} 已放进你的衣柜 ✨`);
+    await Promise.all([loadWallet(), loadShopCatalog()]);
+    renderShop();
+    if (!els.shopView.hidden) renderShop();
+    await loadProfile();
+  } catch (e) {
+    sfx.oops();
+    toast('兑换失败，请检查网络后重试');
+    if (btn) btn.disabled = false;
+  }
+}
+
+// 商店内直接「使用」
+async function doChooseAvatar(key) {
+  const btn = null;
+  const res = await persistAvatar(key);
+  if (!res || res.ok === false) {
+    sfx.oops();
+    if (res && res.reason === 'not_owned') toast('这款还没拥有，先用星光值兑换吧～');
+    else if (res && res.reason === 'no_student') toast('请先填好班级和姓名');
+    else toast('头像没有保存成功，请稍后再试');
+    return;
+  }
+  sfx.pick();
+  state.myAvatar = key;
+  const row = currentRosterRow();
+  if (row) row.avatar = key;
+  persistWallCache(); renderWall(); renderMoodPreview();
+  await loadShopCatalog();
+  if (els.shopView && !els.shopView.hidden) renderShop();
+  toast('换好啦！');
+}
+
+async function doChooseFrame(key) {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return starHintNoIdentity();
+  const wr = await runWrite({ name: 'set_student_frame', params: { p_class: cls, p_student: name, p_frame: key } });
+  if (!wr.ok || (wr.res && wr.res.ok === false)) {
+    sfx.oops();
+    toast(wr.res && wr.res.reason === 'not_owned' ? '这个头像框还没拥有，先去商店兑换吧～' : '保存失败，请重试');
+    return;
+  }
+  sfx.pick();
+  state.myFrame = key;
+  const row = currentRosterRow();
+  if (row) row.frame = key;
+  applyFrameTo(els.identityAvatarEmoji, key);
+  persistWallCache(); renderWall();
+  await loadShopCatalog();
+  if (els.shopView && !els.shopView.hidden) renderShop();
+  toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
+}
+
+/* ---------------- 班级转盘抽奖 ---------------- */
+async function openLottery() {
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!cls) { toast('请先选择班级'); return; }
+  sfx.tap();
+  if (els.wallView) els.wallView.hidden = true;
+  if (els.formView) els.formView.hidden = true;
+  if (els.shopView) els.shopView.hidden = true;
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.lotteryView) els.lotteryView.hidden = false;
+  if (els.lotteryConfigBanner) els.lotteryConfigBanner.hidden = !!ready;
+  window.scrollTo(0, 0);
+  if (els.lotteryClassName) els.lotteryClassName.textContent = cls + ' · 全班';
+  await Promise.all([loadClassProgress(), loadWheelPrizes(), loadLotteryHistory()]);
+  renderLottery();
+  if (typeof Nav !== 'undefined' && Nav.push) Nav.push('lottery');
+}
+
+function closeLottery() {
+  sfx.back();
+  if (els.lotteryView) els.lotteryView.hidden = true;
+  if (els.wallView) els.wallView.hidden = false;
+  window.scrollTo(0, 0);
+  loadWall();
+  if (typeof Nav !== 'undefined' && Nav.pop) Nav.pop();
+}
+
+async function loadClassProgress() {
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!ready || !cls) return null;
+  try {
+    const r = await withTimeout(supabase.rpc('get_class_progress', { p_class: cls }), DATA_TIMEOUT);
+    if (!r.error && r.data && r.data.ok !== false) { state.classProgress = r.data; return r.data; }
+  } catch (e) { /* 忽略 */ }
+  return state.classProgress;
+}
+
+async function loadWheelPrizes() {
+  if (!ready) return;
+  try {
+    const r = await withTimeout(supabase.rpc('get_lottery_prizes'), DATA_TIMEOUT);
+    if (!r.error && Array.isArray(r.data) && r.data.length) state.wheelPrizes = r.data;
+  } catch (e) { /* 忽略 */ }
+  if (!state.wheelPrizes.length) {
+    state.wheelPrizes = [
+      { prize_key: 'star_50', name: '星光值 +50', icon: '⭐' },
+      { prize_key: 'star_100', name: '星光值 +100', icon: '🌟' },
+      { prize_key: 'class_50', name: '全班星光 +50', icon: '🎊' },
+      { prize_key: 'thanks', name: '谢谢参与', icon: '🍀' }
+    ];
+  }
+}
+
+function renderLottery() {
+  const p = state.classProgress || { xp: 0, level: 1, chances: 0, next_need: 3000 };
+  if (els.lotteryClassLv) els.lotteryClassLv.textContent = 'Lv.' + (p.level || 1);
+  if (els.lotteryChance) {
+    const n = Number(p.chances) || 0;
+    els.lotteryChance.textContent = n > 0 ? `可抽奖 ${n} 次` : '暂无可抽奖次数';
+    els.lotteryChance.classList.toggle('has', n > 0);
+  }
+  if (els.lotteryTip) {
+    els.lotteryTip.textContent = (Number(p.chances) || 0) > 0
+      ? '点「开始抽奖」，转盘停下就是你的奖品'
+      : `班级星光值 ${p.xp || 0} · 再 ${p.next_need || 0} 点升到 Lv.${(p.level || 1) + 1}，升级就送抽奖机会`;
+  }
+  if (els.btnSpinMain) els.btnSpinMain.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
+  if (els.btnSpin) els.btnSpin.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
+
+  const prizes = state.wheelPrizes || [];
+  const n = Math.max(1, prizes.length);
+  const sector = 360 / n;
+  if (els.lotteryWheel) {
+    const stops = prizes.map((x, i) => {
+      const c = i % 2 === 0 ? '#fff3d6' : '#ffe3b3';
+      return `${c} ${i * sector}deg ${(i + 1) * sector}deg`;
+    }).join(',');
+    els.lotteryWheel.style.background = `conic-gradient(${stops})`;
+    els.lotteryWheel.innerHTML = prizes.map((x, i) => {
+      const ang = ((i + 0.5) * sector - 90) * Math.PI / 180;
+      const left = 50 + 37 * Math.cos(ang);
+      const top = 50 + 37 * Math.sin(ang);
+      const short = String(x.name || '').replace(/星光值|全班星光|头像框|头像/g, '').trim();
+      return `<span class="wheel-label" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%">` +
+        `<i>${x.icon}<em>${esc(short)}</em></i></span>`;
+    }).join('');
+  }
+}
+
+async function loadLotteryHistory() {
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!ready || !cls || !els.lotteryHistoryBody) return;
+  try {
+    const r = await supabase.rpc('get_class_draw_history', { p_class: cls, p_limit: 10 });
+    if (r.error) throw r.error;
+    const rows = Array.isArray(r.data) ? r.data : [];
+    els.lotteryHistoryCard.hidden = !rows.length;
+    els.lotteryHistoryBody.innerHTML = rows.map(x => `
+      <div class="lh-row">
+        <span class="lh-icon">${x.icon || '🎁'}</span>
+        <span class="lh-name">${esc(x.name || '')}</span>
+        <span class="lh-meta">Lv.${x.level}${x.student_name ? ' · ' + esc(x.student_name) : ''}</span>
+        <span class="lh-time">${formatTime(x.drawn_at)}</span>
+      </div>`).join('');
+  } catch (e) { /* 忽略 */ }
+}
+
+async function spinLottery() {
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!cls || state.spinning) return;
+  const chance = Number((state.classProgress || {}).chances) || 0;
+  if (chance <= 0) { sfx.oops(); return toast('还没有抽奖机会，班级升级后就会送一次哦'); }
+
+  state.spinning = true;
+  if (els.btnSpinMain) els.btnSpinMain.disabled = true;
+  if (els.btnSpin) els.btnSpin.disabled = true;
+  sfx.tap();
+
+  const name = (els.inpName.value || '').trim();
+  let res = null;
+  try {
+    const r = await supabase.rpc('class_lottery_draw', { p_class: cls, p_student: name });
+    if (r.error) throw r.error;
+    res = r.data;
+  } catch (e) {
+    state.spinning = false;
+    renderLottery();
+    sfx.oops();
+    return toast('抽奖失败，请检查网络后重试');
+  }
+  if (!res || res.ok === false) {
+    state.spinning = false;
+    renderLottery();
+    sfx.oops();
+    return toast(res && res.reason === 'no_chance' ? '还没有抽奖机会，班级升级后就会送一次哦' : '抽奖失败，请稍后再试');
+  }
+
+  // 转盘停在对应扇区
+  const prizes = state.wheelPrizes || [];
+  const n = Math.max(1, prizes.length);
+  const sector = 360 / n;
+  let idx = prizes.findIndex(x => x.prize_key === res.prize_key);
+  if (idx < 0) idx = 0;
+  const target = 360 * 6 + (360 - (idx * sector + sector / 2));
+  if (els.lotteryWheel) {
+    els.lotteryWheel.style.transition = 'transform 3.8s cubic-bezier(.16,.84,.24,1)';
+    els.lotteryWheel.style.transform = `rotate(${target}deg)`;
+  }
+  if (typeof sfx.star === 'function') sfx.star();
+
+  setTimeout(() => {
+    state.spinning = false;
+    if (els.lotteryWheel) {
+      els.lotteryWheel.style.transition = 'none';
+      els.lotteryWheel.style.transform = `rotate(${target % 360}deg)`;
+    }
+    showPrize(res);
+    loadClassProgress().then(renderLottery);
+    loadWallet();
+    loadLotteryHistory();
+  }, 3900);
+}
+
+function showPrize(res) {
+  if (!els.prizeModal) return;
+  els.prizeIcon.textContent = res.icon || '🎁';
+  els.prizeName.textContent = `恭喜！${res.name || '中奖啦'}`;
+  let desc = `班级升到 Lv.${res.level} 的奖励`;
+  if (res.prize_type === 'star') desc += ` · 已存入你的星光值`;
+  else if (res.prize_type === 'class_star') desc += ` · 全班每人 +${res.prize_value}`;
+  else if (res.prize_type === 'avatar' || res.prize_type === 'frame') desc += ' · 已放进你的衣柜，去星光商店佩戴';
+  else desc += ' · 下次一定中大奖';
+  els.prizeDesc.textContent = desc;
+  els.prizeModal.classList.add('show');
+  if (typeof sfx.success === 'function') sfx.success();
+}
+
 function showForm(presetName) {
   if (!state.currentClass) { toast('请先选择班级'); return; }
   els.inpClass.value = state.currentClass;
@@ -2214,7 +2632,12 @@ function showForm(presetName) {
   state.myAvatar = null;   // 进入表单先显示该学生已保存的头像
   els.wallView.hidden = true;
   els.formView.hidden = false;
-  loadProfile();           // v105：拉取成就与已解锁头像框
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.shopView) els.shopView.hidden = true;
+  if (els.lotteryView) els.lotteryView.hidden = true;
+  loadProfile();           // 成就 + 已拥有装扮
+  loadWallet();            // v167：星光值余额
+  loadShopCatalog();       // v167：商店目录（换头像时判定是否已拥有）
   window.scrollTo({ top: 0 });
   updateMood();
   if (!els.inpName.value) els.inpName.focus();
@@ -2294,7 +2717,7 @@ async function loadTodayTasks() {
       const d = r.data || {};
       if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
-      toast(`完成啦！${Number(d.xp_delta) > 0 ? '经验+' + d.xp_delta : '已记录'}`);
+      toast(`完成啦！${Number(d.xp_delta) > 0 ? '星光值+' + d.xp_delta : '已记录'}`);
       loadTodayTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
@@ -2330,7 +2753,7 @@ async function loadPersonalTasks() {
         <span class="today-task-label">🎯 ${esc(t.content)}</span>
         <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
       </div>
-      <div class="today-task-sub">${dimName[t.dim] || ''} · 经验+${t.xp_value}${dl}</div>
+      <div class="today-task-sub">${dimName[t.dim] || ''} · 星光值+${t.xp_value}${dl}</div>
       ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm-ptask="${t.id}">✅ 我完成了</button>`}
     </div>`;
   }).join('');
@@ -2343,7 +2766,7 @@ async function loadPersonalTasks() {
       const d = r.data || {};
       if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
-      toast(`完成啦！经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      toast(`完成啦！星光值+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
       loadPersonalTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
@@ -2351,7 +2774,7 @@ async function loadPersonalTasks() {
   }));
 }
 
-// v150 + v152：挑战任务（教师布置，学生自选达成档位，经验按教师自定义方案）
+// v150 + v152：挑战任务（教师布置，学生自选达成档位，星光值按教师自定义方案）
 // v152 重写：配合 82 号 SQL —— 提交走 confirm_challenge_levels（多档位数组、增量合并、
 // done_levels 列持久化）；离线提交自动入队联网同步
 const CHALLENGE_LEVELS = (() => { const a = []; for (let lv = 10; lv <= 110; lv += 5) a.push(lv); return a; })();
@@ -2417,7 +2840,7 @@ async function loadChallengeTasks() {
       if (d.ok === false) { toast('提交失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
       const newN = (Array.isArray(d.new_levels) ? d.new_levels.length : (lvList.length || 0));
-      toast(`已达成 ${newN} 档，经验+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      toast(`已达成 ${newN} 档，星光值+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
       loadChallengeTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
@@ -2496,7 +2919,7 @@ async function loadPastTasks() {
         if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
         const d = wr.res || {};
         sfx.pick();
-        const xpGain = (d.xp_delta || 0) > 0 ? ` 经验+${d.xp_delta}` : '';
+        const xpGain = (d.xp_delta || 0) > 0 ? ` 星光值+${d.xp_delta}` : '';
         toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : (grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存'));
         const pastResult = document.querySelector(`[data-result="past-${taskId}"]`);
         if (pastResult) pastResult.textContent = wr.queued ? '已离线保存，联网后自动同步 ✅' : '';
@@ -2521,6 +2944,9 @@ async function loadPastTasks() {
 }
 function showWall() {
   els.formView.hidden = true;
+  if (els.frameView) els.frameView.hidden = true;
+  if (els.shopView) els.shopView.hidden = true;
+  if (els.lotteryView) els.lotteryView.hidden = true;
   els.wallView.hidden = false;
   window.scrollTo({ top: 0 });
   loadWall();
@@ -2554,7 +2980,7 @@ async function onSubmit() {
         }
         const subVal = subArr.join('、');
         if (Array.isArray(t.options) && t.options.length) {
-          // 有二级选项：一级标题本身不加经验，按选中的二级数量逐个加
+          // 有二级选项：一级标题本身不加星光值，按选中的二级数量逐个加
           subArr.forEach(opt => {
             items.push({ id: t.id, label: t.label, type: 'check', value: opt, category: t.category || 'positive', xp: tagXpOf(t) });
           });
@@ -2577,7 +3003,7 @@ async function onSubmit() {
   els.btnSubmit.disabled = true;
   els.btnSubmit.textContent = '正在提交…';
   try {
-    // v107：离线时直接入队，联网后自动同步（按人按天合并，不会重复加经验）
+    // v107：离线时直接入队，联网后自动同步（按人按天合并，不会重复加星光值）
     if (!window.Offline || !window.Offline.online) {
       const q = await window.Offline.enqueue({
         name: 'submit_today',
@@ -2585,7 +3011,7 @@ async function onSubmit() {
       });
       if (q) {
         sfx.success();
-        toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢');
+        toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢');
         applyLocalSubmitFeedback(cls, name, items);   // v123：记录合并+即时置灰+缓存持久化
         resetSelections();
         renderMoodPreview();
@@ -2614,7 +3040,7 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -2636,7 +3062,7 @@ async function onSubmit() {
       // 当天已有记录，本次为补充合并
     }
 
-    // 以服务端返回的差额经验为准（合并场景只加新增部分）
+    // 以服务端返回的差额星光值为准（合并场景只加新增部分）
     const gainedXp = Number(subRes.xp_delta || 0);
     let leveledUp = false;
     if (gainedXp > 0) {
@@ -2645,8 +3071,12 @@ async function onSubmit() {
         const beforeLv = Number(row.level) || 1;
         row.xp = Number(subRes.xp != null ? subRes.xp : (Number(row.xp) || 0) + gainedXp);
         row.level = subRes.level || levelFromXp(row.xp);
+        row.star = (Number(row.star) || 0) + Math.max(0, gainedXp);
         leveledUp = row.level > beforeLv;
       }
+      state.wallet.balance = (Number(state.wallet.balance) || 0) + Math.max(0, gainedXp);
+      state.wallet.total_earned = (Number(state.wallet.total_earned) || 0) + Math.max(0, gainedXp);
+      renderIdentityLevel();
     }
 
     try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
@@ -2667,7 +3097,7 @@ async function onSubmit() {
       }
     });
     renderTagGrid();
-    renderWall();  // 本地重绘头像墙（经验/条数/评语即时更新）
+    renderWall();  // 本地重绘头像墙（星光值/条数/评语即时更新）
     // v145(RSK-15)：提交成功即同步本地墙缓存（带 cachedAt，刷新不丢本次记录）
     try {
       const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
@@ -2675,16 +3105,18 @@ async function onSubmit() {
       window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
     } catch (eCache) {}
     loadProfile();// 成就/头像框（单请求，轻量）
+    loadWallet();  // v167：同步星光值余额
+    loadClassProgress();  // v167：同步班级星光值/等级/抽奖机会
     // 后台静默全量同步一次（多设备/教师评语一致性，不阻塞界面）
     if (window.Offline && window.Offline.online) {
       setTimeout(() => { try { loadWall(); } catch (e3) {} }, 2500);
     }
   } catch (e) {
-    // 断网/网络错误：先入队，联网自动补传（按人按天合并，不会重复加经验）
+    // 断网/网络错误：先入队，联网自动补传（按人按天合并，不会重复加星光值）
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，经验不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
@@ -2746,9 +3178,9 @@ function celebrate(gainedXp, leveledUp) {
   let msg;
   if (leveledUp) {
     const row = currentRosterRow();
-    msg = `🎉 升级啦！你现在是 Lv.${row ? row.level : ''}，新头像已经解锁，快去挑一个吧！`;
+    msg = `🎉 星光等级提升！你现在是 Lv.${row ? row.level : ''}，去星光商店看看新装扮吧！`;
   } else if (gainedXp > 0) {
-    msg = `太棒啦！本次获得 ${gainedXp} 点经验 🌟`;
+    msg = `太棒啦！本次获得 ${gainedXp} 点星光值 ⭐ 现在有 ${state.wallet.balance} 点可以花啦`;
   } else {
     const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
     msg = pool[Math.floor(Math.random() * pool.length)];
@@ -2893,7 +3325,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
-  // "还没做"也提交：用于撤销之前的评分、回退经验
+  // "还没做"也提交：用于撤销之前的评分、回退星光值
   const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
   if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
   const d = wr.res || {};
@@ -2918,7 +3350,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
         }
       } catch (e3) {}
     } else {
-      const xpGain = (d.xp_delta || 0) > 0 ? ' 经验+' + d.xp_delta : '';
+      const xpGain = (d.xp_delta || 0) > 0 ? ' 星光值+' + d.xp_delta : '';
       resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
                           : grade === 'good'    ? `真不错，继续保持！${xpGain}`
                           :                       `完成啦，辛苦啦！${xpGain}`;
@@ -3210,7 +3642,7 @@ function escapeHtml(s) {
   }
   fetchWeather();
 })();
-/* ============ v152.3：雏菊榜单（左：经验榜 / 右：挑战榜） ============ */
+/* ============ v152.3：雏菊榜单（左：星光榜 / 右：挑战榜） ============ */
 let lbCurrentStudent = '';
 
 function openLeaderboard(kind) {
@@ -3219,8 +3651,8 @@ function openLeaderboard(kind) {
   lbCurrentStudent = name;
   els.leaderboardModal.classList.add('show');
   if (kind === 'xp') {
-    els.lbTitle.textContent = '经验榜';
-    els.lbSub.textContent = cls ? cls + ' 全班经验排名' : '全班经验排名';
+    els.lbTitle.textContent = '星光榜';
+    els.lbSub.textContent = cls ? cls + ' 全班累计星光值排名' : '全班累计星光值排名';
     els.lbIcon.textContent = '🏅';
     loadLeaderboardXp(cls);
   } else {
@@ -3251,7 +3683,7 @@ async function loadLeaderboardXp(cls) {
       <span class="lb-rank ${i < 3 ? 'top' + (i + 1) : ''}">${i < 3 ? medal[i] : (i + 1)}</span>
       <span class="lb-name">${esc(s.student_name)}</span>
       <span class="lb-val">Lv.${s.level}</span>
-      <span class="lb-val">${s.xp}xp</span>
+      <span class="lb-val">⭐${s.xp}</span>
     </div>`).join('');
 }
 
