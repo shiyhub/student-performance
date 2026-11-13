@@ -935,27 +935,27 @@ html,body{background:#e8e6e1 !important;}
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
 }
-.frame-tac.framed::after     { background-image: url("../assets/frames/frame-tac.png"); }
-.frame-gun.framed::after     { background-image: url("../assets/frames/frame-gun.png"); }
-.frame-dragon.framed::after  { background-image: url("../assets/frames/frame-dragon.png"); }
-.frame-mecha.framed::after   { background-image: url("../assets/frames/frame-mecha.png"); }
-.frame-wolf.framed::after    { background-image: url("../assets/frames/frame-wolf.png"); }
-.frame-sakura.framed::after  { background-image: url("../assets/frames/frame-sakura.png"); }
-.frame-magic.framed::after   { background-image: url("../assets/frames/frame-magic.png"); }
-.frame-princess.framed::after{ background-image: url("../assets/frames/frame-princess.png"); }
-.frame-queen.framed::after   { background-image: url("../assets/frames/frame-queen.png"); }
-.frame-rose.framed::after    { background-image: url("../assets/frames/frame-rose.png"); }
-.frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.png"); }
-.frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.png"); }
-.frame-bronze.framed::after  { background-image: url("../assets/frames/frame-bronze.png"); }
-.frame-silver.framed::after  { background-image: url("../assets/frames/frame-silver.png"); }
-.frame-gold.framed::after    { background-image: url("../assets/frames/frame-gold.png"); }
-.frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.png"); }
-.frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.png"); }
-.frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.png"); }
+.frame-tac.framed::after     { background-image: url("../assets/frames/frame-tac.webp"); }
+.frame-gun.framed::after     { background-image: url("../assets/frames/frame-gun.webp"); }
+.frame-dragon.framed::after  { background-image: url("../assets/frames/frame-dragon.webp"); }
+.frame-mecha.framed::after   { background-image: url("../assets/frames/frame-mecha.webp"); }
+.frame-wolf.framed::after    { background-image: url("../assets/frames/frame-wolf.webp"); }
+.frame-sakura.framed::after  { background-image: url("../assets/frames/frame-sakura.webp"); }
+.frame-magic.framed::after   { background-image: url("../assets/frames/frame-magic.webp"); }
+.frame-princess.framed::after{ background-image: url("../assets/frames/frame-princess.webp"); }
+.frame-queen.framed::after   { background-image: url("../assets/frames/frame-queen.webp"); }
+.frame-rose.framed::after    { background-image: url("../assets/frames/frame-rose.webp"); }
+.frame-fairy.framed::after   { background-image: url("../assets/frames/frame-fairy.webp"); }
+.frame-pixie.framed::after   { background-image: url("../assets/frames/frame-pixie.webp"); }
+.frame-bronze.framed::after  { background-image: url("../assets/frames/frame-bronze.webp"); }
+.frame-silver.framed::after  { background-image: url("../assets/frames/frame-silver.webp"); }
+.frame-gold.framed::after    { background-image: url("../assets/frames/frame-gold.webp"); }
+.frame-rainbow.framed::after { background-image: url("../assets/frames/frame-rainbow.webp"); }
+.frame-heart.framed::after   { background-image: url("../assets/frames/frame-heart.webp"); }
+.frame-crown.framed::after   { background-image: url("../assets/frames/frame-crown.webp"); }
 /* 星空星环框：外环由外向内缓慢收缩的呼吸循环动画（GPU transform，性能友好） */
 .frame-star.framed::after {
-  background-image: url("../assets/frames/frame-star.png");
+  background-image: url("../assets/frames/frame-star.webp");
   background-size: 120% 120%;
   animation: starBreath 4.5s ease-in-out infinite;
   transform-origin: center;
@@ -968,25 +968,25 @@ html,body{background:#e8e6e1 !important;}
   .frame-star.framed::after { animation: none; }
 }
 /* 头像框选择区预览（直接显示素材图） */
-.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.png") center / contain no-repeat; }
-.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.png") center / contain no-repeat; }
-.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.png") center / contain no-repeat; }
-.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.png") center / contain no-repeat; }
-.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.png") center / contain no-repeat; }
-.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.png") center / contain no-repeat; }
-.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.png") center / contain no-repeat; }
-.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.png") center / contain no-repeat; }
-.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.png") center / contain no-repeat; }
-.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.png") center / contain no-repeat; }
-.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.png") center / contain no-repeat; }
-.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.png") center / contain no-repeat; }
-.frame-choice.fc-bronze  .fc-ring { background: url("../assets/frames/frame-bronze.png") center / contain no-repeat; }
-.frame-choice.fc-silver  .fc-ring { background: url("../assets/frames/frame-silver.png") center / contain no-repeat; }
-.frame-choice.fc-gold    .fc-ring { background: url("../assets/frames/frame-gold.png") center / contain no-repeat; }
-.frame-choice.fc-rainbow .fc-ring { background: url("../assets/frames/frame-rainbow.png") center / contain no-repeat; }
-.frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.png") center / contain no-repeat; }
-.frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.png") center / contain no-repeat; }
-.frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.png") center / contain no-repeat; }
+.frame-choice.fc-tac     .fc-ring { background: url("../assets/frames/frame-tac.webp") center / contain no-repeat; }
+.frame-choice.fc-gun     .fc-ring { background: url("../assets/frames/frame-gun.webp") center / contain no-repeat; }
+.frame-choice.fc-dragon  .fc-ring { background: url("../assets/frames/frame-dragon.webp") center / contain no-repeat; }
+.frame-choice.fc-mecha   .fc-ring { background: url("../assets/frames/frame-mecha.webp") center / contain no-repeat; }
+.frame-choice.fc-wolf    .fc-ring { background: url("../assets/frames/frame-wolf.webp") center / contain no-repeat; }
+.frame-choice.fc-sakura  .fc-ring { background: url("../assets/frames/frame-sakura.webp") center / contain no-repeat; }
+.frame-choice.fc-magic   .fc-ring { background: url("../assets/frames/frame-magic.webp") center / contain no-repeat; }
+.frame-choice.fc-princess .fc-ring { background: url("../assets/frames/frame-princess.webp") center / contain no-repeat; }
+.frame-choice.fc-queen   .fc-ring { background: url("../assets/frames/frame-queen.webp") center / contain no-repeat; }
+.frame-choice.fc-rose    .fc-ring { background: url("../assets/frames/frame-rose.webp") center / contain no-repeat; }
+.frame-choice.fc-fairy   .fc-ring { background: url("../assets/frames/frame-fairy.webp") center / contain no-repeat; }
+.frame-choice.fc-pixie   .fc-ring { background: url("../assets/frames/frame-pixie.webp") center / contain no-repeat; }
+.frame-choice.fc-bronze  .fc-ring { background: url("../assets/frames/frame-bronze.webp") center / contain no-repeat; }
+.frame-choice.fc-silver  .fc-ring { background: url("../assets/frames/frame-silver.webp") center / contain no-repeat; }
+.frame-choice.fc-gold    .fc-ring { background: url("../assets/frames/frame-gold.webp") center / contain no-repeat; }
+.frame-choice.fc-rainbow .fc-ring { background: url("../assets/frames/frame-rainbow.webp") center / contain no-repeat; }
+.frame-choice.fc-star    .fc-ring { background: url("../assets/frames/frame-star.webp") center / contain no-repeat; }
+.frame-choice.fc-heart   .fc-ring { background: url("../assets/frames/frame-heart.webp") center / contain no-repeat; }
+.frame-choice.fc-crown   .fc-ring { background: url("../assets/frames/frame-crown.webp") center / contain no-repeat; }
 /* v142：七风格进阶头像框（素材 assets/frames/frame-*.png） */
 .frame-huadian.framed::after, .frame-blossom.framed::after, .frame-ink.framed::after,
 .frame-spring.framed::after, .frame-redlily.framed::after, .frame-mask.framed::after,
@@ -995,20 +995,20 @@ html,body{background:#e8e6e1 !important;}
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
 }
-.frame-huadian.framed::after  { background-image: url("../assets/frames/frame-huadian.png"); }
-.frame-blossom.framed::after  { background-image: url("../assets/frames/frame-blossom.png"); }
-.frame-ink.framed::after      { background-image: url("../assets/frames/frame-ink.png"); }
-.frame-spring.framed::after   { background-image: url("../assets/frames/frame-spring.png"); }
-.frame-redlily.framed::after  { background-image: url("../assets/frames/frame-redlily.png"); }
-.frame-mask.framed::after     { background-image: url("../assets/frames/frame-mask.png"); }
-.frame-neonwolf.framed::after { background-image: url("../assets/frames/frame-neonwolf.png"); }
-.frame-choice.fc-huadian  .fc-ring { background: url("../assets/frames/frame-huadian.png") center / contain no-repeat; }
-.frame-choice.fc-blossom  .fc-ring { background: url("../assets/frames/frame-blossom.png") center / contain no-repeat; }
-.frame-choice.fc-ink      .fc-ring { background: url("../assets/frames/frame-ink.png") center / contain no-repeat; }
-.frame-choice.fc-spring   .fc-ring { background: url("../assets/frames/frame-spring.png") center / contain no-repeat; }
-.frame-choice.fc-redlily  .fc-ring { background: url("../assets/frames/frame-redlily.png") center / contain no-repeat; }
-.frame-choice.fc-mask     .fc-ring { background: url("../assets/frames/frame-mask.png") center / contain no-repeat; }
-.frame-choice.fc-neonwolf .fc-ring { background: url("../assets/frames/frame-neonwolf.png") center / contain no-repeat; }
+.frame-huadian.framed::after  { background-image: url("../assets/frames/frame-huadian.webp"); }
+.frame-blossom.framed::after  { background-image: url("../assets/frames/frame-blossom.webp"); }
+.frame-ink.framed::after      { background-image: url("../assets/frames/frame-ink.webp"); }
+.frame-spring.framed::after   { background-image: url("../assets/frames/frame-spring.webp"); }
+.frame-redlily.framed::after  { background-image: url("../assets/frames/frame-redlily.webp"); }
+.frame-mask.framed::after     { background-image: url("../assets/frames/frame-mask.webp"); }
+.frame-neonwolf.framed::after { background-image: url("../assets/frames/frame-neonwolf.webp"); }
+.frame-choice.fc-huadian  .fc-ring { background: url("../assets/frames/frame-huadian.webp") center / contain no-repeat; }
+.frame-choice.fc-blossom  .fc-ring { background: url("../assets/frames/frame-blossom.webp") center / contain no-repeat; }
+.frame-choice.fc-ink      .fc-ring { background: url("../assets/frames/frame-ink.webp") center / contain no-repeat; }
+.frame-choice.fc-spring   .fc-ring { background: url("../assets/frames/frame-spring.webp") center / contain no-repeat; }
+.frame-choice.fc-redlily  .fc-ring { background: url("../assets/frames/frame-redlily.webp") center / contain no-repeat; }
+.frame-choice.fc-mask     .fc-ring { background: url("../assets/frames/frame-mask.webp") center / contain no-repeat; }
+.frame-choice.fc-neonwolf .fc-ring { background: url("../assets/frames/frame-neonwolf.webp") center / contain no-repeat; }
 
 /* ============================================================
    v155：魔法星空 6 款 + 兽耳小铺 9 款（新增款式头像框）
@@ -1033,38 +1033,38 @@ html,body{background:#e8e6e1 !important;}
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
 }
-.frame-ice.framed::after { background-image: url("../assets/frames/frame-ice.png"); }
-.frame-moon.framed::after { background-image: url("../assets/frames/frame-moon.png"); }
-.frame-crystal.framed::after { background-image: url("../assets/frames/frame-crystal.png"); }
-.frame-silk.framed::after { background-image: url("../assets/frames/frame-silk.png"); }
-.frame-goldwing.framed::after { background-image: url("../assets/frames/frame-goldwing.png"); }
-.frame-kitty.framed::after { background-image: url("../assets/frames/frame-kitty.png"); }
-.frame-devilcat.framed::after { background-image: url("../assets/frames/frame-devilcat.png"); }
-.frame-angelcat.framed::after { background-image: url("../assets/frames/frame-angelcat.png"); }
-.frame-clover.framed::after { background-image: url("../assets/frames/frame-clover.png"); }
-.frame-neko.framed::after { background-image: url("../assets/frames/frame-neko.png"); }
-.frame-sweets.framed::after { background-image: url("../assets/frames/frame-sweets.png"); }
-.frame-goth.framed::after { background-image: url("../assets/frames/frame-goth.png"); }
-.frame-broken.framed::after { background-image: url("../assets/frames/frame-broken.png"); }
-.frame-mono.framed::after { background-image: url("../assets/frames/frame-mono.png"); }
-.frame-tech.framed::after { background-image: url("../assets/frames/frame-tech.png"); }
-.frame-ribbon.framed::after { background-image: url("../assets/frames/frame-ribbon.png"); }
-.frame-choice.fc-ice .fc-ring { background: url("../assets/frames/frame-ice.png") center / contain no-repeat; }
-.frame-choice.fc-moon .fc-ring { background: url("../assets/frames/frame-moon.png") center / contain no-repeat; }
-.frame-choice.fc-crystal .fc-ring { background: url("../assets/frames/frame-crystal.png") center / contain no-repeat; }
-.frame-choice.fc-silk .fc-ring { background: url("../assets/frames/frame-silk.png") center / contain no-repeat; }
-.frame-choice.fc-goldwing .fc-ring { background: url("../assets/frames/frame-goldwing.png") center / contain no-repeat; }
-.frame-choice.fc-kitty .fc-ring { background: url("../assets/frames/frame-kitty.png") center / contain no-repeat; }
-.frame-choice.fc-devilcat .fc-ring { background: url("../assets/frames/frame-devilcat.png") center / contain no-repeat; }
-.frame-choice.fc-angelcat .fc-ring { background: url("../assets/frames/frame-angelcat.png") center / contain no-repeat; }
-.frame-choice.fc-clover .fc-ring { background: url("../assets/frames/frame-clover.png") center / contain no-repeat; }
-.frame-choice.fc-neko .fc-ring { background: url("../assets/frames/frame-neko.png") center / contain no-repeat; }
-.frame-choice.fc-sweets .fc-ring { background: url("../assets/frames/frame-sweets.png") center / contain no-repeat; }
-.frame-choice.fc-goth .fc-ring { background: url("../assets/frames/frame-goth.png") center / contain no-repeat; }
-.frame-choice.fc-broken .fc-ring { background: url("../assets/frames/frame-broken.png") center / contain no-repeat; }
-.frame-choice.fc-mono .fc-ring { background: url("../assets/frames/frame-mono.png") center / contain no-repeat; }
-.frame-choice.fc-tech .fc-ring { background: url("../assets/frames/frame-tech.png") center / contain no-repeat; }
-.frame-choice.fc-ribbon .fc-ring { background: url("../assets/frames/frame-ribbon.png") center / contain no-repeat; }
+.frame-ice.framed::after { background-image: url("../assets/frames/frame-ice.webp"); }
+.frame-moon.framed::after { background-image: url("../assets/frames/frame-moon.webp"); }
+.frame-crystal.framed::after { background-image: url("../assets/frames/frame-crystal.webp"); }
+.frame-silk.framed::after { background-image: url("../assets/frames/frame-silk.webp"); }
+.frame-goldwing.framed::after { background-image: url("../assets/frames/frame-goldwing.webp"); }
+.frame-kitty.framed::after { background-image: url("../assets/frames/frame-kitty.webp"); }
+.frame-devilcat.framed::after { background-image: url("../assets/frames/frame-devilcat.webp"); }
+.frame-angelcat.framed::after { background-image: url("../assets/frames/frame-angelcat.webp"); }
+.frame-clover.framed::after { background-image: url("../assets/frames/frame-clover.webp"); }
+.frame-neko.framed::after { background-image: url("../assets/frames/frame-neko.webp"); }
+.frame-sweets.framed::after { background-image: url("../assets/frames/frame-sweets.webp"); }
+.frame-goth.framed::after { background-image: url("../assets/frames/frame-goth.webp"); }
+.frame-broken.framed::after { background-image: url("../assets/frames/frame-broken.webp"); }
+.frame-mono.framed::after { background-image: url("../assets/frames/frame-mono.webp"); }
+.frame-tech.framed::after { background-image: url("../assets/frames/frame-tech.webp"); }
+.frame-ribbon.framed::after { background-image: url("../assets/frames/frame-ribbon.webp"); }
+.frame-choice.fc-ice .fc-ring { background: url("../assets/frames/frame-ice.webp") center / contain no-repeat; }
+.frame-choice.fc-moon .fc-ring { background: url("../assets/frames/frame-moon.webp") center / contain no-repeat; }
+.frame-choice.fc-crystal .fc-ring { background: url("../assets/frames/frame-crystal.webp") center / contain no-repeat; }
+.frame-choice.fc-silk .fc-ring { background: url("../assets/frames/frame-silk.webp") center / contain no-repeat; }
+.frame-choice.fc-goldwing .fc-ring { background: url("../assets/frames/frame-goldwing.webp") center / contain no-repeat; }
+.frame-choice.fc-kitty .fc-ring { background: url("../assets/frames/frame-kitty.webp") center / contain no-repeat; }
+.frame-choice.fc-devilcat .fc-ring { background: url("../assets/frames/frame-devilcat.webp") center / contain no-repeat; }
+.frame-choice.fc-angelcat .fc-ring { background: url("../assets/frames/frame-angelcat.webp") center / contain no-repeat; }
+.frame-choice.fc-clover .fc-ring { background: url("../assets/frames/frame-clover.webp") center / contain no-repeat; }
+.frame-choice.fc-neko .fc-ring { background: url("../assets/frames/frame-neko.webp") center / contain no-repeat; }
+.frame-choice.fc-sweets .fc-ring { background: url("../assets/frames/frame-sweets.webp") center / contain no-repeat; }
+.frame-choice.fc-goth .fc-ring { background: url("../assets/frames/frame-goth.webp") center / contain no-repeat; }
+.frame-choice.fc-broken .fc-ring { background: url("../assets/frames/frame-broken.webp") center / contain no-repeat; }
+.frame-choice.fc-mono .fc-ring { background: url("../assets/frames/frame-mono.webp") center / contain no-repeat; }
+.frame-choice.fc-tech .fc-ring { background: url("../assets/frames/frame-tech.webp") center / contain no-repeat; }
+.frame-choice.fc-ribbon .fc-ring { background: url("../assets/frames/frame-ribbon.webp") center / contain no-repeat; }
 
 /* ============================================================
    v162：Lv.8 四款新头像框（用户定制素材）
@@ -1075,14 +1075,14 @@ html,body{background:#e8e6e1 !important;}
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
 }
-.frame-cyber.framed::after { background-image: url("../assets/frames/frame-cyber.png"); }
-.frame-pulse.framed::after { background-image: url("../assets/frames/frame-pulse.png"); }
-.frame-unicorn.framed::after { background-image: url("../assets/frames/frame-unicorn.png"); }
-.frame-onyx.framed::after { background-image: url("../assets/frames/frame-onyx.png"); }
-.frame-choice.fc-cyber .fc-ring { background: url("../assets/frames/frame-cyber.png") center / contain no-repeat; }
-.frame-choice.fc-pulse .fc-ring { background: url("../assets/frames/frame-pulse.png") center / contain no-repeat; }
-.frame-choice.fc-unicorn .fc-ring { background: url("../assets/frames/frame-unicorn.png") center / contain no-repeat; }
-.frame-choice.fc-onyx .fc-ring { background: url("../assets/frames/frame-onyx.png") center / contain no-repeat; }
+.frame-cyber.framed::after { background-image: url("../assets/frames/frame-cyber.webp"); }
+.frame-pulse.framed::after { background-image: url("../assets/frames/frame-pulse.webp"); }
+.frame-unicorn.framed::after { background-image: url("../assets/frames/frame-unicorn.webp"); }
+.frame-onyx.framed::after { background-image: url("../assets/frames/frame-onyx.webp"); }
+.frame-choice.fc-cyber .fc-ring { background: url("../assets/frames/frame-cyber.webp") center / contain no-repeat; }
+.frame-choice.fc-pulse .fc-ring { background: url("../assets/frames/frame-pulse.webp") center / contain no-repeat; }
+.frame-choice.fc-unicorn .fc-ring { background: url("../assets/frames/frame-unicorn.webp") center / contain no-repeat; }
+.frame-choice.fc-onyx .fc-ring { background: url("../assets/frames/frame-onyx.webp") center / contain no-repeat; }
 /* ============================================================
    v164：白玫瑰黑羽（用户定制素材，Lv.7）
    ============================================================ */
@@ -1091,8 +1091,8 @@ html,body{background:#e8e6e1 !important;}
   pointer-events: none; z-index: 1;
   background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
 }
-.frame-rosefeather.framed::after { background-image: url("../assets/frames/frame-rosefeather.png"); }
-.frame-choice.fc-rosefeather .fc-ring { background: url("../assets/frames/frame-rosefeather.png") center / contain no-repeat; }
+.frame-rosefeather.framed::after { background-image: url("../assets/frames/frame-rosefeather.webp"); }
+.frame-choice.fc-rosefeather .fc-ring { background: url("../assets/frames/frame-rosefeather.webp") center / contain no-repeat; }
 
 /* v155：魔法星空排名装饰（TOP3 专属，保留原金色角标） */
 .mate .rank-deco { position:absolute; right:-14px; top:-14px; width:96px; height:96px; pointer-events:none; z-index:4; background-repeat:no-repeat; background-position:center; background-size:contain; }
