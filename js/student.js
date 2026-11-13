@@ -587,7 +587,10 @@ const state = {
   shopTab: 'avatar',      // 商店当前分类
   classProgress: null,    // 班级星光值/等级/抽奖机会
   wheelPrizes: [],        // 转盘奖项
-  spinning: false         // 转盘动画中
+  spinning: false,        // 转盘动画中
+  // v167.4：换装扮时的「仅显示已拥有」筛选（记忆到本次会话，不落库）
+  avatarOwnedOnly: false,
+  frameOwnedOnly: false
 };
 
 init();
@@ -1716,12 +1719,36 @@ function updateSoundButton() {
 /* ---------------- 头像选择 ---------------- */
 
 async function openAvatarPicker() {
-  const cur = currentAvatar();
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (!cls || !name) { toast('请先在下面填好班级和姓名，再换头像'); return; }
   if (ready) { els.avatarModal.classList.add('show'); }
   if (ready) await Promise.all([loadWallet(), loadShopCatalog()]);
+  renderAvatarPicker();
+  renderMoodPreview();
+  els.avatarModal.classList.add('show');
+  Nav.push('avatar');
+}
+
+/* v167.4：通用「仅显示已拥有」筛选条（头像 / 头像框共用） */
+function buildOwnFilter(onlyOwned, onChange, label) {
+  const bar = document.createElement('div');
+  bar.className = 'own-filter';
+  bar.innerHTML = `
+    <button type="button" class="of-btn${onlyOwned ? '' : ' on'}" data-own="all">全部${label}</button>
+    <button type="button" class="of-btn${onlyOwned ? ' on' : ''}" data-own="owned">仅显示已拥有</button>`;
+  bar.querySelectorAll('.of-btn').forEach(b => b.addEventListener('click', () => {
+    sfx.tap();
+    onChange(b.dataset.own === 'owned');
+  }));
+  return bar;
+}
+
+/* v167.4：头像选择器改为可重渲染，支持筛选 */
+function renderAvatarPicker() {
+  const cur = currentAvatar();
+  const onlyOwned = !!state.avatarOwnedOnly;
+
   els.avatarPicker.innerHTML = '';
 
   // 顶部：星光值 + 商店入口（v167：不再按等级解锁，改为星光值兑换）
@@ -1735,7 +1762,13 @@ async function openAvatarPicker() {
     openShop();
   });
 
-  // —— 免费小动物头像（默认拥有）——
+  // 筛选：全部 / 仅显示已拥有
+  els.avatarPicker.appendChild(buildOwnFilter(onlyOwned, v => {
+    state.avatarOwnedOnly = v;
+    renderAvatarPicker();
+  }, '头像'));
+
+  // —— 免费小动物头像（默认拥有，筛选时也始终可见）——
   const emojiSec = document.createElement('div');
   emojiSec.className = 'avatar-sec';
   emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 免费头像<span class="avatar-sec-tip ok">默认拥有，可随意更换</span></div>`;
@@ -1760,22 +1793,31 @@ async function openAvatarPicker() {
     warn.innerHTML = '<div class="avatar-sec-tip">商店商品还没加载出来，请老师执行 110 号 SQL 初始化商店。</div>';
     els.avatarPicker.appendChild(warn);
   }
+  let shown = 0;
   groups.forEach(g => {
     const ownedCount = g.items.filter(it => it.owned || ownsItem('avatar', it.item_key)).length;
+    const items = onlyOwned
+      ? g.items.filter(it => it.owned || ownsItem('avatar', it.item_key))
+      : g.items;
+    if (!items.length) return;          // 筛选后没有可佩戴的，整组隐藏
+    shown++;
     const sec = document.createElement('div');
     sec.className = 'avatar-sec';
     sec.innerHTML = `<div class="avatar-sec-title">${esc(g.name)}<span class="avatar-sec-tip">${ownedCount}/${g.items.length} 已拥有</span></div>`;
     const grid = document.createElement('div');
     grid.className = 'avatar-grid avatar-grid-img';
-    g.items.forEach(it => grid.appendChild(
+    items.forEach(it => grid.appendChild(
       buildImgChoice(it.item_key, cur.key, it.owned || ownsItem('avatar', it.item_key), Number(it.price) || 0)));
     sec.appendChild(grid);
     els.avatarPicker.appendChild(sec);
   });
 
-  renderMoodPreview();
-  els.avatarModal.classList.add('show');
-  Nav.push('avatar');
+  if (onlyOwned && !shown && ready) {
+    const empty = document.createElement('div');
+    empty.className = 'avatar-sec';
+    empty.innerHTML = '<div class="own-empty">商店头像还没有已拥有的<br><span>去「星光商店」用星光值兑换后，这里就能直接换</span></div>';
+    els.avatarPicker.appendChild(empty);
+  }
 }
 
 
@@ -2032,11 +2074,24 @@ function renderFramePage() {
     els.framePreviewTip.textContent = `当前佩戴：${frameNameOf(curFrame)} · 我的星光值 ${state.wallet.balance}`;
   }
   grid.innerHTML = '';
+  // v167.4：筛选条（全部 / 仅显示已拥有）
+  const filterHost = document.getElementById('frameOwnFilter');
+  if (filterHost) {
+    filterHost.innerHTML = '';
+    filterHost.appendChild(buildOwnFilter(!!state.frameOwnedOnly, v => {
+      state.frameOwnedOnly = v;
+      renderFramePage();
+    }, '头像框'));
+  }
+  const onlyOwned = !!state.frameOwnedOnly;
+  let shownCount = 0;
   FRAMES.forEach(f => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
     const owned = f.key === 'none' || ownedSet.has(f.key);
+    if (onlyOwned && !owned) return;   // 筛选时只显示已拥有的
+    shownCount++;
     const price = f.key === 'none' ? 0 : shopPriceOf('frame', f.key);
     b.innerHTML = `<span class="fc-ring"></span>` +
       (owned ? `<span class="fc-owned">✓</span>` : `<span class="fc-lock">🔒<em>⭐${price}</em></span>`);
@@ -2054,7 +2109,7 @@ function renderFramePage() {
   if (els.frameCountTip) {
     const total = FRAMES.length;
     const got = FRAMES.filter(f => f.key === 'none' || ownedSet.has(f.key)).length;
-    els.frameCountTip.textContent = `已拥有 ${got}/${total}`;
+    els.frameCountTip.textContent = onlyOwned ? `显示 ${shownCount} 个 · 已拥有 ${got}/${total}` : `已拥有 ${got}/${total}`;
   }
 }
 
