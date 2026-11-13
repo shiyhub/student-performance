@@ -62,7 +62,8 @@
       <button class="tab-btn" data-tab="task">📋 每日任务</button>
       <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
       <button class="tab-btn" data-tab="stats">📊 数据统计</button>
-      <button class="tab-btn" data-tab="xpLog">📜 经验记录</button>
+      <button class="tab-btn" data-tab="xpLog">📜 星光记录</button>
+      <button class="tab-btn" data-tab="star">⭐ 星光管理</button>
       <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
       <button class="tab-btn" data-tab="seat">🪑 座位编排</button>
     </nav>
@@ -165,7 +166,7 @@
       <div class="card">
         <div class="card-title">➕ 新增表现标签</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，经验值可自定义。<b>「维度」决定加分归属：德/智/体/美/劳，经验值会加进对应维度。</b>
+          标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，星光值可自定义。<b>「维度」决定加分归属：德/智/体/美/劳，星光值会加进对应维度。</b>
         </p>
         <form id="addTagForm">
           <div class="add-form-grid">
@@ -198,7 +199,7 @@
               </select>
             </div>
             <div class="field">
-              <label for="addTagXp">经验值（自定义）</label>
+              <label for="addTagXp">星光值（自定义）</label>
               <input class="input" id="addTagXp" type="number" min="0" max="100" value="2" title="积极建议 2~10，消极建议 0；老师可自定义">
             </div>
             <div class="field full">
@@ -218,7 +219,7 @@
       </p>
     </section>
 
-    <!-- ===== 自动化任务（五维经验自动加分） ===== -->
+    <!-- ===== 自动化任务（五维星光值自动加分） ===== -->
     <section id="tabAuto" hidden>
       <div class="card">
         <div class="card-title">🤖 新增自动化任务</div>
@@ -294,7 +295,7 @@
         <div class="card-title">🙋 手动分配任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           手动给单个/多个/全班学生分配某天的任务（如：某天某人做卫生委员、某人抬菜）。
-          学生端会看到自己的任务，<b>确认完成后才按标签加分</b>（走五维经验）。
+          学生端会看到自己的任务，<b>确认完成后才按标签加分</b>（走五维星光值）。
         </p>
         <div class="add-form-grid">
           <div class="field">
@@ -336,7 +337,7 @@
         <div class="card-title">🎯 发布个人任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           教师自定义任务内容（如"今天给绿植浇水""课间提醒大家喝水"），只发给选定的学生，
-          学生端<b>个人任务栏</b>专属可见，确认完成后按你定的分值+维度加经验。
+          学生端<b>个人任务栏</b>专属可见，确认完成后按你定的分值+维度加星光值。
         </p>
         <div class="add-form-grid">
           <div class="field full">
@@ -358,7 +359,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="personalTaskXp">经验分值（1-100）</label>
+            <label for="personalTaskXp">星光值分值（1-100）</label>
             <input class="input" id="personalTaskXp" type="number" min="1" max="100" value="2">
           </div>
           <div class="field">
@@ -392,7 +393,7 @@
 
           <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskSelNone">清空</button>
 
-          <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（经验回退）</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（星光值回退）</button>
 
           <span class="text-muted" style="font-size:12px;" id="ptaskSelCount"></span>
 
@@ -408,7 +409,7 @@
         <div class="card-title">🏆 发布挑战任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           如"英语默写挑战"，学生端<b>挑战任务栏</b>可见；完成后学生自选达成档位
-          <b>10 / 15 / 20 … 110</b>（步长 5，共 21 档），对应经验 = 档位 ÷ 5（即 2 / 3 / 4 … 22）。
+          <b>10 / 15 / 20 … 110</b>（步长 5，共 21 档），对应星光值 = 档位 ÷ 5（即 2 / 3 / 4 … 22）。
         </p>
         <div class="add-form-grid">
           <div class="field full">
@@ -442,7 +443,7 @@
           </div>
         </div>
         <div class="field full" style="margin-top:10px;">
-          <label>档位方案（每行一档：档位数值 + 对应经验，可增删改；默认 10~110 步5、经验=档位÷5）</label>
+          <label>档位方案（每行一档：档位数值 + 对应星光值，可增删改；默认 10~110 步5、星光值=档位÷5）</label>
           <div id="challengeLevelBox" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"></div>
           <div style="margin-top:6px;">
             <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeLevelAdd">+ 加一档</button>
@@ -464,7 +465,7 @@
 
           <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeSelNone">清空</button>
 
-          <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（经验回退）</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeDelBatch" style="color:#c0392b;border-color:#e0b4b0;">删除所选（星光值回退）</button>
 
           <span class="text-muted" style="font-size:12px;" id="challengeSelCount"></span>
 
@@ -608,14 +609,97 @@
       <div id="examBox" class="exam-box"></div>
     </section>
 
-    <!-- ===== 经验记录（真实经验值流水） ===== -->
+    <!-- ===== 星光记录（真实星光值流水） ===== -->
+
+    <!-- ===== 星光管理 ===== -->
+    <section id="tabStar" hidden>
+      <div class="card">
+        <div class="card-title">⭐ 星光值与班级星光值</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          学生获得的是<b>星光值</b>（原星光值），可用于星光商店兑换头像与头像框；
+          消费只扣余额，不影响已累计的星光值。每 <b>1 点星光值</b> 自动转化为 <b>1 点班级星光值</b>，
+          班级每升 1 级自动获得 <b>1 次抽奖机会</b>，学生点击班级墙上的班级头像即可抽奖。
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="starClass">班级</label>
+            <select class="input" id="starClass"></select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" id="btnStarRefresh" type="button">刷新</button>
+          </div>
+        </div>
+        <div id="starProgressBox" style="margin-top:12px;"></div>
+        <div class="exam-form-grid" style="margin-top:12px;">
+          <div class="field">
+            <label for="starAddXp">补发班级星光值</label>
+            <input class="input" id="starAddXp" type="number" min="1" step="1" placeholder="例如 300">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-ghost" id="btnStarAddXp" type="button">发放星光值</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎡 班级抽奖记录</div>
+        <div id="starDrawBox"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🛍️ 星光商店价格</div>
+        <p class="text-muted" style="margin-bottom:10px;">修改价格后学生端立即生效；已兑换过的装扮不受影响。</p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="shopItemSel">商品</label>
+            <select class="input" id="shopItemSel"></select>
+          </div>
+          <div class="field">
+            <label for="shopItemPrice">价格（星光值）</label>
+            <input class="input" id="shopItemPrice" type="number" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" id="btnShopPriceSave" type="button">保存价格</button>
+          </div>
+        </div>
+        <div id="shopAdminMsg" class="text-muted" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🗄️ 数据封存与重置</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          把当前<b>全部学生数据</b>（表现记录、任务提交、挑战、试卷、留言、星光流水、抽奖记录、成就）
+          原样封存到归档表，可随时查看；随后把统计归零，开始新一轮记录。
+          <b>名单、头像、头像框、家长凭据保留；星光值与班级星光值从 0 开始。</b>
+          此操作不可撤销，请先确认已备份。
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="archiveLabel">封存批次名称</label>
+            <input class="input" id="archiveLabel" type="text" maxlength="40" placeholder="例如 2026秋 第一学期">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-danger" id="btnArchive" type="button">封存并重置</button>
+          </div>
+        </div>
+        <div id="archiveResult" style="margin-top:10px;"></div>
+        <div style="margin-top:14px;">
+          <div class="card-title" style="font-size:14px;">📚 历史封存批次</div>
+          <div id="archiveBatchList"></div>
+        </div>
+      </div>
+    </section>
     <section id="tabXpLog" hidden>
       <div class="card">
-        <div class="card-title">📜 学生经验日志</div>
+        <div class="card-title">📜 学生星光值日志</div>
         <p class="text-muted" style="margin-bottom:10px;">
           查询某学生的全部加分流水（日常表现 / 每日任务 / 个人任务 / 挑战任务），
-          按<b>表现标签当前真实分值</b>记录，带累计经验列，可用于对照与核账；
-          也可一键查看<b>全班学生经验日志总览</b>（当前经验 / 流水应得 / 差额），点击学生行看流水明细。
+          按<b>表现标签当前真实分值</b>记录，带累计星光值列，可用于对照与核账；
+          也可一键查看<b>全班学生星光值日志总览</b>（当前星光值 / 流水应得 / 差额），点击学生行看流水明细。
           首次使用需先执行 87 号 SQL，并在教师后台执行注入（select inject_xp_log()）。
         </p>
         <div class="exam-form-grid">
@@ -640,10 +724,10 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🚨 经验异常区（自动上报）</div>
+        <div class="card-title">🚨 星光值异常区（自动上报）</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          学生提交经验时自动检测异常并上报到这里，无需手工排查：
-          <b>标签已被删除</b>、<b>标签经验值误配</b>（超 0~30）、<b>扣减致经验为负</b>、<b>加分链路异常</b>（双计/漏计）等。
+          学生提交星光值时自动检测异常并上报到这里，无需手工排查：
+          <b>标签已被删除</b>、<b>标签星光值误配</b>（超 0~30）、<b>扣减致星光值为负</b>、<b>加分链路异常</b>（双计/漏计）等。
           同一位学生同一天同一类异常只上报一次，处理后可标记为「已处理」。
           需先执行 90 号 SQL。
         </p>
@@ -653,11 +737,11 @@
       </div>
 
       <div class="card">
-        <div class="card-title">⚠️ 异常经验排查</div>
+        <div class="card-title">⚠️ 异常星光值排查</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          比对全班「当前经验」与「经验流水应得」，列出差额非零的学生，
-          辅助排查异常经验来源（手动调经验 / 删除未回退 / 回退过头等）。
-          需先完成经验流水注入。
+          比对全班「当前星光值」与「星光值流水应得」，列出差额非零的学生，
+          辅助排查异常星光值来源（手动调星光值 / 删除未回退 / 回退过头等）。
+          需先完成星光值流水注入。
         </p>
         <button class="btn btn-warn" id="btnXpAnomaly" type="button">扫描全班异常</button>
         <span id="xpAnomalyHint" class="text-muted" style="margin-left:10px;"></span>
@@ -668,22 +752,22 @@
     <!-- ===== 测试工具（不影响真实使用） ===== -->
     <section id="tabTools" hidden>
       <div class="card">
-        <div class="card-title">📥 经验流水注入（经验记录功能）</div>
+        <div class="card-title">📥 星光值流水注入（星光记录功能）</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          把现有全部加分（日常/每日任务/个人任务/挑战）按<b>真实经验值</b>写入「经验记录」流水，
+          把现有全部加分（日常/每日任务/个人任务/挑战）按<b>真实星光值</b>写入「星光记录」流水，
           用于查询与核账。可重复点击，不会重复记录。
         </p>
-        <button class="btn btn-primary" id="btnInjectXpLog" type="button">注入经验流水</button>
+        <button class="btn btn-primary" id="btnInjectXpLog" type="button">注入星光值流水</button>
         <span id="injectXpLogResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
 
       <div class="card">
-        <div class="card-title">🔄 经验值重算</div>
+        <div class="card-title">🔄 星光值重算</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          修改了「表现标签」里的经验值后，点这里按历史记录重新累加全班的经验和等级。
+          修改了「表现标签」里的星光值后，点这里按历史记录重新累加全班的星光值和等级。
           <b>只会重算，不会删除任何记录。</b>
         </p>
-        <button class="btn btn-primary" id="btnRecalcXp" type="button">一键重算全班经验</button>
+        <button class="btn btn-primary" id="btnRecalcXp" type="button">一键重算全班星光值</button>
         <span id="recalcResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
 
@@ -709,12 +793,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title">ℹ️ 经验规则说明</div>
+        <div class="card-title">ℹ️ 星光值规则说明</div>
         <p class="text-muted" style="margin-bottom:6px;">
-          · 学生每勾选一个「积极表现」，经验 +该标签设定值（默认 +2）；消极表现默认 +0。<br>
-          · 老师删掉一条记录时，这条记录带来的经验会自动扣回。<br>
+          · 学生每勾选一个「积极表现」，星光值 +该标签设定值（默认 +2）；消极表现默认 +0。<br>
+          · 老师删掉一条记录时，这条记录带来的星光值会自动扣回。<br>
           · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200 / Lv6=400。校园头像 Lv3、典藏头像 Lv6 解锁。<br>
-          · 想直接调整某个学生的经验，到「学生名单」里点他那一行的 ✏️ 调经验。
+          · 想直接调整某个学生的星光值，到「学生名单」里点他那一行的 ✏️ 调星光值。
         </p>
       </div>
     </section>
@@ -738,8 +822,8 @@
               <select class="input" id="taskType">
                 <option value="classwork">🏫 课堂作业</option>
                 <option value="homework">🏠 家庭作业</option>
-                <option value="recite">🎤 背诵任务（未完成/完成，+2经验）</option>
-                <option value="dictation">✏️ 默写任务（未完成/完成，+2经验）</option>
+                <option value="recite">🎤 背诵任务（未完成/完成，+2星光值）</option>
+                <option value="dictation">✏️ 默写任务（未完成/完成，+2星光值）</option>
               </select>
             </div>
             <div class="field full">
@@ -804,7 +888,7 @@
     <section id="tabBatch" hidden>
       <div class="card">
         <div class="card-title">🎖️ 批量打标签</div>
-        <p class="text-muted">全班/多日都遵守纪律时，选一个标签，一次给多个学生、多个日期批量打上。经验和心情会按规则自动计算。</p>
+        <p class="text-muted">全班/多日都遵守纪律时，选一个标签，一次给多个学生、多个日期批量打上。星光值和心情会按规则自动计算。</p>
         <div class="grid">
           <div class="field">
             <label for="awardClass">班级</label>
@@ -859,10 +943,10 @@
           <div class="field">
             <label for="awardGrade">统一等级</label>
             <select class="input" id="awardGrade">
-              <option value="done">✅ 完成（经验+1）</option>
-              <option value="good">👍 优秀 A（经验+2）</option>
-              <option value="perfect" selected>🏆 完美 A+（经验+3）</option>
-              <option value="none">⏳ 未完成（经验0）</option>
+              <option value="done">✅ 完成（星光值+1）</option>
+              <option value="good">👍 优秀 A（星光值+2）</option>
+              <option value="perfect" selected>🏆 完美 A+（星光值+3）</option>
+              <option value="none">⏳ 未完成（星光值0）</option>
             </select>
           </div>
         </div>

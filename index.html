@@ -62,7 +62,7 @@
     </div>
     <div class="class-progress" id="classProgress">
       <div class="cp-row">
-        <span>🧡 班级经验 <b id="cpXp">0</b></span>
+        <span>🧡 班级星光值 <b id="cpXp">0</b></span>
         <span id="cpNext">距 Lv2 还需 400</span>
       </div>
       <div class="cp-bar"><div class="cp-fill" id="cpFill"></div></div>
@@ -112,9 +112,15 @@
       <span class="identity-actions-sep">·</span>
       <button type="button" class="identity-hint-btn" id="btnOpenFrames">🖼️ 更换头像框</button>
     </div>
-    <div class="identity-xp">
+    <div class="identity-star">
+      <div class="is-row">
+        <span class="is-icon" aria-hidden="true">⭐</span>
+        <b id="identityStar">0</b>
+        <span class="is-unit">星光值</span>
+        <button type="button" class="is-shop-btn" id="btnOpenShop">🛍️ 星光商店</button>
+      </div>
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
-      <div class="identity-xp-text" id="identityXpText">经验 0 · 再得 20 点升到 Lv.2</div>
+      <div class="identity-xp-text" id="identityXpText">累计获得 0 星光值 · 星光等级 Lv.1</div>
     </div>
     <div class="field">
       <label for="inpClass">我的班级</label>
@@ -244,11 +250,96 @@
 
   <!-- 全部头像框 -->
   <section class="card">
-    <div class="frame-page-title">全部头像框 <span class="frame-page-tip" id="frameCountTip"></span></div>
+    <div class="frame-page-title">我的头像框 <span class="frame-page-tip" id="frameCountTip"></span></div>
     <div class="frame-grid" id="framePageGrid"></div>
   </section>
 
-  <div class="frame-page-foot">达成条件自动解锁 · 等级不够的框会显示 🔒</div>
+  <div class="frame-page-foot">头像框用星光值在商店兑换 · 已拥有的可随时更换</div>
+</div>
+
+<!-- ================= 视图五：星光商店 ================= -->
+<div class="container student-view" id="shopView" hidden>
+
+  <button class="wall-back" id="btnShopBack" aria-label="返回个人主页" title="返回个人主页"><span class="back-tri">‹</span></button>
+
+  <header class="s-header">
+    <div class="s-mascot">🛍️</div>
+    <h1 class="s-title">星光商店</h1>
+    <div class="s-date" id="shopWalletLabel">我的星光值：0</div>
+  </header>
+
+  <div id="shopConfigBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能兑换，请联系老师完成部署。
+  </div>
+
+  <section class="card shop-wallet-card">
+    <div class="shop-wallet-main">
+      <span class="shop-wallet-icon">⭐</span>
+      <b id="shopWalletValue">0</b>
+      <span class="shop-wallet-unit">星光值</span>
+    </div>
+    <div class="shop-wallet-sub" id="shopWalletSub">累计获得 0 · 已消费 0</div>
+  </section>
+
+  <div class="shop-tabs" id="shopTabs">
+    <button type="button" class="shop-tab active" data-shop-tab="avatar">👤 头像</button>
+    <button type="button" class="shop-tab" data-shop-tab="frame">🖼️ 头像框</button>
+  </div>
+
+  <div id="shopLoading" class="loading-row"><span class="spinner"></span>正在加载商品…</div>
+  <div class="shop-groups" id="shopGroups" hidden></div>
+  <div class="shop-tip">用星光值兑换后即可永久使用 · 上课表现越棒，星光值越多 ✨</div>
+</div>
+
+<!-- ================= 视图六：班级转盘抽奖 ================= -->
+<div class="container student-view" id="lotteryView" hidden>
+
+  <button class="wall-back" id="btnLotteryBack" aria-label="返回班级墙" title="返回班级墙"><span class="back-tri">‹</span></button>
+
+  <header class="s-header">
+    <div class="s-mascot">🎡</div>
+    <h1 class="s-title">班级升级转盘</h1>
+    <div class="s-date" id="lotterySub">班级每升 1 级，就有 1 次抽奖机会</div>
+  </header>
+
+  <div id="lotteryConfigBanner" class="banner banner-error" hidden>
+    系统还没有连接数据库（Supabase 未配置），暂时不能抽奖，请联系老师完成部署。
+  </div>
+
+  <section class="card lottery-card">
+    <div class="lottery-head">
+      <div class="lottery-class-name" id="lotteryClassName">我们班</div>
+      <div class="lottery-class-lv" id="lotteryClassLv">Lv.1</div>
+    </div>
+    <div class="lottery-chance" id="lotteryChance">可抽奖 0 次</div>
+
+    <div class="wheel-wrap">
+      <div class="wheel-pointer">▼</div>
+      <div class="wheel" id="lotteryWheel"></div>
+      <button type="button" class="wheel-hub" id="btnSpin">抽奖</button>
+    </div>
+
+    <div class="lottery-actions">
+      <button type="button" class="btn btn-warn" id="btnSpinMain">开始抽奖 🎁</button>
+      <button type="button" class="btn btn-ghost" id="btnLotteryHistory">抽奖记录</button>
+    </div>
+    <div class="lottery-tip" id="lotteryTip">班级星光值每升 1 级获得 1 次机会，机会可累计</div>
+  </section>
+
+  <section class="card" id="lotteryHistoryCard" hidden>
+    <div class="card-title red-title">🏆 最近抽奖</div>
+    <div id="lotteryHistoryBody" class="lottery-history"></div>
+  </section>
+</div>
+
+<!-- ================= 抽奖结果弹窗 ================= -->
+<div class="modal-mask" id="prizeModal">
+  <div class="modal prize-modal">
+    <div class="prize-icon" id="prizeIcon">🎁</div>
+    <h3 class="prize-title" id="prizeName">恭喜中奖</h3>
+    <div class="prize-desc" id="prizeDesc"></div>
+    <button type="button" class="btn btn-warn" id="btnPrizeClose">收下啦 ✨</button>
+  </div>
 </div>
 
 <!-- ================= 某位同学的表现详情弹窗 ================= -->
@@ -296,14 +387,14 @@
   </div>
 </div>
 
-<!-- 榜单弹窗（左雏菊：经验榜 / 右雏菊：挑战榜） -->
+<!-- 榜单弹窗（左雏菊：星光榜 / 右雏菊：挑战榜） -->
 <div class="modal-mask" id="leaderboardModal">
   <div class="modal leaderboard-modal">
     <div class="detail-head">
       <div class="detail-avatar" id="lbIcon">🏅</div>
       <div class="detail-who">
-        <h3 id="lbTitle">经验榜</h3>
-        <div class="text-muted" id="lbSub">全班经验排名</div>
+        <h3 id="lbTitle">星光榜</h3>
+        <div class="text-muted" id="lbSub">全班累计星光值排名</div>
       </div>
       <button class="detail-close" id="btnLbClose" aria-label="关闭">✕</button>
     </div>
@@ -321,7 +412,7 @@
 <!-- v3.0：雨/雪 Canvas 粒子（独立于 skyDeco，避免 innerHTML 清空误删） -->
 <canvas id="wxCanvas" aria-hidden="true"></canvas>
 
-<div class="plant plant-left" title="点击查看经验榜">
+<div class="plant plant-left" title="点击查看星光榜">
   <img id="flowerLeft" class="wx-flower" src="assets/flowers/flower-sunny.png" alt="">
   <img id="cloudLeft" class="wx-cloud" src="assets/flowers/cloud.png" alt="">
 </div>
