@@ -252,7 +252,9 @@ const FRAMES = [
   { key: 'cyber',   name: '赛博幻梦', icon: '🤖', need: '升到 Lv.8' },
   { key: 'pulse',   name: '霓虹脉冲', icon: '⚡', need: '升到 Lv.8' },
   { key: 'unicorn', name: '彩虹独角兽', icon: '🦄', need: '升到 Lv.8' },
-  { key: 'onyx',    name: '黑金曜石', icon: '💫', need: '升到 Lv.8' }
+  { key: 'onyx',    name: '黑金曜石', icon: '💫', need: '升到 Lv.8' },
+  /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
+  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '🪶', need: '升到 Lv.7' }
 ];
 const XP_PER_POSITIVE = 2;
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
@@ -1867,7 +1869,8 @@ const FRAME_CLASS = {
   sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech',
   ribbon:'frame-ribbon',
   /* v162：Lv.8 四款新头像框 */
-  cyber:'frame-cyber', pulse:'frame-pulse', unicorn:'frame-unicorn', onyx:'frame-onyx'
+  cyber:'frame-cyber', pulse:'frame-pulse', unicorn:'frame-unicorn', onyx:'frame-onyx',
+  rosefeather:'frame-rosefeather'
 };
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
@@ -1983,7 +1986,7 @@ function calcUnlockedFrames(profile) {
   if (lv >= 9) { un.add('redlily'); un.add('mask'); }
   if (lv >= 10) { un.add('neonwolf'); }
   /* 新 15 款（95 号 SQL 同口径：魔法星空 Lv.7 / 兽耳小铺 Lv.8） */
-  if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty'].forEach(k => un.add(k)); }
+  if (lv >= 7) { ['ice','moon','crystal','silk','goldwing','kitty','rosefeather'].forEach(k => un.add(k)); }
   if (lv >= 8) { ['devilcat','angelcat','clover','neko','sweets','goth','broken','mono','tech','ribbon'].forEach(k => un.add(k)); }
   /* v163(RSK-20)：4 款 Lv.8 头像框（与 103 号迁移同口径）——此前漏加，等级 8 也不解锁 */
   if (lv >= 8) { ['cyber','pulse','unicorn','onyx'].forEach(k => un.add(k)); }
