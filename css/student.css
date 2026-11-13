@@ -795,7 +795,8 @@ html,body{background:#e8e6e1 !important;}
 .mate-class-all{grid-column:1/-1;max-width:220px;}
 .mate-class-all{grid-column:auto;max-width:none;}
 .wall-class-card{display:flex;flex-direction:column;justify-content:space-between;gap:10px;}
-.wall-class-card .class-progress{flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+/* v167.3：底部只剩一条星光值进度，纵向居中，不再用 space-between 拉开空隙 */
+.wall-class-card .class-progress{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;}
 .wall-top{display:flex;gap:14px;align-items:stretch;}
 .wall-class-left{flex:0 0 180px;}
 .wall-top .wall-class-card{flex:1;margin:0;}
@@ -815,6 +816,9 @@ html,body{background:#e8e6e1 !important;}
   .wall-class-left{grid-column:1;flex:none;}
   .wall-top .wall-class-card{grid-column:2/-1;flex:none;margin:0;}
   .wall-class-left .mate .mate-name{white-space:normal;line-height:1.35;}
+  /* v167.3：班级卡片撑满左侧格位，底部与右侧「班级星光值」卡片齐平 */
+  .wall-class-left{display:flex;}
+  .wall-class-left > .class-card-inner{flex:1 1 auto;height:100%;box-sizing:border-box;}
 }
 .diary-col.c2{display:flex;flex-direction:column;}
 .diary-col.c2 > #pastTaskCard{flex:1;min-height:300px;display:flex;flex-direction:column;}
