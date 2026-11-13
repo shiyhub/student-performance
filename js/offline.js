@@ -142,7 +142,7 @@
       const b = document.createElement('div');
       b.id = 'spPendingBadge';
       b.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:9998;background:#d9a441;color:#fff;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.22);display:none;cursor:pointer;';
-      b.title = '还有离线操作未同步，点击立即同步';
+      b.title = '离线操作未同步，点击同步';
       document.body.appendChild(b);
       b.addEventListener('click', () => {
         b.style.display = 'none';

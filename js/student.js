@@ -107,11 +107,11 @@ const MOOD_MAP = Object.fromEntries(Object.values(MOOD_LEVELS).map(m => [m.key, 
 const MOOD_BY_LEVEL = l => MOOD_LEVELS[Math.min(5, Math.max(1, l))];
 const STAR_TEXT = ['', '还需加油', '继续努力', '还不错', '很棒', '超级棒'];
 const PRAISE = {
-  happy:  ['太棒啦！明天也要保持好心情！', '你今天闪闪发光，继续加油！'],
-  good:   ['做得不错，为你点赞！', '稳稳进步中，明天会更好！'],
-  normal: ['记录下来就是进步，明天加油！', '没关系，每天进步一点点！'],
-  down:   ['明天试着多做一个积极的小表现吧！', '有一点小低落很正常，老师陪着你！'],
-  sad:    ['愿意说出来就很勇敢，老师和家长都爱你！', '明天会是新的一天，陪你一起加油！']
+  happy:  ['记录好了，明天也保持好心情'],
+  good:   ['做得不错，继续'],
+  normal: ['每天进步一点点'],
+  down:   ['明天试着多做一件积极的小事'],
+  sad:    ['明天会是新的一天']
 };
 const AVATARS = Array.from({ length: 24 }, (_, i) => 'animal' + (i + 1));
 
@@ -289,7 +289,7 @@ function ensureMobileGate() {
   ov.innerHTML =
     '<div style="font-size:30px">' + I['wifi-off']() + '</div>' +
     '<div style="font-size:20px;font-weight:700;letter-spacing:1px">学生端暂不支持手机查看</div>' +
-    '<div style="font-size:13px;color:#93a5c4;line-height:1.8">请使用电脑浏览器访问本页面。<br>教师如需在手机上查看效果，请输入解锁秘钥。</div>' +
+    '<div style="font-size:13px;color:#93a5c4;line-height:1.8">请用电脑浏览器访问。<br>教师需在手机上查看，请输入秘钥。</div>' +
     '<input id="mKeyInput" type="password" placeholder="输入教师秘钥" autocomplete="off" style="width:220px;padding:10px 12px;border-radius:8px;border:1px solid #3b5b8a;background:#0e1a2c;color:#fff;font-size:15px;outline:none;text-align:center;margin-top:6px">' +
     '<div id="mKeyErr" style="font-size:12px;color:#ff6b6b;height:16px"></div>' +
     '<button id="mKeyBtn" style="padding:10px 34px;border-radius:8px;border:none;background:#2f6fed;color:#fff;font-size:15px;font-weight:600;cursor:pointer">解锁查看</button>';
@@ -420,7 +420,7 @@ function ensureOfflineBanner() {
   offlineBanner = document.createElement('div');
   offlineBanner.id = 'offlineBanner';
   offlineBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4e6b5c;color:#fff;text-align:center;font-size:13px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15);';
-  offlineBanner.textContent = '离线模式：正在显示本地缓存，你的操作会先保存，联网后自动同步';
+  offlineBanner.textContent = '离线模式 · 显示本地缓存，操作稍后同步';
   offlineBanner.hidden = true;
   document.body.appendChild(offlineBanner);
 }
@@ -612,7 +612,7 @@ function init() {
     els.wallLoading.hidden = true;
     els.tagsLoading.hidden = true;
     els.tagsFailed.hidden = false;
-    els.tagsFailed.textContent = '系统尚未配置完成，表现项目暂不可用，请联系老师。';
+    els.tagsFailed.textContent = '尚未配置完成，请联系老师';
     return;
   }
   loadTags();
@@ -749,7 +749,7 @@ function showDeviceGate() {
     const name = (nameInput.value || '').trim();
     if (!name) { err.textContent = '请输入姓名'; return; }
     if (!roster.length) {
-      err.textContent = '离线且暂无名单缓存：暂时无法校验姓名，请确认与老师登记的完全一致。';
+      err.textContent = '离线无法校验姓名，请核对';
     } else if (!roster.includes(name)) {
       err.textContent = '名单里没有这个名字，请核对班级和姓名'; return;
     }
@@ -762,7 +762,7 @@ function showDeviceGate() {
     if (window.Precache && window.Offline && window.Offline.online) {
       setTimeout(() => {
         window.Precache.runStudent(cls, p => {
-          if (p && p.done === p.total) toast('本班数据已缓存到本机，断网也能完整使用');
+          if (p && p.done === p.total) toast('已缓存到本机');
         });
       }, 600);
     }
@@ -775,7 +775,7 @@ function applyReadonlyMode() {
   // 隐藏提交按钮，顶部加预览提示
   const banner = document.createElement('div');
   banner.className = 'preview-banner';
-  banner.innerHTML = '' + I.eye() + ' 老师预览模式（只读）——你看到的就是这位学生看到的页面，不能提交记录';
+  banner.innerHTML = '' + I.eye() + ' 预览模式（只读）';
   const card = document.querySelector('.identity-card') || document.querySelector('main');
   if (card && !document.querySelector('.preview-banner')) card.prepend(banner);
   if (els.btnSubmit) {
@@ -783,7 +783,7 @@ function applyReadonlyMode() {
     const tip = document.createElement('div');
     tip.className = 'text-muted';
     tip.style.cssText = 'margin-top:10px;text-align:center;';
-    tip.textContent = '（预览模式下不能提交，仅供老师查看效果）';
+    tip.textContent = '（预览模式不能提交）';
     els.formView.appendChild(tip);
   }
 }
@@ -887,7 +887,7 @@ async function loadWall() {
     els.wallLoading.hidden = true;
     if (!hasCache) {
       els.wallLoading.hidden = false;
-      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">数据加载失败，请稍后刷新重试。</span>';
+      els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">加载失败，请刷新重试</span>';
     }
     return;   // 有缓存：静默保持已渲染的缓存界面
   }
@@ -1089,8 +1089,8 @@ function openStudentDetail(name) {
     : null;
   const starOf = rosterRow ? (Number(rosterRow.star) || 0) : 0;
   els.detailSub.textContent = (rows.length
-    ? `共 ${rows.length} 条记录${avg ? ' · 平均 ${I.star()}' + avg : ''}`
-    : '还没有提交过表现记录') + ` · ${I.star()}${starOf} 星光值`;
+    ? `共 ${rows.length} 条记录${avg ? ' · 平均 ' + avg + ' 星' : ''}`
+    : '还没有记录') + ` · 星光 ${starOf}`;
   // v146(RSK-16)：墙 records 已瘦身（不含 items/teacher_comment），明细点开详情时按需拉取
   els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载详细记录…</div>';
   state.detailName = name;
@@ -1107,8 +1107,8 @@ function openStudentDetail(name) {
       ? (rated2.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated2.length).toFixed(1)
       : null;
     els.detailSub.textContent = rows2.length
-      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ${I.star()}' + avg2 : ''}`
-      : '还没有提交过表现记录';
+      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ' + avg2 + ' 星' : ''}`
+      : '还没有记录';
     els.detailBody.innerHTML = renderRecordTimeline(rows2);
   });
 }
@@ -1184,7 +1184,7 @@ function renderClassRanking() {
 
 function renderRecordTimeline(rows) {
   if (!rows.length) {
-    return '<div class="empty" style="padding:24px 10px;">还没有表现记录，快去提交今天的第一条吧！</div>';
+    return '<div class="empty" style="padding:24px 10px;">暂无表现记录</div>';
   }
   // 按日期分组（入参已按日期、时间倒序）
   const groups = [];
@@ -1358,8 +1358,8 @@ function renderIdentityLevel() {
   if (els.identityXpFill) els.identityXpFill.style.width = p.pct + '%';
   if (els.identityXpText) {
     els.identityXpText.textContent = p.maxed
-      ? `累计获得 ${cum} 星光值 · 星光等级 Lv.${lv}（满级）`
-      : `累计获得 ${cum} 星光值 · 再得 ${p.left} 升到 Lv.${lv + 1}`;
+      ? `累计 ${cum} · Lv.${lv}（满级）`
+      : `累计 ${cum} · 再 ${p.left} 升 Lv.${lv + 1}`;
   }
   const wrap = document.querySelector('.identity-avatar');
   if (wrap) wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
@@ -1419,7 +1419,7 @@ function renderTagGrid() {
   });
   els.negGroup.hidden = !hasNeg;
   if (!state.tags.length) {
-    els.posGrid.innerHTML = '<span class="text-muted">老师还没有设置表现标签。</span>';
+    els.posGrid.innerHTML = '<span class="text-muted">暂无表现标签</span>';
   }
   els.tagsBox.hidden = false;
 }
@@ -1583,7 +1583,7 @@ function buildTextTag(t) {
   input.className = 'input';
   input.rows = 3;
   input.maxLength = 600;
-  input.placeholder = '填写今天的内容（选填，最多 600 字）';
+  input.placeholder = '选填，最多 600 字';
   input.addEventListener('input', () => { state.textValues[t.id] = input.value; updateMood(); });
   wrap.appendChild(label);
   wrap.appendChild(input);
@@ -1721,7 +1721,7 @@ function updateSoundButton() {
 async function openAvatarPicker() {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!cls || !name) { toast('请先在下面填好班级和姓名，再换头像'); return; }
+  if (!cls || !name) { toast('请先填写姓名'); return; }
   if (ready) { els.avatarModal.classList.add('show'); }
   if (ready) await Promise.all([loadWallet(), loadShopCatalog()]);
   renderAvatarPicker();
@@ -1754,7 +1754,7 @@ function renderAvatarPicker() {
   // 顶部：星光值 + 商店入口（v167：不再按等级解锁，改为星光值兑换）
   const tip = document.createElement('div');
   tip.className = 'avatar-shop-tip';
-  tip.innerHTML = `<span>${I.star()} 我的星光值 <b>${state.wallet.balance}</b> · 头像与头像框都在星光商店兑换</span>
+  tip.innerHTML = `<span>${I.star()} 星光值 <b>${state.wallet.balance}</b></span>
     <button type="button" class="avatar-shop-go">去商店 ${I.shop('ico-sm')}</button>`;
   els.avatarPicker.appendChild(tip);
   tip.querySelector('.avatar-shop-go').addEventListener('click', () => {
@@ -1771,7 +1771,7 @@ function renderAvatarPicker() {
   // —— 免费小动物头像（默认拥有，筛选时也始终可见）——
   const emojiSec = document.createElement('div');
   emojiSec.className = 'avatar-sec';
-  emojiSec.innerHTML = `<div class="avatar-sec-title">${I.paw()} 免费头像<span class="avatar-sec-tip ok">默认拥有，可随意更换</span></div>`;
+  emojiSec.innerHTML = `<div class="avatar-sec-title">${I.paw()} 免费头像<span class="avatar-sec-tip ok">默认拥有</span></div>`;
   const emojiGrid = document.createElement('div');
   emojiGrid.className = 'avatar-grid avatar-grid-img';
   AVATARS.forEach(key => emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0)));
@@ -1790,7 +1790,7 @@ function renderAvatarPicker() {
   if (!groups.length && ready) {
     const warn = document.createElement('div');
     warn.className = 'avatar-sec';
-    warn.innerHTML = '<div class="avatar-sec-tip">商店商品还没加载出来，请老师执行 110 号 SQL 初始化商店。</div>';
+    warn.innerHTML = '<div class="avatar-sec-tip">商品未加载，请联系老师</div>';
     els.avatarPicker.appendChild(warn);
   }
   let shown = 0;
@@ -1815,7 +1815,7 @@ function renderAvatarPicker() {
   if (onlyOwned && !shown && ready) {
     const empty = document.createElement('div');
     empty.className = 'avatar-sec';
-    empty.innerHTML = '<div class="own-empty">商店头像还没有已拥有的<br><span>去「星光商店」用星光值兑换后，这里就能直接换</span></div>';
+    empty.innerHTML = '<div class="own-empty">暂无已拥有的头像</div>';
     els.avatarPicker.appendChild(empty);
   }
 }
@@ -1842,7 +1842,7 @@ function buildImgChoice(key, selectedKey, owned, price) {
   b.addEventListener('click', () => {
     if (!owned) {
       sfx.oops();
-      toast(`这款头像还没拥有，去星光商店用 ${price || 0} 星光值兑换吧～`);
+      toast(`未拥有 · ${price || 0} 星光值兑换`);
       return;
     }
     onChooseAvatar(key, b);
@@ -1869,13 +1869,13 @@ async function onChooseAvatar(key, btn) {
     const reason = res && res.reason;
     sfx.oops();
     if (reason === 'not_owned') {
-      toast('这款头像还没拥有，去星光商店兑换后就能用啦～');
+      toast('未拥有，请先兑换');
     } else if (reason === 'no_student') {
-      toast('请先在下面填好班级和姓名，再换头像');
+      toast('请先填写姓名');
     } else if (reason === 'error') {
-      toast('头像没有保存成功，请检查网络后重试');
+      toast('保存失败，请重试');
     } else {
-      toast('头像没有保存成功，请稍后再试');
+      toast('保存失败，请重试');
     }
     return; // 服务端拒绝：不更新本地选择
   }
@@ -2099,7 +2099,7 @@ function renderFramePage() {
     b.addEventListener('click', () => {
       if (!owned) {
         sfx.oops();
-        toast(`这个头像框还没拥有，去星光商店用 ${price} 星光值兑换吧～`);
+        toast(`未拥有 · ${price} 星光值兑换`);
         return;
       }
       onChooseFrame(f.key, b);
@@ -2140,7 +2140,7 @@ function closeFramePage() {
 function buildFrameSection() {
   const sec = document.createElement('div');
   sec.className = 'avatar-sec';
-  sec.innerHTML = `<div class="avatar-sec-title">${I.sparkle()} 头像框<span class="avatar-sec-tip">星光商店兑换后即可佩戴</span></div>`;
+  sec.innerHTML = `<div class="avatar-sec-title">${I.sparkle()} 头像框<span class="avatar-sec-tip">商店兑换</span></div>`;
   const grid = document.createElement('div');
   grid.className = 'frame-grid';
   const row = currentRosterRow();
@@ -2154,7 +2154,7 @@ function buildFrameSection() {
     b.innerHTML = `<span class="fc-ring"></span>` +
       (unlocked ? '' : `<span class="fc-lock">${I.lock()}<em>${f.need}</em></span>`);
     b.addEventListener('click', () => {
-      if (!unlocked) { sfx.oops(); toast(`这个头像框还没拥有，去星光商店兑换吧～`); return; }
+      if (!unlocked) { sfx.oops(); toast('未拥有，请先兑换'); return; }
       onChooseFrame(f.key, b);
     });
     grid.appendChild(b);
@@ -2183,7 +2183,7 @@ async function onChooseFrame(key, btn) {
     return;
   }
   if (!wr.res || wr.res.ok === false) {
-    toast(wr.res && wr.res.reason === 'not_owned' ? '这个头像框还没拥有，去星光商店兑换吧～' : '保存失败，请重试');
+    toast(wr.res && wr.res.reason === 'not_owned' ? '未拥有，请先兑换' : '保存失败，请重试');
     return;
   }
   state.myFrame = key;
@@ -2403,7 +2403,7 @@ function renderShop() {
   });
 
   if (!groups.length && state.shopTab !== 'avatar') {
-    html += `<div class="empty">商店暂时没有商品，请老师执行 110 号 SQL 初始化。</div>`;
+    html += `<div class="empty">暂无商品，请联系老师</div>`;
   }
   els.shopGroups.innerHTML = html;
 
@@ -2423,7 +2423,7 @@ async function buyShopItem(key, btn) {
   if (!it) return;
   if (state.wallet.balance < Number(it.price || 0)) {
     sfx.oops();
-    return toast(`星光值不够啦，还差 ${Number(it.price) - state.wallet.balance} 点，继续加油～`);
+    return toast(`还差 ${Number(it.price) - state.wallet.balance} 星光值`);
   }
   if (btn) btn.disabled = true;
   try {
@@ -2432,14 +2432,14 @@ async function buyShopItem(key, btn) {
     const res = r.data || {};
     if (!res.ok) {
       sfx.oops();
-      if (res.reason === 'not_enough') toast(`星光值不够啦，还差 ${Number(res.price || 0) - Number(res.balance || 0)} 点`);
+      if (res.reason === 'not_enough') toast(`还差 ${Number(res.price || 0) - Number(res.balance || 0)} 星光值`);
       else if (res.reason === 'owned') toast('这件已经拥有啦');
       else toast('兑换失败，请稍后再试');
       if (btn) btn.disabled = false;
       return;
     }
     sfx.success();
-    toast(`兑换成功！${it.name} 已放进你的衣柜`);
+    toast(`已兑换 ${it.name}`);
     await Promise.all([loadWallet(), loadShopCatalog()]);
     renderShop();
     if (!els.shopView.hidden) renderShop();
@@ -2459,7 +2459,7 @@ async function doChooseAvatar(key) {
     sfx.oops();
     if (res && res.reason === 'not_owned') toast('这款还没拥有，先用星光值兑换吧～');
     else if (res && res.reason === 'no_student') toast('请先填好班级和姓名');
-    else toast('头像没有保存成功，请稍后再试');
+    else toast('保存失败，请重试');
     return;
   }
   sfx.pick();
@@ -2556,8 +2556,8 @@ function renderLottery() {
   }
   if (els.lotteryTip) {
     els.lotteryTip.textContent = (Number(p.chances) || 0) > 0
-      ? '点「开始抽奖」，转盘停下就是你的奖品'
-      : `班级星光值 ${p.xp || 0} · 再 ${p.next_need || 0} 点升到 Lv.${(p.level || 1) + 1}，升级就送抽奖机会`;
+      ? '点开始抽奖'
+      : `班级星光 ${p.xp || 0} · 再 ${p.next_need || 0} 升 Lv.${(p.level || 1) + 1}`;
   }
   if (els.btnSpinMain) els.btnSpinMain.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
   if (els.btnSpin) els.btnSpin.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
@@ -2604,7 +2604,7 @@ async function spinLottery() {
   const cls = state.currentClass || (els.inpClass.value || '').trim();
   if (!cls || state.spinning) return;
   const chance = Number((state.classProgress || {}).chances) || 0;
-  if (chance <= 0) { sfx.oops(); return toast('还没有抽奖机会，班级升级后就会送一次哦'); }
+  if (chance <= 0) { sfx.oops(); return toast('暂无抽奖机会'); }
 
   state.spinning = true;
   if (els.btnSpinMain) els.btnSpinMain.disabled = true;
@@ -2627,7 +2627,7 @@ async function spinLottery() {
     state.spinning = false;
     renderLottery();
     sfx.oops();
-    return toast(res && res.reason === 'no_chance' ? '还没有抽奖机会，班级升级后就会送一次哦' : '抽奖失败，请稍后再试');
+    return toast(res && res.reason === 'no_chance' ? '暂无抽奖机会' : '抽奖失败，请稍后再试');
   }
 
   // 转盘停在对应扇区
@@ -2670,7 +2670,7 @@ function showPrize(res) {
   let desc = `班级升到 Lv.${res.level} 的奖励`;
   if (res.prize_type === 'star') desc += ` · 已存入你的星光值`;
   else if (res.prize_type === 'class_star') desc += ` · 全班每人 +${res.prize_value}`;
-  else if (res.prize_type === 'avatar' || res.prize_type === 'frame') desc += ' · 已放进你的衣柜，去星光商店佩戴';
+  else if (res.prize_type === 'avatar' || res.prize_type === 'frame') desc += ' · 已放入衣柜';
   else desc += ' · 下次一定中大奖';
   els.prizeDesc.textContent = desc;
   els.prizeModal.classList.add('show');
@@ -2730,7 +2730,7 @@ async function updateSubmitStatus() {
   }
   if (myToday.length) {
     el.hidden = false;
-    el.textContent = `今天已提交 ${myToday.length} 次，可继续补充表现（不会重复加分）`;
+    el.textContent = `今天已提交 ${myToday.length} 次`;
     el.className = 'submit-status submit-status-ok';
   } else {
     el.hidden = true;
@@ -2944,7 +2944,7 @@ async function loadPastTasks() {
     }
     const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
     const gLabel = { none:'' + I.hourglass() + '未完成', done:'' + I['check-circle']() + '完成', good:'' + I.thumb() + '优秀A', perfect:'' + I.trophy() + '完美A+' };
-    if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
+    if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近 7 天无任务</p>'; return; }
     const now = new Date(); now.setHours(0,0,0,0);
     // 截止日期按本地时区解析（'YYYY-MM-DD' 字符串若用 new Date 会被当 UTC，导致当天任务上午就"已截止"）
     const parseLocalDate = dStr => {
@@ -2960,7 +2960,7 @@ async function loadPastTasks() {
       const active = dueDate ? dueDate >= now : false;
       const dueStr = t.due_time ? ` 截止${String(t.due_time).slice(0,10)}`
                   : (t.task_date ? ` 截止${(()=>{const d=parseLocalDate(t.task_date);d.setDate(d.getDate()+7);return fmtLocal(d);})()}` : '');
-      const head = `<div class="past-line1">${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
+      const head = `<div class="past-line1">${t.task_type==='homework'?I.home():I.school()} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
       if (!active) {
         return `<div class="past-row">${head}<div class="past-grade">${gLabel[cur] || '已截止'}</div></div>`;
       }
@@ -3055,7 +3055,7 @@ async function onSubmit() {
   // 不允许提交空白表现（星级可以不打，但至少要选一个小表现）
   if (!items.length) {
     sfx.oops();
-    return toast('还没有选择任何表现哦，先选一个今天的小表现吧～');
+    return toast('请先选择表现');
   }
 
   els.btnSubmit.disabled = true;
@@ -3069,7 +3069,7 @@ async function onSubmit() {
       });
       if (q) {
         sfx.success();
-        toast('没网也帮你存好了！联网后自动上传，星光值不会丢');
+        toast('已离线保存，联网后同步');
         applyLocalSubmitFeedback(cls, name, items);   // v123：记录合并+即时置灰+缓存持久化
         resetSelections();
         renderMoodPreview();
@@ -3085,7 +3085,7 @@ async function onSubmit() {
     if (rpcError) throw rpcError;
     if (!valid) {
       sfx.oops();
-      toast('没有找到你的名字哦，请检查班级和姓名，或请老师确认名单');
+      toast('未找到该姓名，请核对');
       return;
     }
 
@@ -3098,11 +3098,11 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+        if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
-        toast('名单中没有找到对应班级和姓名，请请老师确认');
+        toast('未找到该姓名，请核对');
       } else {
         throw insertError;
       }
@@ -3111,7 +3111,7 @@ async function onSubmit() {
     if (!subRes || subRes.ok === false) {
       sfx.oops();
       toast(subRes && subRes.reason === 'no_student'
-        ? '没有找到你的名字，请检查班级和姓名'
+        ? '未找到该姓名，请核对'
         : '提交失败，请重试');
       return;
     }
@@ -3174,7 +3174,7 @@ async function onSubmit() {
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
@@ -3236,9 +3236,9 @@ function celebrate(gainedXp, leveledUp) {
   let msg;
   if (leveledUp) {
     const row = currentRosterRow();
-    msg = `${I.sparkle()} 星光等级提升！你现在是 Lv.${row ? row.level : ''}，去星光商店看看新装扮吧！`;
+    msg = `星光等级提升，现在是 Lv.${row ? row.level : ''}`;
   } else if (gainedXp > 0) {
-    msg = `太棒啦！本次获得 ${gainedXp} 点星光值 ${I.star()} 现在有 ${state.wallet.balance} 点可以花啦`;
+    msg = `本次获得 ${gainedXp} 星光值 · 现有 ${state.wallet.balance}`;
   } else {
     const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
     msg = pool[Math.floor(Math.random() * pool.length)];
@@ -3395,7 +3395,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const resultEl = document.querySelector(`[data-result="${taskId}"]`);
   if (resultEl) {
     if (grade === 'none') {
-      resultEl.textContent = '好的，继续加油把任务完成吧！';
+      resultEl.textContent = '任务未完成';
     } else if (wr.queued) {
       resultEl.textContent = '已离线保存，联网后自动同步';
       // 离线：本地即时反映状态（按钮高亮 + 缓存），联网后以服务端为准
@@ -3410,10 +3410,10 @@ async function onPickTaskGrade(grade, taskId, btn) {
       } catch (e3) {}
     } else {
       const xpGain = (d.xp_delta || 0) > 0 ? ' 星光值+' + d.xp_delta : '';
-      resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
-                          : grade === 'good'    ? `真不错，继续保持！${xpGain}`
-                          :                       `完成啦，辛苦啦！${xpGain}`;
-      if (d.mood_awarded) resultEl.textContent += ' 心情+1 ' + I['mood-4']() + '';
+      resultEl.textContent = grade === 'perfect' ? `完美完成${xpGain}`
+                          : grade === 'good'    ? `完成良好${xpGain}`
+                          :                       `已完成${xpGain}`;
+      if (d.mood_awarded) resultEl.textContent += ' 心情+1';
     }
   }
   const row = state.roster.find(s => s.class === cls && s.student_name === name);
@@ -3655,7 +3655,7 @@ function escapeHtml(s) {
     if (flowerL) flowerL.src = 'assets/flowers/flower-' + w + '.png';
     if (flowerR) flowerR.src = 'assets/flowers/flower-' + w + '.png';
     renderDeco(w);
-    btn.title = '天气主题：' + (LABELS[w] || w) + '（自动跟随洞口县天气，点按可切换）';
+    btn.title = '天气：' + (LABELS[w] || w) + '（点按切换）';
     if (manual) {
       try { localStorage.setItem(AUTO_KEY, w + ':' + Date.now()); } catch (e) {}
     }
@@ -3725,7 +3725,7 @@ function openLeaderboard(kind) {
 async function loadLeaderboardXp(cls) {
   const box = els.leaderboardBody;
   box.innerHTML = '<div class="lb-empty">正在加载…</div>';
-  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级进入。</div>'; return; }
+  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级</div>'; return; }
   let rows = [];
   try {
     const r = await supabase
@@ -3735,11 +3735,11 @@ async function loadLeaderboardXp(cls) {
       .order('xp', { ascending: false });
     if (!r.error) rows = r.data || [];
   } catch (e) {}
-  if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无学生数据。</div>'; return; }
+  if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无学生数据</div>'; return; }
   // v167.3：没有星光值就不排名——只对有星光值（xp>0）的同学排位，相同星光值并列同名次
   const ranked = rows.filter(s => (Number(s.xp) || 0) > 0);
   if (!ranked.length) {
-    box.innerHTML = '<div class="lb-empty">还没有同学获得星光值，暂时不排名。<br>完成表现记录或任务后，这里会按累积星光值排位。</div>';
+    box.innerHTML = '<div class="lb-empty">暂无星光值，暂不排名</div>';
     return;
   }
   const medal = ['' + I.medal('rk rk1') + '', '' + I.medal('rk rk2') + '', '' + I.medal('rk rk3') + ''];
@@ -3762,7 +3762,7 @@ async function loadLeaderboardXp(cls) {
 async function loadLeaderboardChallenge(cls) {
   const box = els.leaderboardBody;
   box.innerHTML = '<div class="lb-empty">正在加载…</div>';
-  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级进入。</div>'; return; }
+  if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级</div>'; return; }
   let rows = [];
   try {
     const r = await supabase
@@ -3772,7 +3772,7 @@ async function loadLeaderboardChallenge(cls) {
       .neq('status', 'cancelled');
     if (!r.error) rows = r.data || [];
   } catch (e) {}
-  if (!rows.length) { box.innerHTML = '<div class="lb-empty">还没有挑战任务。</div>'; return; }
+  if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无挑战任务</div>'; return; }
   const groups = new Map();
   rows.forEach(t => {
     const key = t.title;

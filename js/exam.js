@@ -130,7 +130,7 @@
     if (offline || error) {
       const v = await window.Offline.get('exam_roster');
       data = (v && v.rows) || null;
-      if (!data) { toast('离线且暂无名单缓存：请先联网打开过一次考试页'); state.ready = false; return; }
+      if (!data) { toast('离线无缓存，请先联网'); state.ready = false; return; }
     } else {
       await window.Offline.set('exam_roster', { rows: data || [] });
     }
@@ -164,7 +164,7 @@
 
       runOcr(state.imageBlob);
     } catch (err) {
-      setOcrStatus('图片处理失败，可以换一张试试（仍可手动填写分数后保存）。');
+      setOcrStatus('图片处理失败，可手动填分数');
     }
   }
 
@@ -210,7 +210,7 @@
 
   async function runOcr(blob) {
     state.ocrBusy = true;
-    setOcrStatus('正在识别卷面上的分数（首次识别需加载识别引擎，约需十几秒，请稍候）…');
+    setOcrStatus('正在识别分数（首次需加载引擎）…');
     // v128(RSK-04)：OCR 加 60 秒超时，超时提示手动填写，避免低配/弱网长时间无反馈
     const OCR_TIMEOUT_MS = 60000;
     const withTimeout = p => Promise.race([
@@ -226,12 +226,12 @@
         els.examScoreText.value = found.text;
         setOcrStatus(`识别到分数「${found.text}」，请核对后保存（不对可直接手动修改）。`);
       } else {
-        setOcrStatus('没有自动识别到分数，请手动填写后保存。');
+        setOcrStatus('未识别到分数，请手动填写');
       }
     } catch (err) {
       setOcrStatus((err && err.message === 'OCR_TIMEOUT')
-        ? '识别超时（超过 60 秒），可再试一次，或直接手动填写分数后保存。'
-        : '分数识别失败，可以手动填写分数后保存。');
+        ? '识别超时，请手动填写'
+        : '识别失败，请手动填写');
     } finally {
       state.ocrBusy = false;
     }
@@ -266,7 +266,7 @@
     let score = null;
     if (scoreRaw) {
       const n = Number(scoreRaw);
-      if (isNaN(n) || n <= 0 || n > 150) { toast('分数请填写 0~150 之间的数字'); return; }
+      if (isNaN(n) || n <= 0 || n > 150) { toast('分数需在 0~150 之间'); return; }
       score = Math.round(n * 10) / 10;
     }
 
@@ -289,7 +289,7 @@
       } });
       if (!wr.ok) throw new Error('保存失败');
 
-      toast(wr.queued ? '已离线保存，联网后自动上传' : '已保存，家长可以在查询页看到这份试卷啦');
+      toast(wr.queued ? '已离线保存，联网后自动上传' : '已保存，家长可见');
       resetForm();
       await loadPapers();
     } catch (err) {
@@ -332,11 +332,11 @@
     if (offline) {
       const v = await window.Offline.get('exam_papers');
       rows = (v && v.rows) || null;
-      if (!rows) { els.examBox.innerHTML = '<div class="t-empty">离线且暂无缓存：请先联网打开过试卷列表。</div>'; return; }
-      toast('离线模式：显示上次缓存的试卷');
+      if (!rows) { els.examBox.innerHTML = '<div class="t-empty">离线无缓存，请先联网</div>'; return; }
+      toast('离线模式 · 显示缓存');
     }
     if (!rows.length) {
-      els.examBox.innerHTML = '<div class="t-empty">还没有上传过试卷。</div>';
+      els.examBox.innerHTML = '<div class="t-empty">暂无试卷</div>';
       return;
     }
     els.examBox.innerHTML = rows.map(r => {
@@ -362,7 +362,7 @@
   }
 
   async function onDelete(id, url) {
-    if (!window.confirm('确定删除这份试卷吗？删除后家长端也看不到了。')) return;
+    if (!window.confirm('删除这份试卷？家长端将不可见')) return;
     let path = null;
     if (url) {
       const m = String(url).match(/exam-papers\/([^?#]+)/);
@@ -494,7 +494,7 @@
     setStatus(els.batchImgStatus, '正在处理图片…');
     try {
       state.batchImageBlob = await downscaleImage(file, 2200, 0.9);
-      setStatus(els.batchImgStatus, '正在识别成绩单（首次识别需加载中文识别引擎，约需 20~40 秒）…');
+      setStatus(els.batchImgStatus, '正在识别成绩单（首次需加载引擎）…');
       const worker = await withT(90, getBatchOcrWorker());
       const { data } = await withT(180, worker.recognize(state.batchImageBlob));
       const text = (data && data.text) || '';
@@ -516,12 +516,12 @@
         renderBatchTable();
         setStatus(els.batchImgStatus, `已按名单顺序填入 ${Math.min(nums.length, state.batchRows.length)} 人的分数，请逐行核对后保存。`);
       } else {
-        setStatus(els.batchImgStatus, '未能从图片中匹配到姓名，请改用 Excel 模板，或直接在表格里手动填写。');
+        setStatus(els.batchImgStatus, '未匹配到姓名，请改用 Excel 或手动填写');
       }
     } catch (err) {
       setStatus(els.batchImgStatus, (err && err.message === 'TIMEOUT')
-        ? '识别超时，请改用 Excel 模板，或直接在表格里手动填写。'
-        : '识别失败：请确认站点已上传 js/vendor/tesseract/chi_sim.traineddata.gz（中文识别包），或改用 Excel 模板。');
+        ? '识别超时，请改用 Excel 或手动填写'
+        : '识别失败，请确认已上传中文识别包 js/vendor/tesseract/chi_sim.traineddata.gz');
     }
   }
 
@@ -613,7 +613,7 @@
   }
 
   function xlsxMissingHint(where) {
-    const msg = 'Excel 组件加载失败：请确认站点根目录下已上传 js/vendor/xlsx.mini.min.js';
+    const msg = 'Excel 组件加载失败，请确认已上传 js/vendor/xlsx.mini.min.js';
     if (where === 'status') setStatus(els.batchXlsxStatus, msg);
     else toast(msg);
   }
@@ -630,7 +630,7 @@
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '成绩单');
     XLSX.writeFile(wb, `成绩单模板_${cls}.xlsx`);
-    toast('模板已下载，填好分数后在上方选择文件导入');
+    toast('模板已下载，填分后导入');
   }
 
   async function onXlsxPicked(e) {
@@ -650,7 +650,7 @@
         const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
         const pairs = parseSheetRows(aoa);
         if (!pairs.length) {
-          setStatus(els.batchXlsxStatus, '没有读到有效数据：请确认表内有「姓名」「分数」两列。');
+          setStatus(els.batchXlsxStatus, '无有效数据，需含「姓名」「分数」两列');
           return;
         }
         const res = applyImported(pairs, 'excel');
@@ -768,7 +768,7 @@
         const msg = String((r.error && r.error.message) || r.error || '');
         if (/fetch|network|Failed|timeout|Load failed/i.test(msg)) { offline = true; }
         else {
-          els.batchBox.innerHTML = '<div class="t-empty">成绩单功能还没启用：请先在 Supabase SQL Editor 执行 database/105-exam-batch.sql</div>';
+          els.batchBox.innerHTML = '<div class="t-empty">功能未启用，需执行 database/105-exam-batch.sql</div>';
           return;
         }
       } else { rows = r.data || []; await window.Offline.set('exam_batches', { rows }); }
@@ -776,12 +776,12 @@
     if (offline) {
       const v = await window.Offline.get('exam_batches');
       rows = (v && v.rows) || null;
-      if (!rows) { els.batchBox.innerHTML = '<div class="t-empty">离线且暂无缓存：请先联网打开过本页。</div>'; return; }
-      toast('离线模式：显示上次缓存的成绩单');
+      if (!rows) { els.batchBox.innerHTML = '<div class="t-empty">离线无缓存，请先联网</div>'; return; }
+      toast('离线模式 · 显示缓存');
     }
     state.batches = rows || [];
     if (!state.batches.length) {
-      els.batchBox.innerHTML = '<div class="t-empty">还没有导入过成绩单。</div>';
+      els.batchBox.innerHTML = '<div class="t-empty">暂无成绩单</div>';
       return;
     }
     renderBatchList();
@@ -817,7 +817,7 @@
   }
 
   async function onBatchDelete(id, url) {
-    if (!window.confirm('确定删除这次成绩单吗？该次考试的所有学生分数都会删除，家长端也看不到了。')) return;
+    if (!window.confirm('删除这次成绩单？所有分数一并删除')) return;
     let path = null;
     if (url) {
       const m = String(url).match(/exam-papers\/([^?#]+)/);

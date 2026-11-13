@@ -207,7 +207,7 @@ function init() {
       state.scanCode = sCode;
       setTimeout(() => { els.btnQuery.click(); }, 300);
     } else {
-      els.headerHint.textContent = '扫码已自动识别班级，请填写学生姓名和出生年月日';
+      els.headerHint.textContent = '请填写姓名与出生年月日';
     }
   }
 
@@ -258,18 +258,18 @@ async function onQuery() {
   const student = norm(els.inpStudent.value);
   const birth = state.scanCode || norm(els.inpBirth.value);
   if (!cls || !student || !birth) {
-    toast(lockedClass ? '学生姓名和出生年月日都要填写哦' : '班级、学生姓名、出生年月日都要填写哦');
+    toast(lockedClass ? '请填写姓名与出生年月日' : '请填写班级、姓名与出生年月日');
     return;
   }
   if (state.scanCode) {
     if (!/^\d{6}$/.test(birth)) {
       els.mismatchBanner.hidden = true;
-      toast('二维码链接无效，请联系老师重新获取');
+      toast('链接无效，请联系老师');
       return;
     }
   } else if (!/^\d{8}$/.test(birth)) {
     els.mismatchBanner.hidden = true;
-    toast('出生年月日请输入 8 位数字，例如 20150901');
+    toast('请输入 8 位出生年月日');
     return;
   }
 
@@ -323,9 +323,9 @@ async function onQuery() {
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
         const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
-        toast(t ? `离线模式：显示缓存数据（缓存于 ${t}）` : '离线模式：显示上次查询的缓存数据');
+        toast(t ? `离线模式：显示缓存数据（缓存于 ${t}）` : '离线模式 · 显示缓存数据');
       } else {
-        els.mismatchBanner.textContent = '当前离线，且这台设备还没有查询过这组信息：请先联网查询一次，之后断网也能看。';
+        els.mismatchBanner.textContent = '离线且无缓存，请先联网查询一次';
         els.mismatchBanner.hidden = false;
       }
       return;
@@ -336,10 +336,10 @@ async function onQuery() {
     if (v && v.ok === false) {
       if (state.scanCode) { state.scanCode = ''; }
       els.mismatchBanner.textContent = v.reason === 'no_student'
-        ? '没有找到这个学生，请核对班级和学生姓名是否和老师登记的一致。'
+        ? '未找到该学生，请核对姓名'
         : v.reason === 'locked'
-          ? '错误次数过多，该学生已临时锁定 15 分钟，请稍后再试（或请老师重置密码）。'
-          : '学生找到了，但出生年月日或学生密码对不上，请核对后再试（密码可请老师重新生成）。';
+          ? '错误次数过多，锁定 15 分钟'
+          : '出生年月日或密码不符，请核对';
       els.mismatchBanner.hidden = false;
       return;
     }
@@ -379,7 +379,7 @@ async function onQuery() {
     const noteData = (noteRes && noteRes.data && noteRes.data.ok) ? noteRes.data : { notes: [] };
     const homeNotes = noteData.notes || [];
     if (!records.length && !papers.length && !examBatches.length && !tasks.length && !homeNotes.length) {
-      els.mismatchBanner.textContent = '校验通过，但还没有任何记录；稍后再来看看。';
+      els.mismatchBanner.textContent = '暂无记录';
       els.mismatchBanner.hidden = false;
       return;
     }
@@ -393,7 +393,7 @@ async function onQuery() {
     renderExamBatches(examBatches);
     renderTasks(tasks);
     renderHomeThread(homeNotes);
-    if (partialFailed) toast('网络较慢：在校表现已加载，试卷/任务等部分内容稍后自动更新，可再点「查询记录」刷新。');
+    if (partialFailed) toast('网络较慢，部分内容稍后更新');
   } catch (e) {
     // 在线查询失败（断网/服务异常）：自动重试已由 rpcRetry 处理；仍失败则回退本地缓存（长期有效）
     try {
@@ -406,7 +406,7 @@ async function onQuery() {
         renderTasks(v.tasks || []);
         renderHomeThread(v.homeNotes || []);
         const t = v.cachedAt ? new Date(v.cachedAt).toLocaleString('zh-CN', { hour12: false }) : '';
-        toast(t ? `网络请求失败，已显示缓存数据（缓存于 ${t}，联网后重试可更新）` : '网络请求失败，已显示上次查询的缓存数据');
+        toast(t ? `网络请求失败，已显示缓存数据（缓存于 ${t}，联网后重试可更新）` : '网络失败，显示缓存数据');
         return;
       }
     } catch (e2) {}
@@ -414,8 +414,8 @@ async function onQuery() {
     const msg = (e && e.message) || '';
     const isServerErr = !isNetErr(e) && (!!(e && e.code) || /PGRST|PostgrestError|API key|JWT|permission|violat|duplicate|row-level|relationship/i.test(msg));
     toast(isServerErr
-      ? '服务器暂时繁忙，请稍后再点「查询记录」重试。'
-      : '网络请求失败（当前网络较慢），且本机暂无这组信息的缓存：建议连接 WiFi 或到信号好的位置，再点「查询记录」重试。');
+      ? '服务器繁忙，请重试'
+      : '网络失败且无缓存，请联网后重试');
   } finally {
     els.btnQuery.disabled = false;
     els.btnQuery.textContent = '查询记录';
@@ -439,7 +439,7 @@ async function onSubmitHome() {
       p_date: date
     } });
     if (!wr.ok) {
-      toast('身份信息未通过校验，请返回重新查询后再提交');
+      toast('身份校验未通过，请重新查询');
       return;
     }
     els.homeContent.value = '';
@@ -907,7 +907,7 @@ function refreshQr() {
     });
   } catch (e) {
     els.qrImage.hidden = true;
-    toast('二维码生成失败，可直接复制链接转发');
+    toast('二维码生成失败，可复制链接');
   }
 }
 function refreshQrDebounced() {

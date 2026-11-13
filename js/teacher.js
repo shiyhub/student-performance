@@ -326,7 +326,7 @@ function ensureOfflineBanner() {
   teacherBanner = document.createElement('div');
   teacherBanner.id = 'offlineBanner';
   teacherBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4e6b5c;color:#fff;text-align:center;font-size:13px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15);';
-  teacherBanner.textContent = '离线模式：显示本地缓存，批改/发布会先保存，联网后自动同步';
+  teacherBanner.textContent = '离线模式 · 改动稍后同步';
   teacherBanner.hidden = true;
   document.body.appendChild(teacherBanner);
 }
@@ -352,7 +352,7 @@ init();
 
 function init() {
   if (!ready) {
-    els.loginError.textContent = '系统还没有连接数据库（Supabase 未配置），请先修改 js/config.js。';
+    els.loginError.textContent = '尚未配置数据库，请修改 js/config.js';
     els.loginError.hidden = false;
     els.btnLogin.disabled = true;
     return;
@@ -533,7 +533,7 @@ let precacheToastTimer = null;
 async function runPrecache(from) {
   if (!window.Precache) return;
   if (window.Precache.running) { toast('预缓存正在后台进行中…'); return; }
-  toast(from === '自动' ? '正在后台预缓存全校数据，断网也能完整使用…' : '开始预缓存全校数据…');
+  toast(from === '自动' ? '正在预缓存全校数据…' : '开始预缓存全校数据…');
   const ok = await window.Precache.runTeacher(p => {
     if (!p.done || p.done === p.total) return;
     if (!precacheToastTimer && (p.done === 1 || p.done % Math.max(1, Math.round(p.total / 5)) === 0)) {
@@ -543,10 +543,10 @@ async function runPrecache(from) {
   });
   if (ok) {
     const okN = (window.Precache.lastResult && window.Precache.lastResult.ok) || 0;
-    if (okN === 0) toast('预缓存失败：所有数据都没能下载（可能当前离线），联网后会自动重试');
-    else toast('预缓存完成：' + okN + ' 项数据已存到本机，断网可完整使用');
+    if (okN === 0) toast('预缓存失败，联网后自动重试');
+    else toast('预缓存完成：' + okN + ' 项已缓存');
   }
-  else toast('预缓存未执行（可能正在运行或当前离线）');
+  else toast('预缓存未执行');
 }
 function leaveApp() {
   try { localStorage.removeItem('sp_teacher_session'); } catch (e) {}
@@ -760,7 +760,7 @@ function renderRecordList(data, notes) {
     html += data.map(r => renderRecordCard(r)).join('');
   }
   if (!notes.length && !data.length) {
-    html = '<div class="empty">还没有符合条件的记录。</div>';
+    html = '<div class="empty">无符合条件的记录</div>';
   }
   els.recordBox.innerHTML = html;
 
@@ -855,7 +855,7 @@ function renderHomeNotes(notes) {
 }
 
 async function deleteRecord(id) {
-  if (!confirm('确定删除这条在校表现记录吗？删除后不可恢复。')) return;
+  if (!confirm('删除这条记录？不可恢复')) return;
   const { error } = await supabase.from('daily_record').delete().eq('id', id);
   if (error) { toast('删除失败：' + error.message); return; }
   toast('已删除');
@@ -881,7 +881,7 @@ document.getElementById('btnBatchDelRec')?.addEventListener('click', async () =>
 });
 
 async function deleteHomeNote(id) {
-  if (!confirm('确定删除这条家长留言吗？删除后不可恢复。')) return;
+  if (!confirm('删除这条留言？不可恢复')) return;
   const { error } = await supabase.from('home_note').delete().eq('id', id);
   if (error) { toast('删除失败：' + error.message); return; }
   toast('已删除');
@@ -1120,7 +1120,7 @@ function renderRecTags() {
 
   let extra = '';
   if (recState.preserved.length) {
-    extra = '<div class="rec-tag-group"><div class="rec-tag-title">历史标签（标签表中已停用/删除，将原样保留）</div><div class="rec-preserved">' +
+    extra = '<div class="rec-tag-group"><div class="rec-tag-title">历史标签（已停用或删除）</div><div class="rec-preserved">' +
       recState.preserved.map(it => {
         if (it.type === 'text') return `<span class="rec-chip active">${esc(it.label)}：${esc(it.value || '')}</span>`;
         return `<span class="rec-chip active ${it.category === 'negative' ? 'neg' : ''}">${esc(it.label)}${it.value ? ' · ' + esc(it.value) : ''}</span>`;
@@ -1212,7 +1212,7 @@ async function saveRecordModal() {
   const behavior = buildBehavior();
   // 空表现拦截：不允许保存空白日常记录（与后端 100 号兜底对应）
   if (!behavior.items || !behavior.items.length) {
-    return showRecError('请至少选择一项表现，不能保存空白记录');
+    return showRecError('请至少选一项表现');
   }
 
   const payload = {
@@ -1375,7 +1375,7 @@ async function loadStudents() {
   }
   cache.students = data || [];
   if (!data.length) {
-    els.studentBox.innerHTML = '<div class="empty">名单还是空的，先在上方录入第一个学生吧。</div>';
+    els.studentBox.innerHTML = '<div class="empty">名单为空，请先录入学生</div>';
     return;
   }
 
@@ -1475,7 +1475,7 @@ async function loadStudents() {
       const box = btn.closest('.pchips');
       const count = box.querySelectorAll('.pchip').length;
       if (count <= 1) {
-        toast('至少要保留一位家长；可先点「＋家长」添加新家长，再移除这一位');
+        toast('至少保留一位家长');
         return;
       }
       const pid = btn.dataset.delParent;
@@ -1581,7 +1581,7 @@ async function onAddStudent(e) {
     btn.disabled = false;
     btn.textContent = '添加学生';
     if (/uq_student|duplicate|unique/i.test(stuErr.message)) {
-      toast('这个班已经有同名学生了，可在名单里直接给他「＋家长」');
+      toast('已有同名学生，可在名单里加家长');
     } else {
       toast('添加失败：' + stuErr.message);
     }
@@ -1811,14 +1811,14 @@ function parseBatchText(text, defaultClass) {
     if (cls) {
       // 统一班级：至少要有"学生 + 1 位家长"两列
       if (parts.length < 2) {
-        bad.push({ lineNo, raw, reason: '需要至少两列：学生姓名 + 一位家长姓名' });
+        bad.push({ lineNo, raw, reason: '至少两列：学生姓名 + 家长姓名' });
         return;
       }
       rowClass = cls; name = parts[0]; parents = parts.slice(1);
     } else {
       // 混班：至少要有"班级 + 学生 + 1 位家长"三列
       if (parts.length < 3) {
-        bad.push({ lineNo, raw, reason: '未填统一班级时，每行至少三列：班级,学生姓名,一位家长姓名' });
+        bad.push({ lineNo, raw, reason: '未填统一班级时，每行需三列' });
         return;
       }
       rowClass = parts[0]; name = parts[1]; parents = parts.slice(2);
@@ -1859,7 +1859,7 @@ function onBatchCheck() {
                确认无误后点「② 确认导入」；已存在的学生和家长会自动跳过，新家长会追加到已有学生名下。
              </div>`;
   } else {
-    html += '<div class="banner banner-error">没有可导入的有效行，请按格式粘贴名单。</div>';
+    html += '<div class="banner banner-error">没有可导入的有效行</div>';
   }
   if (bad.length) {
     html += `<div class="banner banner-error batch-bad">
@@ -1978,7 +1978,7 @@ async function renderTags() {
     return;
   }
   if (!data.length) {
-    els.tagBox.innerHTML = '<div class="empty">还没有标签，在上方添加第一个吧。</div>';
+    els.tagBox.innerHTML = '<div class="empty">暂无标签</div>';
     return;
   }
 
@@ -1998,14 +1998,14 @@ async function renderTags() {
     <div class="tag-edit-row${t.category === 'negative' ? ' row-neg' : ''}" data-tag-id="${t.id}">
       <input type="text" class="tag-label" value="${esc(t.label)}" maxlength="600" placeholder="标签文字（最长600字）">
       <input type="text" class="tag-options" value="${esc((t.options || []).join(','))}"
-             maxlength="600" placeholder="二级标签，逗号分隔（选填），如：语文作业,数学作业">
+             maxlength="600" placeholder="二级标签，逗号分隔（选填）">
       <select class="tag-cat" title="心情分类（影响学生心情）">
         <option value="positive"${t.category === 'positive' ? ' selected' : ''}>积极</option>
         <option value="negative"${t.category === 'negative' ? ' selected' : ''}>消极</option>
       </select>
       <select class="tag-dim" title="加分维度（星光值加进该维度）">${DIM_OPT('', t.dim)}</select>
       <span class="tag-type-badge" title="仅支持勾选型">勾选型</span>
-      <label class="tag-off-toggle" title="可重复提交：每天/多次都能选；不勾选=不可重复，同一具体项一生只能记一次">
+      <label class="tag-off-toggle" title="可重复：每天可多次；不可重复：同一项只记一次">
         <input type="checkbox" class="tag-repeat" ${t.history_unique === false ? 'checked' : ''}> 可重复提交
       </label>
       <label class="tag-off-toggle">
@@ -2211,7 +2211,7 @@ document.getElementById('btnManualAssign')?.addEventListener('click', async () =
   const tagId = els.manualTaskTag.value;
   const date = els.manualTaskDate.value;
   if (!cls) { toast('请先选班级'); return; }
-  if (!tagId) { toast('请先选任务标签（如卫生委员，可在标签页创建）'); return; }
+  if (!tagId) { toast('请先选任务标签'); return; }
   if (!date) { toast('请选择任务日期'); return; }
   if (!manualState.students.length) { toast('请至少选择一名学生'); return; }
   const btn = document.getElementById('btnManualAssign');
@@ -2244,11 +2244,11 @@ async function loadManualTasks() {
     if (r.error) throw r.error;
     rows = r.data || [];
   } catch (e) {
-    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 68 号 SQL（manual_task 表）')}</div>`;
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '需先执行 68 号 SQL')}</div>`;
     return;
   }
   if (!rows.length) {
-    box.innerHTML = '<div class="empty">还没有手动分配的任务。</div>';
+    box.innerHTML = '<div class="empty">暂无任务</div>';
     return;
   }
   const today = todayStr();
@@ -2266,7 +2266,7 @@ async function loadManualTasks() {
       </div>
     </div>`).join('');
   box.querySelectorAll('[data-del-task]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消这条任务分配？（未加分，学生端将不再显示）')) return;
+    if (!confirm('取消这条任务？')) return;
     const wr = await runWrite({ name: 'delete_manual_task', params: { p_task_id: btn.dataset.delTask } });
     if (!wr.ok) { toast('取消失败，请重试'); return; }
     toast(wr.queued ? '已离线保存，联网后同步' : '已取消');
@@ -2380,11 +2380,11 @@ async function loadPersonalTasks() {
     if (r.error) throw r.error;
     rows = r.data || [];
   } catch (e) {
-    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 69 号 SQL（personal_task 表）')}</div>`;
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '需先执行 69 号 SQL')}</div>`;
     return;
   }
   if (!rows.length) {
-    box.innerHTML = '<div class="empty">还没有发布个人任务。</div>';
+    box.innerHTML = '<div class="empty">暂无个人任务</div>';
     return;
   }
   const today = todayStr();
@@ -2410,7 +2410,7 @@ async function loadPersonalTasks() {
     </div>`).join('');
   box.querySelectorAll('[data-fill-ptask]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.fillPtask;
-    if (!confirm('确认为该生代填此任务？将立即按分值加星光值。')) return;
+    if (!confirm('代填此任务并按分值加分？')) return;
     const wr = await runWrite({ name: 'teacher_fill_personal_task', params: { p_task_id: id } });
     if (!wr.ok) { toast('代填失败，请重试'); return; }
     const d = wr.res || {};
@@ -2419,7 +2419,7 @@ async function loadPersonalTasks() {
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('删除这条个人任务？已完成任务的已加星光值将自动回退。')) return;
+    if (!confirm('删除？已加星光值将回退')) return;
     const wr = await runWrite({ name: 'delete_personal_task', params: { p_task_id: btn.dataset.delPtask } });
     if (!wr.ok) { toast('删除失败，请重试'); return; }
     const d2 = wr.res || {};
@@ -2530,7 +2530,7 @@ document.getElementById('btnChallengeAssign')?.addEventListener('click', async (
       p_levels: challengeState.levels,
       p_students: challengeState.students.map(n => ({ value: n }))
     }});
-    if (!wr.ok) { toast('发布失败：请确认已执行 82 号 SQL（挑战任务 v2）'); return; }
+    if (!wr.ok) { toast('需先执行 82 号 SQL'); return; }
     if (wr.queued) { toast('已离线保存，联网后自动发布'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
@@ -2554,11 +2554,11 @@ async function loadChallengeTasks() {
     if (r.error) throw r.error;
     rows = r.data || [];
   } catch (e) {
-    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 82 号 SQL（挑战任务 v2，含 done_levels 列）')}</div>`;
+    box.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '需先执行 82 号 SQL')}</div>`;
     return;
   }
   if (!rows.length) {
-    box.innerHTML = '<div class="empty">还没有发布挑战任务。</div>';
+    box.innerHTML = '<div class="empty">暂无挑战任务</div>';
     return;
   }
   // v152.2：查询填报记录（单次可取消），按挑战分组
@@ -2618,13 +2618,13 @@ async function loadChallengeTasks() {
           </div>`).join('')}
       </div>` : ''}
     </div>`;
-  }).join('') || '<div class="empty">还没有发布挑战任务。</div>';
+  }).join('') || '<div class="empty">暂无挑战任务</div>';
   box.querySelectorAll('[data-sub-toggle]').forEach(btn => btn.addEventListener('click', () => {
     const b = box.querySelector('[data-sub-box="' + btn.dataset.subToggle + '"]');
     if (b) b.style.display = (b.style.display === 'none') ? '' : 'none';
   }));
   box.querySelectorAll('[data-cancel-sub]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('取消本次填报？该次所得星光值将回退，对应档位从已达成中移除。')) return;
+    if (!confirm('取消填报？星光值将回退')) return;
     const wr = await runWrite({ name: 'cancel_challenge_submission', params: { p_submission_id: btn.dataset.cancelSub } });
     if (!wr.ok) { toast('取消失败，请重试'); return; }
     const d4 = wr.res || {};
@@ -2634,7 +2634,7 @@ async function loadChallengeTasks() {
     loadChallengeTasks();
   }));
   box.querySelectorAll('[data-del-challenge]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('删除这条挑战？已达成档位加过的星光值将自动回退。')) return;
+    if (!confirm('删除？已加星光值将回退')) return;
     const wr = await runWrite({ name: 'delete_challenge_task', params: { p_task_id: btn.dataset.delChallenge } });
     if (!wr.ok) { toast('删除失败，请重试'); return; }
     const d3 = wr.res || {};
@@ -2657,11 +2657,11 @@ async function loadAutoRules() {
     if (error) throw error;
     rows = data || [];
   } catch (e) {
-    els.autoBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '请确认已执行 61 号 SQL（auto_rules 表）')}</div>`;
+    els.autoBox.innerHTML = `<div class="banner banner-error">加载失败：${esc(e.message || '需先执行 61 号 SQL')}</div>`;
     return;
   }
   if (!rows.length) {
-    els.autoBox.innerHTML = '<div class="empty">还没有自动化任务，在上方创建第一条吧。</div>';
+    els.autoBox.innerHTML = '<div class="empty">暂无自动化任务</div>';
     return;
   }
   const fmtRange = r => (r.start_date || r.end_date)
@@ -2676,7 +2676,7 @@ async function loadAutoRules() {
       <span class="rule-name">${esc(r.name)}</span>
       <span class="rule-badge badge-dim">${DIM_ICON[r.dim] || ''} ${DIM_LABEL[r.dim] || '智'} +${r.xp_value}</span>
       <span class="rule-badge badge-tag">${r.trigger_type === 'no_tag' ? '当天没有' : '当天有'}「${esc((r.behavior_tags && r.behavior_tags.label) || '(标签已删除)')}」</span>
-      <span class="rule-meta">⏰ ${fmtRange(r)} · ${fmtWeek(r.weekdays)}</span>
+      <span class="rule-meta">${I.clock('ico-xs')} ${fmtRange(r)} · ${fmtWeek(r.weekdays)}</span>
       <span class="rule-meta">${r.is_active ? '' + I['circle-dot']() + ' 生效中' : '' + I['circle-dot']() + ' 已停用'}</span>
       <div class="rule-actions">
         <button class="btn btn-ghost btn-sm rule-toggle">${r.is_active ? '停用' : '启用'}</button>
@@ -2693,7 +2693,7 @@ async function loadAutoRules() {
       loadAutoRules();
     });
     $('.rule-delete', row).addEventListener('click', async () => {
-      if (!confirm('确定删除该自动化任务吗？\n已产生的历史自动加分记录会一并删除。')) return;
+      if (!confirm('删除该自动化任务？历史加分记录一并删除')) return;
       const { error } = await supabase.from('auto_rules').delete().eq('id', id);
       if (error) { toast('删除失败：' + error.message); return; }
       toast('已删除');
@@ -2708,7 +2708,7 @@ if (els.autoRuleForm) {
     const name = els.autoRuleName.value.trim();
     if (!name) return toast('请输入规则名称');
     const tagId = els.autoRuleTag.value;
-    if (!tagId) return toast('请选择目标标签（需先在标签页创建并启用）');
+    if (!tagId) return toast('请选择目标标签');
     const xpVal = Math.max(1, Math.min(100, parseInt(els.autoRuleXp.value, 10) || 1));
     const week = Array.from(els.autoRuleWeek.querySelectorAll('input:checked')).map(i => parseInt(i.value, 10));
     if (!week.length) return toast('请至少勾选一个执行星期');
@@ -2741,7 +2741,7 @@ if (els.autoRuleForm) {
 /* ---------------- 测试工具 ---------------- */
 
 async function onRecalcXp() {
-  if (!confirm('将按历史记录重新累加全班的星光值和等级。\n不会删除任何记录，只是重算星光值。确定继续吗？')) return;
+  if (!confirm('按历史记录重算全班星光值与等级，不删记录。继续？')) return;
   const btn = els.btnRecalcXp;
   if (btn.disabled) return;   // v128(RSK-06)：重入保护（含 RPC 异常路径）
   btn.disabled = true;
@@ -2784,7 +2784,7 @@ async function scanXpAnomaly() {
     const rows = (data && data.rows) || [];
     if (hint) hint.textContent = '';
     if (!rows.length) {
-      box.innerHTML = '<div class="banner">' + I['check-circle']() + ' 全班当前星光值与流水应得一致，无异常差额。</div>';
+      box.innerHTML = '<div class="banner">' + I['check-circle']() + ' 无异常差额</div>';
       return;
     }
     const rowsHtml = rows.map(r => {
@@ -2840,7 +2840,7 @@ async function loadAllStudentLogs() {
       return;
     }
     const rows = (data && data.rows) || [];
-    if (!rows.length) { box.innerHTML = '<div class="banner">该班暂无学生或流水。</div>'; return; }
+    if (!rows.length) { box.innerHTML = '<div class="banner">暂无学生或流水</div>'; return; }
     const rowsHtml = rows.map(r => {
       const d = r.diff || 0;
       const color = d === 0 ? 'inherit' : (d > 0 ? '#b84c3a' : '#a93b36');
@@ -2966,7 +2966,7 @@ async function resolveXpAnomaly(id) {
 
 // v152.7：星光值流水注入（测试工具）
 async function injectXpLog() {
-  if (!confirm('将按真实星光值把现有全部加分写入星光值流水（可重复执行，不会重复）。确定继续吗？')) return;
+  if (!confirm('把全部加分写入星光流水，可重复执行。继续？')) return;
   const btn = els.btnInjectXpLog, out = els.injectXpLogResult;
   if (btn) btn.disabled = true;
   if (out) out.textContent = '注入中…';
@@ -3013,7 +3013,7 @@ async function queryXpLog() {
     .from('student_info').select('xp').eq('class', cls).eq('student_name', name).single();
   if (info) cur = info.xp || 0;
   if (!rows.length) {
-    box.innerHTML = '<div class="banner">该生暂无星光值流水。首次使用请在教师后台「测试工具」执行注入（select public.inject_xp_log();）</div>';
+    box.innerHTML = '<div class="banner">暂无流水，需先在「测试工具」注入</div>';
     return;
   }
   let acc = 0;
@@ -3088,7 +3088,7 @@ function openStudentPreview() {
 function friendlyAuthError(msg) {
   if (/invalid login credentials/i.test(msg)) return '邮箱或密码不正确';
   if (/email not confirmed/i.test(msg)) return '邮箱尚未确认，请查收邀请邮件';
-  if (/failed to fetch|networkerror|network error|load failed|request failed/i.test(msg)) return '网络连接失败：请检查网络（WiFi/流量）后重试';
+  if (/failed to fetch|networkerror|network error|load failed|request failed/i.test(msg)) return '网络连接失败，请重试';
   return msg;
 }
 function esc(s) {
@@ -3218,7 +3218,7 @@ function beginTaskEdit(t) {
   const cancelBtn = document.getElementById('btnCancelTaskEdit');
   if (cancelBtn) cancelBtn.hidden = false;
   const note = document.querySelector('#taskForm .text-muted');
-  if (note) note.textContent = '正在编辑这条任务，保存后生效；点"取消编辑"回到新建模式';
+  if (note) note.textContent = '正在编辑，保存后生效';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -3280,7 +3280,7 @@ async function loadTaskReport() {
       } catch (e3) {}
       if (!data) {
         box.innerHTML = offlineFailed
-          ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
+          ? '<p class="text-muted">离线无缓存，请先联网打开该日期</p>'
           : '<p class="text-muted">加载失败：' + esc(error.message) + '</p>';
         return;
       }
@@ -3297,7 +3297,7 @@ async function loadTaskReport() {
   });
   const tasks = Array.isArray(data) ? data : ((data && data.tasks) || []);
   if (!tasks.length) {
-    box.innerHTML = '<p class="text-muted">这一天还没有发布任务。在上方发布后学生就能看到。</p>';
+    box.innerHTML = '<p class="text-muted">当天未发布任务</p>';
     return;
   }
 
@@ -3377,7 +3377,7 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
   });
   box.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('确定删除这条任务吗？学生已获得的星光值会保留。')) return;
+      if (!confirm('删除这条任务？已加星光值保留')) return;
       const wr = await runWrite({ name: 'task_delete', params: { p_task_id: btn.dataset.del } });
       if (!wr.ok) { toast('删除失败，请重试'); return; }
       toast(wr.queued ? '已离线删除，联网后同步' : '已删除'); loadTaskReport();
@@ -3440,8 +3440,8 @@ async function loadTagReport() {
     } catch (e2) {}
     if (!roster.length) {
       box.innerHTML = offlineFailed
-        ? '<p class="text-muted">离线且暂无缓存：请先联网打开过这个日期再看。</p>'
-        : '<p class="text-muted">该日期全班还没有打卡记录。</p>';
+        ? '<p class="text-muted">离线无缓存，请先联网打开该日期</p>'
+        : '<p class="text-muted">当天无打卡记录</p>';
       return;
     }
   }
@@ -3816,7 +3816,7 @@ async function runStats() {
   if (student) {
     timelineHtml = '<h3 style="margin:14px 0 6px;">' + I.clock() + ' '+esc(student)+' 历史表现</h3>';
     const list = (recs||[]).slice(0,60);
-    if (!list.length) timelineHtml += '<div class="text-muted">该时间段没有记录。</div>';
+    if (!list.length) timelineHtml += '<div class="text-muted">无记录</div>';
     list.forEach(r => {
       const items = ((r.behavior&&r.behavior.items)||[]).filter(it => it && typeof it === 'object').map(it =>
         `<span class="batch-chip" style="${it.category==='negative'?'background:#fde3e3;color:#c0392b;':''}">${esc(it.label)}</span>`).join(' ');
@@ -3884,7 +3884,7 @@ async function runStats() {
     </table>
     <h3 style="margin-top:16px;">${I['check-circle']()} 任务评级分布</h3>
     <div style="display:flex;gap:14px;flex-wrap:wrap;">
-      <span>⏳ 未完成：<b>${gradeCount.none}</b></span>
+      <span>${I.hourglass('ico-xs')} 未完成：<b>${gradeCount.none}</b></span>
       <span>${I['check-circle']('ico-xs')} 完成：<b>${gradeCount.done}</b></span>
       <span>${I.thumb('ico-xs')} 优秀A：<b style="color:#e67e22;">${gradeCount.good}</b></span>
       <span>${I.trophy('ico-xs')} 完美A+：<b style="color:#f1c40f;">${gradeCount.perfect}</b></span>
@@ -3938,7 +3938,7 @@ async function loadSeat() {
       (v.placed || []).forEach(x => seatState.placed[x.r + '_' + x.c] = x.name);
       seatAllNames = v.names || [];
       renderSeat(seatAllNames);
-      toast('离线模式：显示上次保存的座位表，改动会先存本地');
+      toast('离线模式 · 改动先存本地');
       return;
     }
     toast('座位表加载失败，请联网后重试');
@@ -4103,7 +4103,7 @@ async function loadStarProgress() {
     const r = await supabase.rpc('get_class_progress', { p_class: cls });
     if (!r.error) d = r.data;
   } catch (e) {}
-  if (!d || d.ok === false) { els.starProgressBox.innerHTML = '<div class="text-muted">读取失败，请确认已执行 109 号 SQL。</div>'; return; }
+  if (!d || d.ok === false) { els.starProgressBox.innerHTML = '<div class="text-muted">读取失败，需先执行 109 号 SQL</div>'; return; }
   const pct = Math.max(0, Math.min(100, Number(d.pct) || 0));
   els.starProgressBox.innerHTML = `
     <div class="star-progress">
@@ -4127,7 +4127,7 @@ async function loadStarDraws() {
     const r = await supabase.rpc('get_class_draw_history', { p_class: cls, p_limit: 20 });
     if (!r.error && Array.isArray(r.data)) rows = r.data;
   } catch (e) {}
-  if (!rows.length) { els.starDrawBox.innerHTML = '<div class="text-muted">还没有抽奖记录。</div>'; return; }
+  if (!rows.length) { els.starDrawBox.innerHTML = '<div class="text-muted">暂无抽奖记录</div>'; return; }
   els.starDrawBox.innerHTML = `<table class="star-table"><thead><tr>
       <th>时间</th><th>升级</th><th>奖品</th><th>抽奖学生</th></tr></thead><tbody>` +
     rows.map(x => `<tr><td>${fmtTime(x.drawn_at)}</td><td>Lv.${x.level}</td>
@@ -4177,7 +4177,7 @@ async function loadArchiveBatches() {
     const r = await supabase.rpc('get_archive_batches');
     if (!r.error && Array.isArray(r.data)) rows = r.data;
   } catch (e) {}
-  if (!rows.length) { els.archiveBatchList.innerHTML = '<div class="text-muted">还没有封存记录。</div>'; return; }
+  if (!rows.length) { els.archiveBatchList.innerHTML = '<div class="text-muted">暂无封存记录</div>'; return; }
   els.archiveBatchList.innerHTML = rows.map(b => {
     const st = b.stats || {};
     const parts = Object.entries(st).filter(([k]) => k !== 'ok').map(([k, v]) => `${k}:${v}`).join(' · ');
@@ -4203,7 +4203,7 @@ async function showArchiveRecords(batchId, btn) {
     const r = await supabase.rpc('get_archive_records', { p_batch: batchId });
     if (!r.error && r.data && r.data.ok) rows = r.data.records || [];
   } catch (e) {}
-  if (!rows.length) { box.innerHTML = '<div class="text-muted">该批次没有可显示的表现记录。</div>'; box.dataset.loaded = '1'; return; }
+  if (!rows.length) { box.innerHTML = '<div class="text-muted">该批次无记录</div>'; box.dataset.loaded = '1'; return; }
   const byStu = {};
   rows.forEach(x => { const k = x.class + '|' + x.student_name; byStu[k] = (byStu[k] || 0) + 1; });
   box.innerHTML = `<div class="text-muted" style="margin:6px 0;">共 ${rows.length} 条记录，涉及 ${Object.keys(byStu).length} 名学生（仅展示前 200 条）</div>` +
