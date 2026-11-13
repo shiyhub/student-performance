@@ -441,7 +441,7 @@ body { background: #f3f6f5; }
 .task-grade-btn[data-grade="none"]:hover { background:#ffecec; border-color:#d64545; }
 .task-grade-btn[data-grade="none"].on { background:#d64545; border-color:#d64545; color:#fff; font-weight:800; box-shadow:0 1px 4px rgba(214,69,69,.35); }
 
-/* ===== 五维经验：自动化任务面板 ===== */
+/* ===== 五维星光值：自动化任务面板 ===== */
 .weekday-picks {
   display: flex; flex-wrap: wrap; gap: 10px 16px;
   background: #fbfdfc; border: 1.5px solid var(--line, #e3e9e7);
@@ -474,3 +474,28 @@ body { background: #f3f6f5; }
 .tag-mood { margin-left:6px; font-size:13px; }
 .tag-dim-chip { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px;
   border:1.5px solid; font-size:12px; font-weight:700; margin-right:6px; background:#fff; }
+
+/* ============ v167：星光管理 ============ */
+.star-progress { background: #fffaf0; border: 1px solid #ffe6bd; border-radius: 12px; padding: 12px 14px; }
+.sp-head { display: flex; align-items: baseline; gap: 10px; }
+.sp-lv { font-size: 20px; font-weight: 800; color: #d9821f; }
+.sp-xp { font-size: 13px; color: #7a6a4a; }
+.sp-xp b { color: #b8781a; font-size: 15px; }
+.sp-bar { height: 10px; border-radius: 999px; background: #ffeccf; overflow: hidden; margin: 8px 0 6px; }
+.sp-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffc861,#f0952f); transition: width .3s; }
+.sp-foot { display: flex; justify-content: space-between; font-size: 12.5px; color: #8a7a5a; }
+.sp-chance.has { color: #e8552f; font-weight: 800; }
+
+.star-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.star-table th, .star-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #eef3f1; }
+.star-table th { color: #6b7c74; font-weight: 700; background: #f8fbf9; }
+.star-table tbody tr:last-child td { border-bottom: none; }
+
+.archive-row { border: 1px solid #eef3f1; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.ar-head { display: flex; justify-content: space-between; font-size: 13.5px; color: #2f4a3f; }
+.ar-head span { color: #93a29b; font-size: 12px; }
+.ar-stats { font-size: 12px; color: #93a29b; margin: 4px 0 8px; word-break: break-all; }
+.ar-body { margin-top: 8px; }
+
+/* v167：星光是新增标签页，允许换行避免溢出 */
+.tabs { flex-wrap: wrap; }

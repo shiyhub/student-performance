@@ -394,7 +394,7 @@ body {
 }
 
 /* ====================================================================
- * v9：经验等级 / 校园图片头像 / 头像框槽位
+ * v9：星光值等级 / 校园图片头像 / 头像框槽位
  * ==================================================================== */
 
 /* 头像内图片通用 */
@@ -414,7 +414,7 @@ body {
   flex: 0 0 auto; position: static;
 }
 
-/* 身份卡：等级徽章 + 经验条 */
+/* 身份卡：等级徽章 + 星光值条 */
 .identity-avatar { position: relative; }
 .identity-avatar-emoji { position: relative; overflow: hidden; }
 .identity-lv-badge {
@@ -1429,7 +1429,7 @@ html[data-weather] .wall-view{background:transparent}
 .today-task-row { flex-wrap:wrap; }
 
 
-/* ================= v150：班级墙经验榜 TOP5 角花装饰 v4（AI精致角花） ================= */
+/* ================= v150：班级墙星光值榜 TOP5 角花装饰 v4（AI精致角花） ================= */
 .mate.rank-1, .mate.rank-2, .mate.rank-3, .mate.rank-4, .mate.rank-5 { overflow: visible; }
 .mate .rank-corner { position:absolute; top:-8px; left:-8px; width:92px; height:92px; pointer-events:none; z-index:3; }
 .mate .rank-corner::before { content:''; position:absolute; inset:0; background-image:url('../assets/frames/corner-gold.webp'); background-repeat:no-repeat; background-position:top left; background-size:contain; }
@@ -1466,7 +1466,7 @@ html[data-weather] .wall-view{background:transparent}
 .chg-chip:not(.on):hover { border-color:#c9a96e; color:#a07d3e; }
 
 
-/* ===== 榜单弹窗（左雏菊经验榜 / 右雏菊挑战榜） ===== */
+/* ===== 榜单弹窗（左雏菊星光值榜 / 右雏菊挑战榜） ===== */
 .leaderboard-modal{max-width:520px;padding:14px;max-height:82vh;display:flex;flex-direction:column}
 .leaderboard-body{flex:1;overflow-y:auto;margin-top:10px;min-height:200px}
 .lb-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px dashed #e8dcc6;font-size:13px}
@@ -1484,3 +1484,184 @@ html[data-weather] .wall-view{background:transparent}
 .lb-challenge-item .lb-c-meta{font-size:12px;color:#8a7a66;margin-top:2px}
 .lb-back{display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;border:none;background:#f3e9d2;color:#8a6d3b;border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer}
 .lb-empty{padding:30px 10px;text-align:center;color:#b0a28a}
+
+/* ============================================================
+   v167：星光值 / 星光商店 / 班级转盘
+   ============================================================ */
+
+/* ---------- 身份卡：星光值 ---------- */
+.identity-star { width: min(300px, 88%); margin: 0 auto 14px; }
+.is-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.is-icon { font-size: 20px; line-height: 1; }
+.is-row b { font-size: 26px; font-weight: 800; color: #e08a1e; letter-spacing: .5px; }
+.is-unit { font-size: 13px; color: #8a6a34; }
+.is-shop-btn {
+  margin-left: 8px; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  background: linear-gradient(135deg, #ffe9b8, #ffd37a); color: #8a5a10;
+  border: 1px solid #f3c96b; box-shadow: 0 2px 6px rgba(224,138,30,.18);
+}
+.is-shop-btn:active { transform: translateY(1px); }
+
+/* ---------- 班级卡 ---------- */
+.class-card-inner {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px; margin: 0;
+}
+.class-avatar-btn {
+  position: relative; flex: 0 0 auto; width: 62px; height: 62px; border-radius: 50%;
+  background: linear-gradient(135deg, #fff4dc, #ffe2ae);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px #ffe6b4, 0 3px 10px rgba(224,138,30,.18);
+  transition: transform .15s;
+}
+.class-avatar-btn:active { transform: scale(.94); }
+.class-avatar-emoji { font-size: 30px; line-height: 1; }
+.class-lv-badge {
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg,#ffb347,#f08a1e); color: #fff;
+  font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(224,138,30,.35); white-space: nowrap;
+}
+.class-chance-dot {
+  position: absolute; top: -4px; right: -6px;
+  background: #e8552f; color: #fff; font-size: 11px; font-weight: 800;
+  padding: 1px 7px; border-radius: 999px; box-shadow: 0 2px 8px rgba(232,85,47,.4);
+  animation: chancePulse 1.6s ease-in-out infinite;
+}
+@keyframes chancePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.class-card-info { flex: 1 1 auto; min-width: 0; text-align: left; }
+.class-card-name { font-size: 15px; font-weight: 800; color: #2f4a3f; }
+.class-card-xp { font-size: 12.5px; color: #a3681a; margin-top: 2px; }
+.class-card-xp b { color: #e08a1e; }
+.class-card-sub { font-size: 12px; color: #7a8a82; margin-top: 2px; }
+.class-detail-btn {
+  flex: 0 0 auto; font-size: 12.5px; color: var(--primary-d); font-weight: 700;
+  padding: 6px 8px; border-radius: 10px; background: var(--primary-soft);
+}
+
+/* ---------- 墙上学生星光徽标 ---------- */
+.mate-star {
+  display: inline-block; margin-left: 5px; font-size: 11px; font-weight: 800;
+  color: #b8781a; background: #fff4dd; border-radius: 999px; padding: 0 6px;
+  vertical-align: middle;
+}
+
+/* ---------- 星光商店 ---------- */
+.shop-wallet-card { background: linear-gradient(135deg,#fff8e8,#ffeecd); text-align: center; }
+.shop-wallet-main { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.shop-wallet-icon { font-size: 22px; }
+.shop-wallet-main b { font-size: 34px; font-weight: 800; color: #d9821f; }
+.shop-wallet-unit { font-size: 13px; color: #8a6a34; }
+.shop-wallet-sub { font-size: 12.5px; color: #9a7b4a; margin-top: 4px; }
+
+.shop-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.shop-tab {
+  flex: 1; padding: 10px 0; border-radius: 12px; font-size: 14px; font-weight: 700;
+  background: #fff; color: #6b7c74; box-shadow: var(--shadow);
+}
+.shop-tab.active { background: var(--warn); color: #fff; box-shadow: 0 4px 12px rgba(239,154,62,.3); }
+
+.shop-groups { display: block; }
+.shop-group { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px; }
+.shop-group-title { font-size: 14px; font-weight: 800; color: #2f4a3f; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.shop-group-tip { font-size: 12px; font-weight: 500; color: #93a29b; }
+.shop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.shop-item { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 6px 2px; border-radius: 12px; }
+.shop-item.owned { background: #f7fbf9; }
+.shop-thumb {
+  width: 100%; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden;
+  background: #f2f6f4; display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.shop-thumb.is-img img { width: 100%; height: 100%; object-fit: cover; }
+.shop-thumb.frame-choice { background: #fbf7f1; }
+.shop-thumb .fc-ring { position: absolute; inset: 8%; border-radius: 50%; }
+.shop-name { font-size: 11.5px; color: #5f746c; text-align: center; line-height: 1.3; height: 30px; overflow: hidden; }
+.shop-btn {
+  width: 100%; padding: 5px 4px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: var(--primary-soft); color: var(--primary-d);
+}
+.shop-btn.buy { background: linear-gradient(135deg,#ffd97a,#f5b23c); color: #7a4d05; }
+.shop-btn.buy.poor { background: #f0f2f1; color: #9aa7a1; }
+.shop-btn.equipped { background: #eef3f1; color: #8a9a93; }
+.shop-btn.use { background: #e9f6f0; color: #2c7a4e; }
+.shop-tip { font-size: 12px; color: #93a29b; text-align: center; margin: 4px 0 8px; }
+
+/* 头像弹窗顶部提示 */
+.avatar-shop-tip {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #fff7e6; border: 1px solid #ffe2b0; border-radius: 12px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 12.5px; color: #8a6a34;
+}
+.avatar-shop-go { font-size: 12.5px; font-weight: 800; color: #b8781a; white-space: nowrap; }
+.fc-owned {
+  position: absolute; right: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%;
+  background: #4caf7d; color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 800;
+}
+
+/* ---------- 班级转盘 ---------- */
+.lottery-card { text-align: center; }
+.lottery-head { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.lottery-class-name { font-size: 16px; font-weight: 800; color: #2f4a3f; }
+.lottery-class-lv {
+  font-size: 12px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg,#ffb347,#f08a1e); padding: 1px 9px; border-radius: 999px;
+}
+.lottery-chance { font-size: 13px; color: #9aa7a1; margin-top: 4px; }
+.lottery-chance.has { color: #e8552f; font-weight: 800; }
+
+.wheel-wrap { position: relative; width: min(300px, 82vw); aspect-ratio: 1/1; margin: 16px auto 10px; }
+.wheel {
+  position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: 0 0 0 10px #fff, 0 0 0 13px #ffd98a, 0 8px 26px rgba(224,138,30,.28);
+  overflow: hidden; will-change: transform;
+}
+.wheel-label {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 54px; pointer-events: none;
+}
+.wheel-label > i {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-size: 17px; font-style: normal; line-height: 1.1; text-align: center;
+}
+.wheel-label em {
+  font-size: 9.5px; font-style: normal; color: #7a5a20; font-weight: 700;
+  max-width: 52px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.wheel-pointer {
+  position: absolute; left: 50%; top: -12px; transform: translateX(-50%);
+  font-size: 24px; color: #e8552f; z-index: 3; text-shadow: 0 2px 6px rgba(232,85,47,.35);
+}
+.wheel-hub {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 68px; height: 68px; border-radius: 50%; z-index: 2;
+  background: linear-gradient(135deg,#fff,#ffe9c0); color: #b8781a;
+  font-size: 15px; font-weight: 800; box-shadow: 0 4px 14px rgba(224,138,30,.35), inset 0 0 0 2px #ffd98a;
+}
+.wheel-hub:disabled { opacity: .55; }
+.lottery-actions { display: flex; gap: 10px; justify-content: center; margin-top: 6px; }
+.lottery-actions .btn { flex: 1; max-width: 160px; }
+.lottery-tip { font-size: 12px; color: #93a29b; margin-top: 10px; line-height: 1.6; }
+.lottery-history { display: flex; flex-direction: column; gap: 6px; }
+.lh-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 2px; border-bottom: 1px dashed #eef3f1; }
+.lh-row:last-child { border-bottom: none; }
+.lh-icon { font-size: 16px; }
+.lh-name { font-weight: 700; color: #2f4a3f; }
+.lh-meta { color: #93a29b; font-size: 12px; }
+.lh-time { margin-left: auto; color: #b3bfb9; font-size: 11.5px; }
+
+/* 抽奖结果弹窗 */
+.prize-modal { text-align: center; padding: 26px 22px 22px; }
+.prize-icon { font-size: 62px; line-height: 1; margin-bottom: 8px; animation: prizePop .5s cubic-bezier(.2,1.4,.4,1); }
+@keyframes prizePop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.prize-title { font-size: 20px; font-weight: 800; color: #b8781a; margin-bottom: 6px; }
+.prize-desc { font-size: 13.5px; color: #7a8a82; margin-bottom: 18px; line-height: 1.6; }
+.prize-modal .btn { width: 100%; }
+
+@media (max-width: 380px) {
+  .shop-grid { grid-template-columns: repeat(3, 1fr); }
+  .is-row b { font-size: 22px; }
+  .class-avatar-btn { width: 54px; height: 54px; }
+  .class-avatar-emoji { font-size: 26px; }
+}
