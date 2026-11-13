@@ -6,13 +6,15 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>在校表现 · 家长查询</title>
 <link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/parent.css">
+<script src="js/icons.js"></script>
 </head>
 <body>
 <div class="container">
 
   <header class="p-header">
-    <div class="p-emoji">🏡</div>
+    <div class="p-emoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-home"/></svg></div>
     <h1>孩子在校表现查询</h1>
     <p id="headerHint">输入班级、学生姓名、出生年月日（8位数），核对一致即可查看全部历史记录</p>
   </header>
@@ -23,7 +25,7 @@
 
   <!-- 扫码进入：班级锁定条 -->
   <div id="classLockBar" class="class-lock" hidden>
-    <span class="class-lock-icon">🔒</span>
+    <span class="class-lock-icon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg></span>
     <span class="class-lock-text">班级：<b id="classLockName"></b></span>
   </div>
 
@@ -43,7 +45,7 @@
     </div>
     <button class="btn btn-primary" id="btnQuery">查询记录</button>
     <div class="qr-entry">
-      <button id="btnQrEntry" type="button">📱 老师点这里：生成本班查询二维码 / 复制链接</button>
+      <button id="btnQrEntry" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> 老师点这里：生成本班查询二维码 / 复制链接</button>
     </div>
   </section>
 
@@ -89,25 +91,25 @@
 
     <!-- 每日学习任务 -->
     <div id="tasksCard" class="tasks-card" hidden>
-      <div class="tasks-head">📋 每日学习任务</div>
+      <div class="tasks-head"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 每日学习任务</div>
       <div id="tasksList" class="tasks-list"></div>
     </div>
 
     <!-- 老师上传的试卷与成绩（学生端看不到） -->
     <div id="papersCard" class="papers-card" hidden>
-      <div class="papers-head">📝 试卷与成绩</div>
+      <div class="papers-head"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 试卷与成绩</div>
       <div id="papersList" class="papers-list"></div>
     </div>
 
     <!-- v153：成绩单（老师整班导入的考试成绩） -->
     <div id="examBatchesCard" class="papers-card" hidden>
-      <div class="papers-head">📊 成绩单</div>
+      <div class="papers-head"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 成绩单</div>
       <div id="examBatchesList" class="exam-batch-list"></div>
     </div>
 
     <!-- 家长填写在家表现（仅老师可见） -->
     <div class="home-card">
-      <div class="home-head">🏠 给老师留言 · 孩子在家表现</div>
+      <div class="home-head"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-home"/></svg> 给老师留言 · 孩子在家表现</div>
       <p class="home-note-tip">内容仅班主任在教师后台可见，孩子和其他家长看不到。</p>
       <div class="home-row">
         <label for="homeDate">日期</label>
@@ -120,7 +122,7 @@
 
     <!-- 我的留言与老师交流（v50：教师评论 + 多轮回复） -->
     <div class="home-thread" id="homeThread" hidden>
-      <div class="home-thread-head">💬 我的留言与老师交流</div>
+      <div class="home-thread-head"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-message"/></svg> 我的留言与老师交流</div>
       <p class="home-thread-tip">老师回复后你会在这里看到，也可以继续回复老师。</p>
       <div id="homeThreadList"></div>
     </div>
@@ -142,7 +144,7 @@
     <div class="qr-link" id="qrLink"></div>
     <p class="qr-tip">把这个二维码发到家长群或打印贴在教室：<br>家长扫码后只需填写「学生姓名 + 出生年月日（8位）」即可查看。</p>
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="btnDownloadQr">⬇️ 下载二维码</button>
+      <button class="btn btn-ghost" id="btnDownloadQr"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 下载二维码</button>
       <button class="btn btn-ghost" id="btnCopyLink">复制链接</button>
       <button class="btn btn-primary" id="btnQrClose">完成</button>
     </div>

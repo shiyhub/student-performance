@@ -6,14 +6,16 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>教师后台 · 在校表现记录</title>
 <link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/teacher.css">
+<script src="js/icons.js"></script>
 </head>
 <body>
 
 <!-- ========== 登录视图 ========== -->
 <div id="loginView">
   <div class="login-wrap">
-    <div class="login-emoji">🍎</div>
+    <div class="login-emoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-graduation"/></svg></div>
     <h1>教师后台登录</h1>
     <div class="card">
       <form id="loginForm">
@@ -45,27 +47,27 @@
         <div class="topbar-title">在校表现 · 教师后台</div>
         <div class="topbar-email" id="userEmail"></div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="btnPrecache" title="联网时把全校数据下载到本机，断网也能完整使用">📥 预缓存数据</button>
+      <button class="btn btn-ghost btn-sm" id="btnPrecache" title="联网时把全校数据下载到本机，断网也能完整使用"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 预缓存数据</button>
       <button class="btn btn-ghost btn-sm" id="btnLogout">退出登录</button>
     </div>
   </header>
 
   <main class="shell">
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="records">📒 表现记录</button>
-      <button class="tab-btn" data-tab="students">👥 学生名单</button>
-      <button class="tab-btn" data-tab="tags">🏷️ 表现标签</button>
-      <button class="tab-btn" data-tab="auto">🤖 自动化任务</button>
-      <button class="tab-btn" data-tab="personal">🎯 个人任务</button>
-      <button class="tab-btn" data-tab="challenge">🏆 挑战任务</button>
-      <button class="tab-btn" data-tab="exam">📷 试卷拍照</button>
-      <button class="tab-btn" data-tab="task">📋 每日任务</button>
-      <button class="tab-btn" data-tab="batch">🎖️ 批量评价</button>
-      <button class="tab-btn" data-tab="stats">📊 数据统计</button>
-      <button class="tab-btn" data-tab="xpLog">📜 星光记录</button>
-      <button class="tab-btn" data-tab="star">⭐ 星光管理</button>
-      <button class="tab-btn" data-tab="tools">🧪 测试工具</button>
-      <button class="tab-btn" data-tab="seat">🪑 座位编排</button>
+      <button class="tab-btn active" data-tab="records"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-notebook"/></svg> 表现记录</button>
+      <button class="tab-btn" data-tab="students"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-users"/></svg> 学生名单</button>
+      <button class="tab-btn" data-tab="tags"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-tag"/></svg> 表现标签</button>
+      <button class="tab-btn" data-tab="auto"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-robot"/></svg> 自动化任务</button>
+      <button class="tab-btn" data-tab="personal"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-target"/></svg> 个人任务</button>
+      <button class="tab-btn" data-tab="challenge"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trophy"/></svg> 挑战任务</button>
+      <button class="tab-btn" data-tab="exam"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg> 试卷拍照</button>
+      <button class="tab-btn" data-tab="task"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 每日任务</button>
+      <button class="tab-btn" data-tab="batch"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-award"/></svg> 批量评价</button>
+      <button class="tab-btn" data-tab="stats"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 数据统计</button>
+      <button class="tab-btn" data-tab="xpLog"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 星光记录</button>
+      <button class="tab-btn" data-tab="star"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> 星光管理</button>
+      <button class="tab-btn" data-tab="tools"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-beaker"/></svg> 测试工具</button>
+      <button class="tab-btn" data-tab="seat"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排</button>
     </nav>
 
     <!-- 今日概览 -->
@@ -101,9 +103,9 @@
         <div class="filter-actions">
           <button class="btn btn-primary" id="btnSearch">查询</button>
           <button class="btn btn-ghost" id="btnClearFilter">清空条件</button>
-          <button class="btn btn-warn" id="btnAddRecord" type="button">➕ 帮学生记录一条</button>
+          <button class="btn btn-warn" id="btnAddRecord" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> 帮学生记录一条</button>
           <button class="btn btn-ghost" id="btnRecCheckAll" type="button">全选</button>
-          <button class="btn btn-danger" id="btnBatchDelRec" type="button">🗑️ 批量删除所选</button>
+          <button class="btn btn-danger" id="btnBatchDelRec" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg> 批量删除所选</button>
         </div>
       </div>
       <div id="recordBox"></div>
@@ -112,7 +114,7 @@
     <!-- ===== 学生名单 ===== -->
     <section id="tabStudents" hidden>
       <div class="card">
-        <div class="card-title">➕ 录入学生</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> 录入学生</div>
         <form id="addStudentForm">
           <div class="add-form-grid">
             <div class="field">
@@ -135,7 +137,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📋 批量录入（一次粘贴全班名单，支持多位家长）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 批量录入（一次粘贴全班名单，支持多位家长）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           <b>同班最省事：</b>先填一次"统一班级"，每行写 <b>学生姓名,家长1,家长2,…</b>（逗号、空格分隔均可；从 Excel 一次复制多列粘贴也行——第一列学生，后面每列一位家长）。<br>
           <b>多个班混排：</b>统一班级留空，每行写 <b>班级,学生姓名,家长1,家长2,…</b>。<br>
@@ -148,7 +150,7 @@
         <div class="field">
           <label for="batchText">名单内容（每行一个学生，家长数量不限）</label>
           <textarea class="input batch-textarea" id="batchText" rows="9"
-            placeholder="李小明,李大明,刘小芳   ← 爸爸、妈妈都能查&#10;王小红 王建国 王秀兰&#10;张三&#9;张父   ← 也可以是 Excel 复制来的多列"></textarea>
+            placeholder="李小明,李大明,刘小芳   <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow-left"/></svg> 爸爸、妈妈都能查&#10;王小红 王建国 王秀兰&#10;张三&#9;张父   <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-arrow-left"/></svg> 也可以是 Excel 复制来的多列"></textarea>
         </div>
         <div class="batch-actions">
           <button class="btn btn-ghost" id="btnBatchCheck" type="button">① 检查内容</button>
@@ -164,7 +166,7 @@
     <!-- ===== 表现标签 ===== -->
     <section id="tabTags" hidden>
       <div class="card">
-        <div class="card-title">➕ 新增表现标签</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> 新增表现标签</div>
         <p class="text-muted" style="margin-bottom:10px;">
           标签均为<b>勾选型</b>；按「提交方式」分<b>可重复提交</b>（每天/多次都能选）与<b>不可重复提交</b>（同一具体项一生只记一次）；按「心情分类」分积极（心情+1）/消极（心情-1）；可设置二级标签，星光值可自定义。<b>「维度」决定加分归属：德/智/体/美/劳，星光值会加进对应维度。</b>
         </p>
@@ -177,25 +179,25 @@
             <div class="field">
               <label for="addTagDim">维度（加分归属）</label>
               <select class="input" id="addTagDim">
-                <option value="de">❤️ 德（品行守纪）</option>
-                <option value="zhi" selected>🧠 智（学习学业）</option>
-                <option value="ti">💪 体（运动健康）</option>
-                <option value="mei">🎨 美（艺术审美）</option>
-                <option value="lao">🧹 劳（劳动实践）</option>
+                <option value="de"> 德（品行守纪）</option>
+                <option value="zhi" selected> 智（学习学业）</option>
+                <option value="ti"> 体（运动健康）</option>
+                <option value="mei"> 美（艺术审美）</option>
+                <option value="lao"> 劳（劳动实践）</option>
               </select>
             </div>
             <div class="field">
               <label for="addTagCategory">心情分类</label>
               <select class="input" id="addTagCategory">
-                <option value="positive">🌟 积极（心情 +1）</option>
-                <option value="negative">💧 消极（心情 -1）</option>
+                <option value="positive"> 积极（心情 +1）</option>
+                <option value="negative"> 消极（心情 -1）</option>
               </select>
             </div>
             <div class="field">
               <label for="addTagRepeat">提交方式</label>
               <select class="input" id="addTagRepeat">
-                <option value="repeat" selected>🔁 可重复提交（每天/多次都能选）</option>
-                <option value="unique">🔒 不可重复提交（同一具体项只能记一次）</option>
+                <option value="repeat" selected> 可重复提交（每天/多次都能选）</option>
+                <option value="unique"> 不可重复提交（同一具体项只能记一次）</option>
               </select>
             </div>
             <div class="field">
@@ -222,7 +224,7 @@
     <!-- ===== 自动化任务（五维星光值自动加分） ===== -->
     <section id="tabAuto" hidden>
       <div class="card">
-        <div class="card-title">🤖 新增自动化任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-robot"/></svg> 新增自动化任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           每天自动结算：满足条件的规则会给<b>全班每个学生</b>在该维度自动加分（纯奖励制，只加分不扣分）。
           「当天没有某标签」＝ 该生当天没有任何一条该标签的记录时加分；
@@ -238,8 +240,8 @@
             <div class="field">
               <label for="autoRuleType">触发条件</label>
               <select class="input" id="autoRuleType">
-                <option value="no_tag" selected>🚫 当天没有某标签</option>
-                <option value="has_tag">✅ 当天有某标签</option>
+                <option value="no_tag" selected> 当天没有某标签</option>
+                <option value="has_tag"> 当天有某标签</option>
               </select>
             </div>
             <div class="field">
@@ -249,11 +251,11 @@
             <div class="field">
               <label for="autoRuleDim">加分维度</label>
               <select class="input" id="autoRuleDim">
-                <option value="de">❤️ 德</option>
-                <option value="zhi">🧠 智</option>
-                <option value="ti">💪 体</option>
-                <option value="mei">🎨 美</option>
-                <option value="lao">🧹 劳</option>
+                <option value="de"> 德</option>
+                <option value="zhi"> 智</option>
+                <option value="ti"> 体</option>
+                <option value="mei"> 美</option>
+                <option value="lao"> 劳</option>
               </select>
             </div>
             <div class="field">
@@ -292,7 +294,7 @@
       </p>
 
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">🙋 手动分配任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wave"/></svg> 手动分配任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           手动给单个/多个/全班学生分配某天的任务（如：某天某人做卫生委员、某人抬菜）。
           学生端会看到自己的任务，<b>确认完成后才按标签加分</b>（走五维星光值）。
@@ -326,7 +328,7 @@
       </div>
 
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">📋 已分配任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 已分配任务</div>
         <div id="manualTaskBox"></div>
       </div>
     </section>
@@ -334,7 +336,7 @@
     <!-- ===== 个人任务（教师自定义） ===== -->
     <section id="tabPersonal" hidden>
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">🎯 发布个人任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-target"/></svg> 发布个人任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           教师自定义任务内容（如"今天给绿植浇水""课间提醒大家喝水"），只发给选定的学生，
           学生端<b>个人任务栏</b>专属可见，确认完成后按你定的分值+维度加星光值。
@@ -351,11 +353,11 @@
           <div class="field">
             <label for="personalTaskDim">加分维度</label>
             <select class="input" id="personalTaskDim">
-              <option value="de">❤️ 德</option>
-              <option value="zhi">🧠 智</option>
-              <option value="ti">💪 体</option>
-              <option value="mei">🎨 美</option>
-              <option value="lao" selected>🧹 劳</option>
+              <option value="de"> 德</option>
+              <option value="zhi"> 智</option>
+              <option value="ti"> 体</option>
+              <option value="mei"> 美</option>
+              <option value="lao" selected> 劳</option>
             </select>
           </div>
           <div class="field">
@@ -386,7 +388,7 @@
       </div>
 
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">🗂️ 已发布个人任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg> 已发布个人任务</div>
         <div style="margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 
           <button class="btn btn-ghost btn-sm" type="button" id="btnPtaskSelAll">全选</button>
@@ -406,7 +408,7 @@
     <!-- ===== 挑战任务（档位制） ===== -->
     <section id="tabChallenge" hidden>
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">🏆 发布挑战任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trophy"/></svg> 发布挑战任务</div>
         <p class="text-muted" style="margin-bottom:10px;">
           如"英语默写挑战"，学生端<b>挑战任务栏</b>可见；完成后学生自选达成档位
           <b>10 / 15 / 20 … 110</b>（步长 5，共 21 档），对应星光值 = 档位 ÷ 5（即 2 / 3 / 4 … 22）。
@@ -423,11 +425,11 @@
           <div class="field">
             <label for="challengeDim">加分维度</label>
             <select class="input" id="challengeDim">
-              <option value="de">❤️ 德</option>
-              <option value="zhi" selected>🧠 智</option>
-              <option value="ti">💪 体</option>
-              <option value="mei">🎨 美</option>
-              <option value="lao">🧹 劳</option>
+              <option value="de"> 德</option>
+              <option value="zhi" selected> 智</option>
+              <option value="ti"> 体</option>
+              <option value="mei"> 美</option>
+              <option value="lao"> 劳</option>
             </select>
           </div>
           <div class="field">
@@ -458,7 +460,7 @@
       </div>
 
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">🗂️ 已发布挑战任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg> 已发布挑战任务</div>
         <div style="margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 
           <button class="btn btn-ghost btn-sm" type="button" id="btnChallengeSelAll">全选</button>
@@ -478,7 +480,7 @@
     <!-- ===== 试卷拍照（仅家长端可见，学生端不显示） ===== -->
     <section id="tabExam" hidden>
       <div class="card">
-        <div class="card-title">📷 上传学生试卷（拍照自动识别分数）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg> 上传学生试卷（拍照自动识别分数）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           手机点"拍照上传"可直接调起相机；上传后会自动识别卷面上的数字分数，识别结果可以手动修改。<b>试卷只会展示给该生家长，学生端看不到。</b>
         </p>
@@ -535,7 +537,7 @@
 
       <!-- ===== 成绩单批量导入（v153） ===== -->
       <div class="card">
-        <div class="card-title">📊 导入成绩单（整班批量）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 导入成绩单（整班批量）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           输入考试名称（可附说明），再选一种导入方式：<b>上传成绩单图片自动识别姓名和分数</b>，或用
           <b>Excel 模板</b>填写后导入。结果会填入下方表格，<b>可逐行手动修改</b>；保存后该生家长可在「成绩单」里看到本次成绩。
@@ -568,16 +570,16 @@
 
         <div class="batch-import-grid">
           <div class="batch-import-box">
-            <div class="bi-title">📷 成绩单图片识别</div>
+            <div class="bi-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg> 成绩单图片识别</div>
             <p class="bi-tip">拍/选一张有「姓名+分数」的成绩单，自动识别并填入下表。</p>
             <input class="input" id="ebImg" type="file" accept="image/*" capture="environment">
             <div id="ebImgStatus" class="exam-ocr-status"></div>
           </div>
           <div class="batch-import-box">
-            <div class="bi-title">📑 Excel 导入</div>
+            <div class="bi-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-paper"/></svg> Excel 导入</div>
             <p class="bi-tip">先下载模板（已按本班名单预填姓名），填好分数后导入（.xlsx / .csv）。</p>
             <div class="bi-actions">
-              <button class="btn btn-ghost btn-sm" id="btnEbTpl" type="button">⬇️ 下载模板</button>
+              <button class="btn btn-ghost btn-sm" id="btnEbTpl" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 下载模板</button>
               <input class="input" id="ebXlsx" type="file" accept=".xlsx,.xls,.csv">
             </div>
             <div id="ebXlsxStatus" class="exam-ocr-status"></div>
@@ -614,7 +616,7 @@
     <!-- ===== 星光管理 ===== -->
     <section id="tabStar" hidden>
       <div class="card">
-        <div class="card-title">⭐ 星光值与班级星光值</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> 星光值与班级星光值</div>
         <p class="text-muted" style="margin-bottom:10px;">
           学生获得的是<b>星光值</b>（原星光值），可用于星光商店兑换头像与头像框；
           消费只扣余额，不影响已累计的星光值。每 <b>1 点星光值</b> 自动转化为 <b>1 点班级星光值</b>，
@@ -644,12 +646,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🎡 班级抽奖记录</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wheel"/></svg> 班级抽奖记录</div>
         <div id="starDrawBox"></div>
       </div>
 
       <div class="card">
-        <div class="card-title">🛍️ 星光商店价格</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shop"/></svg> 星光商店价格</div>
         <p class="text-muted" style="margin-bottom:10px;">修改价格后学生端立即生效；已兑换过的装扮不受影响。</p>
         <div class="exam-form-grid">
           <div class="field">
@@ -669,7 +671,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🗄️ 数据封存与重置</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-archive"/></svg> 数据封存与重置</div>
         <p class="text-muted" style="margin-bottom:10px;">
           把当前<b>全部学生数据</b>（表现记录、任务提交、挑战、试卷、留言、星光流水、抽奖记录、成就）
           原样封存到归档表，可随时查看；随后把统计归零，开始新一轮记录。
@@ -688,14 +690,14 @@
         </div>
         <div id="archiveResult" style="margin-top:10px;"></div>
         <div style="margin-top:14px;">
-          <div class="card-title" style="font-size:14px;">📚 历史封存批次</div>
+          <div class="card-title" style="font-size:14px;"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-book"/></svg> 历史封存批次</div>
           <div id="archiveBatchList"></div>
         </div>
       </div>
     </section>
     <section id="tabXpLog" hidden>
       <div class="card">
-        <div class="card-title">📜 学生星光值日志</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 学生星光值日志</div>
         <p class="text-muted" style="margin-bottom:10px;">
           查询某学生的全部加分流水（日常表现 / 每日任务 / 个人任务 / 挑战任务），
           按<b>表现标签当前真实分值</b>记录，带累计星光值列，可用于对照与核账；
@@ -717,14 +719,14 @@
           </div>
           <div class="field">
             <label>&nbsp;</label>
-            <button class="btn btn-ghost" id="btnAllXpLogs" type="button">👥 全班日志总览</button>
+            <button class="btn btn-ghost" id="btnAllXpLogs" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-users"/></svg> 全班日志总览</button>
           </div>
         </div>
         <div id="xpLogResult" style="margin-top:12px;"></div>
       </div>
 
       <div class="card">
-        <div class="card-title">🚨 星光值异常区（自动上报）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> 星光值异常区（自动上报）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           学生提交星光值时自动检测异常并上报到这里，无需手工排查：
           <b>标签已被删除</b>、<b>标签星光值误配</b>（超 0~30）、<b>扣减致星光值为负</b>、<b>加分链路异常</b>（双计/漏计）等。
@@ -737,7 +739,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">⚠️ 异常星光值排查</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> 异常星光值排查</div>
         <p class="text-muted" style="margin-bottom:10px;">
           比对全班「当前星光值」与「星光值流水应得」，列出差额非零的学生，
           辅助排查异常星光值来源（手动调星光值 / 删除未回退 / 回退过头等）。
@@ -752,7 +754,7 @@
     <!-- ===== 测试工具（不影响真实使用） ===== -->
     <section id="tabTools" hidden>
       <div class="card">
-        <div class="card-title">📥 星光值流水注入（星光记录功能）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 星光值流水注入（星光记录功能）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           把现有全部加分（日常/每日任务/个人任务/挑战）按<b>真实星光值</b>写入「星光记录」流水，
           用于查询与核账。可重复点击，不会重复记录。
@@ -762,7 +764,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🔄 星光值重算</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sync"/></svg> 星光值重算</div>
         <p class="text-muted" style="margin-bottom:10px;">
           修改了「表现标签」里的星光值后，点这里按历史记录重新累加全班的星光值和等级。
           <b>只会重算，不会删除任何记录。</b>
@@ -772,7 +774,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">👁 以学生身份预览（只读，不会提交）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-eye"/></svg> 以学生身份预览（只读，不会提交）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           选一个学生，打开他看到的班级墙和填写页。预览模式下<b>不能提交记录</b>，方便你核对孩子看到的效果。
         </p>
@@ -798,7 +800,7 @@
           · 学生每勾选一个「积极表现」，星光值 +该标签设定值（默认 +2）；消极表现默认 +0。<br>
           · 老师删掉一条记录时，这条记录带来的星光值会自动扣回。<br>
           · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200 / Lv6=400。校园头像 Lv3、典藏头像 Lv6 解锁。<br>
-          · 想直接调整某个学生的星光值，到「学生名单」里点他那一行的 ✏️ 调星光值。
+          · 想直接调整某个学生的星光值，到「学生名单」里点他那一行的 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 调星光值。
         </p>
       </div>
     </section>
@@ -806,7 +808,7 @@
     <!-- ===== 每日任务 ===== -->
     <section id="tabTask" hidden>
       <div class="card">
-        <div class="card-title">📢 发布今日学习任务</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-bell"/></svg> 发布今日学习任务</div>
         <form id="taskForm">
           <div class="filter-grid">
             <div class="field">
@@ -820,10 +822,10 @@
             <div class="field">
               <label for="taskType">类型</label>
               <select class="input" id="taskType">
-                <option value="classwork">🏫 课堂作业</option>
-                <option value="homework">🏠 家庭作业</option>
-                <option value="recite">🎤 背诵任务（未完成/完成，+2星光值）</option>
-                <option value="dictation">✏️ 默写任务（未完成/完成，+2星光值）</option>
+                <option value="classwork"> 课堂作业</option>
+                <option value="homework"> 家庭作业</option>
+                <option value="recite"> 背诵任务（未完成/完成，+2星光值）</option>
+                <option value="dictation"> 默写任务（未完成/完成，+2星光值）</option>
               </select>
             </div>
             <div class="field full">
@@ -846,7 +848,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📊 全班完成情况</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 全班完成情况</div>
         <div class="filter-grid">
           <div class="field">
             <label for="reportClass">班级</label>
@@ -865,7 +867,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🏷️ 标签填写情况（每日打卡）</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-tag"/></svg> 标签填写情况（每日打卡）</div>
         <div class="filter-grid">
           <div class="field">
             <label for="tagReportClass">班级</label>
@@ -887,7 +889,7 @@
     <!-- ===== 批量评价 ===== -->
     <section id="tabBatch" hidden>
       <div class="card">
-        <div class="card-title">🎖️ 批量打标签</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-award"/></svg> 批量打标签</div>
         <p class="text-muted">全班/多日都遵守纪律时，选一个标签，一次给多个学生、多个日期批量打上。星光值和心情会按规则自动计算。</p>
         <div class="grid">
           <div class="field">
@@ -924,12 +926,12 @@
           <div id="awardStudentBox" class="batch-students"></div>
         </div>
 
-        <button class="btn btn-primary" type="button" id="btnAwardGo">🚀 一键批量评价</button>
+        <button class="btn btn-primary" type="button" id="btnAwardGo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rocket"/></svg> 一键批量评价</button>
         <span id="awardResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
 
       <div class="card">
-        <div class="card-title">📋 任务批量评分</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 任务批量评分</div>
         <p class="text-muted">先在上方选好班级和学生，再选今天的任务和统一等级，一次给多人打好。</p>
         <div class="grid">
           <div class="field">
@@ -943,14 +945,14 @@
           <div class="field">
             <label for="awardGrade">统一等级</label>
             <select class="input" id="awardGrade">
-              <option value="done">✅ 完成（星光值+1）</option>
-              <option value="good">👍 优秀 A（星光值+2）</option>
-              <option value="perfect" selected>🏆 完美 A+（星光值+3）</option>
+              <option value="done"> 完成（星光值+1）</option>
+              <option value="good"> 优秀 A（星光值+2）</option>
+              <option value="perfect" selected> 完美 A+（星光值+3）</option>
               <option value="none">⏳ 未完成（星光值0）</option>
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" type="button" id="btnTaskGradeGo">🚀 批量给所选学生评等级</button>
+        <button class="btn btn-primary" type="button" id="btnTaskGradeGo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rocket"/></svg> 批量给所选学生评等级</button>
         <span id="taskGradeResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
     </section>
@@ -958,7 +960,7 @@
     <!-- ===== 数据统计 ===== -->
     <section id="tabStats" hidden>
       <div class="card">
-        <div class="card-title">📊 数据统计</div>
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 数据统计</div>
         <div class="grid">
           <div class="field">
             <label for="statsClass">班级</label>
@@ -993,7 +995,7 @@
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" id="btnStatsGo">🔍 生成统计</button>
+        <button class="btn btn-primary" id="btnStatsGo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-search"/></svg> 生成统计</button>
       </div>
       <div class="card" id="statsOut" style="margin-top:12px;"><div class="text-muted">选好条件点"生成统计"。</div></div>
     </section>
@@ -1023,7 +1025,7 @@
       </div>
       <div class="field full">
         <label>今日心情（根据表现自动计算）</label>
-        <div id="recMood" class="rec-mood">😐 一般</div>
+        <div id="recMood" class="rec-mood"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-3"/></svg> 一般</div>
       </div>
       <div class="field full">
         <label>表现标签</label>
@@ -1050,7 +1052,7 @@
     <div id="classQrImage" class="t-qr-box"></div>
     <div class="t-qr-link" id="classQrLink"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="btnClassQrDownload" type="button">⬇️ 下载二维码</button>
+      <button class="btn btn-ghost" id="btnClassQrDownload" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 下载二维码</button>
       <button class="btn btn-ghost" id="btnClassQrCopy" type="button">复制链接</button>
       <button class="btn btn-primary" id="btnClassQrClose" type="button">完成</button>
     </div>
@@ -1066,12 +1068,12 @@
     <div class="stu-code-row">
       <span class="stu-code-label">当前密码</span>
       <b class="stu-code-value" id="stuCodeValue">未设置</b>
-      <button class="btn btn-ghost btn-sm" id="btnStuGenCode" type="button">🎲 生成新密码</button>
+      <button class="btn btn-ghost btn-sm" id="btnStuGenCode" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-dice"/></svg> 生成新密码</button>
     </div>
     <div id="stuQrImage" class="t-qr-box"></div>
     <div class="t-qr-link" id="stuQrLink"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="btnStuQrDownload" type="button">⬇️ 下载二维码</button>
+      <button class="btn btn-ghost" id="btnStuQrDownload" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 下载二维码</button>
       <button class="btn btn-ghost" id="btnStuQrCopy" type="button">复制链接</button>
       <button class="btn btn-primary" id="btnStuQrClose" type="button">完成</button>
     </div>
@@ -1079,11 +1081,11 @@
 </div>
 
 <section id="tabSeat" hidden>
-  <h2>🪑 座位编排（6列×7排）</h2>
+  <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排（6列×7排）</h2>
   <p class="text-muted">从下方名单把学生拖到座位上；点座位上的学生可清空。保存后学生端按座位显示。</p>
   <div class="field-row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
     <label>班级</label><select class="input" id="seatClass" style="max-width:200px;"></select>
-    <button class="btn btn-primary" id="btnSeatSave" type="button">💾 保存座位</button>
+    <button class="btn btn-primary" id="btnSeatSave" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-save"/></svg> 保存座位</button>
   </div>
   <div id="seatBoard" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:900px;"></div>
   <h3 style="margin:16px 0 8px;">未安排学生（拖动到座位）</h3>

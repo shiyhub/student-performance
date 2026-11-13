@@ -6,14 +6,16 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>我们班的在校表现</title>
 <link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/student.css">
+<script src="js/icons.js"></script>
 </head>
 <body>
 
 <!-- 陌生设备：先选名字才能进墙 -->
 <div id="deviceGate" class="device-gate" hidden>
   <div class="gate-card">
-    <h2>👋 你好呀，你是哪位同学？</h2>
+    <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wave"/></svg> 你好呀，你是哪位同学？</h2>
     <p class="text-muted">第一次在这台设备上使用，请选你的名字（这台设备会记住你，下次直接进）</p>
     <div class="field">
       <label>班级</label>
@@ -62,7 +64,7 @@
     </div>
     <div class="class-progress" id="classProgress">
       <div class="cp-row">
-        <span>🧡 班级星光值 <b id="cpXp">0</b></span>
+        <span><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-heart"/></svg> 班级星光值 <b id="cpXp">0</b></span>
         <span id="cpNext">距 Lv2 还需 400</span>
       </div>
       <div class="cp-bar"><div class="cp-fill" id="cpFill"></div></div>
@@ -84,7 +86,7 @@
   <button class="wall-back" id="btnBackWall" aria-label="返回班级墙" title="返回班级墙"><span class="back-tri">‹</span></button>
 
   <header class="s-header">
-    <div class="s-mascot">🪄</div>
+    <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></div>
     <h1 class="s-title">我的在校小日记</h1>
     <div class="s-date" id="todayLabel"></div>
   </header>
@@ -99,20 +101,20 @@
   <!-- 身份（个人信息） -->
   <section class="card red-card" id="identityCard">
     <button type="button" class="identity-avatar" id="btnPickAvatar" aria-label="更换头像">
-      <span class="identity-avatar-emoji" id="identityAvatarEmoji">🐯</span>
+      <span class="identity-avatar-emoji" id="identityAvatarEmoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></span>
       <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
     </button>
     <div class="identity-actions">
-      <button type="button" class="identity-hint-btn" id="btnPickAvatarHint">点我换头像 ✨</button>
+      <button type="button" class="identity-hint-btn" id="btnPickAvatarHint">点我换头像 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></button>
       <span class="identity-actions-sep">·</span>
-      <button type="button" class="identity-hint-btn" id="btnOpenFrames">🖼️ 更换头像框</button>
+      <button type="button" class="identity-hint-btn" id="btnOpenFrames"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-image"/></svg> 更换头像框</button>
     </div>
     <div class="identity-star">
       <div class="is-row">
-        <span class="is-icon" aria-hidden="true">⭐</span>
+        <span class="is-icon" aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star"/></svg></span>
         <b id="identityStar">0</b>
         <span class="is-unit">星光值</span>
-        <button type="button" class="is-shop-btn" id="btnOpenShop">🛍️ 星光商店</button>
+        <button type="button" class="is-shop-btn" id="btnOpenShop"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shop"/></svg> 星光商店</button>
       </div>
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
       <div class="identity-xp-text" id="identityXpText">累计获得 0 星光值 · 星光等级 Lv.1</div>
@@ -131,21 +133,21 @@
 
   <!-- 我的成就（徽章墙） -->
   <section class="card red-card" id="achCard" hidden>
-    <div class="card-title red-title">🏅 我的成就 <span id="achCount" class="ach-count"></span></div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-medal"/></svg> 我的成就 <span id="achCount" class="ach-count"></span></div>
     <div class="ach-grid" id="achGrid"></div>
   </section>
 
   <!-- 今日心情（由勾选项自动算出，5 档）——填写页不显示，只在班级墙头像预览 -->
   <section class="card mood-preview-card" id="moodPreviewCard" hidden>
     <div class="mood-preview" id="moodPreview">
-      <span class="mp-avatar" id="mpAvatar">🐯<span class="mp-badge" id="mpBadge">😐</span></span>
+      <span class="mp-avatar" id="mpAvatar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg><span class="mp-badge" id="mpBadge"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-3"/></svg></span></span>
       <div class="mp-text">
         <div class="mp-title">今日心情</div>
-        <div class="mp-level" id="mpLevel">😐 一般</div>
+        <div class="mp-level" id="mpLevel"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-3"/></svg> 一般</div>
       </div>
     </div>
     <div class="mood-meter" id="moodMeter" aria-hidden="true">
-      <span data-l="1">😢</span><span data-l="2">😟</span><span data-l="3">😐</span><span data-l="4">🙂</span><span data-l="5">😄</span>
+      <span data-l="1"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-1"/></svg></span><span data-l="2"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-2"/></svg></span><span data-l="3"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-3"/></svg></span><span data-l="4"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-4"/></svg></span><span data-l="5"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mood-5"/></svg></span>
     </div>
   </section>
 
@@ -154,35 +156,35 @@
   <div class="diary-col c2">
   <!-- 往日任务（中间大卡） -->
   <section class="card red-card" id="pastTaskCard" hidden>
-    <div class="card-title red-title">🗓️ 往日任务（近7天）</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-calendar"/></svg> 往日任务（近7天）</div>
     <div id="pastTaskBody"></div>
   </section>
   <!-- 今日任务（放到往日任务下方，左栏变短，整页无需滚动） -->
   <section class="card red-card task-card" id="taskCard" hidden>
-    <div class="card-title red-title">📋 今日任务</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 今日任务</div>
     <div id="taskBody"></div>
   </section>
   <div class="duo-row">
     <section class="card red-card task-card" id="reciteTaskCard" hidden>
-      <div class="card-title red-title">🎤 背诵任务</div>
+      <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mic"/></svg> 背诵任务</div>
       <div id="reciteTaskBody"></div>
     </section>
     <section class="card red-card task-card" id="dictationTaskCard" hidden>
-      <div class="card-title red-title">✏️ 默写任务</div>
+      <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 默写任务</div>
       <div id="dictationTaskBody"></div>
     </section>
   </div>
   <!-- 手动任务 + 个人任务（今日任务下方，与今日任务卡片同宽） -->
   <div class="card red-card task-card" id="todayTaskCard" hidden>
-    <div class="card-title red-title">📋 今日任务</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 今日任务</div>
     <div id="todayTaskBox"></div>
   </div>
   <div class="card red-card task-card" id="personalTaskCard" hidden>
-    <div class="card-title red-title">🎯 我的个人任务</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-target"/></svg> 我的个人任务</div>
     <div id="personalTaskBox"></div>
   </div>
   <div class="card red-card task-card" id="challengeTaskCard" hidden>
-    <div class="card-title red-title">🏆 我的挑战任务</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trophy"/></svg> 我的挑战任务</div>
     <div id="challengeTaskBox"></div>
   </div>
   </div><!-- /c2 -->
@@ -190,16 +192,16 @@
   <div class="diary-col c3">
   <!-- 表现标签（第三栏） -->
   <section class="card red-card" id="tagsCard">
-    <div class="card-title red-title">📝 今天的小表现</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 今天的小表现</div>
     <div id="tagsLoading" class="loading-row"><span class="spinner"></span>正在加载表现项目…</div>
     <div id="tagsBox" hidden>
       <div class="tag-group red-sub">
-        <div class="tag-group-title pos red-title">🌟 积极表现</div>
+        <div class="tag-group-title pos red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star-fill"/></svg> 积极表现</div>
         <div class="tag-grid" id="posGrid"></div>
         <div id="textTagsBox"></div>
       </div>
       <div class="tag-group red-sub" id="negGroup">
-        <div class="tag-group-title neg red-title">💧 消极表现</div>
+        <div class="tag-group-title neg red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-drop"/></svg> 消极表现</div>
         <div class="tag-grid" id="negGrid"></div>
       </div>
     </div>
@@ -210,7 +212,7 @@
 
   <div class="submit-wrap">
     <div class="submit-status" id="submitStatus" hidden></div>
-    <button class="btn btn-warn" id="btnSubmit">提交今天的表现 🎈</button>
+    <button class="btn btn-warn" id="btnSubmit">提交今天的表现 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></button>
   </div>
 </div>
 
@@ -220,7 +222,7 @@
   <button class="wall-back" id="btnFrameBack" aria-label="返回个人主页" title="返回个人主页"><span class="back-tri">‹</span></button>
 
   <header class="s-header">
-    <div class="s-mascot">🖼️</div>
+    <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-image"/></svg></div>
     <h1 class="s-title">我的头像框</h1>
     <div class="s-date" id="frameHintLabel">点一下佩戴 · 回主页就能看到</div>
   </header>
@@ -233,7 +235,7 @@
   <section class="card frame-preview-card" id="framePreviewCard">
     <div class="frame-preview">
       <div class="frame-preview-avatar-wrap">
-        <div class="frame-preview-avatar" id="framePreviewAvatar">🐯</div>
+        <div class="frame-preview-avatar" id="framePreviewAvatar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></div>
         <span class="identity-lv-badge" id="framePreviewLevel">Lv.1</span>
       </div>
     </div>
@@ -261,7 +263,7 @@
   <button class="wall-back" id="btnShopBack" aria-label="返回个人主页" title="返回个人主页"><span class="back-tri">‹</span></button>
 
   <header class="s-header">
-    <div class="s-mascot">🛍️</div>
+    <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shop"/></svg></div>
     <h1 class="s-title">星光商店</h1>
     <div class="s-date" id="shopWalletLabel">我的星光值：0</div>
   </header>
@@ -272,7 +274,7 @@
 
   <section class="card shop-wallet-card">
     <div class="shop-wallet-main">
-      <span class="shop-wallet-icon">⭐</span>
+      <span class="shop-wallet-icon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star"/></svg></span>
       <b id="shopWalletValue">0</b>
       <span class="shop-wallet-unit">星光值</span>
     </div>
@@ -280,13 +282,13 @@
   </section>
 
   <div class="shop-tabs" id="shopTabs">
-    <button type="button" class="shop-tab active" data-shop-tab="avatar">👤 头像</button>
-    <button type="button" class="shop-tab" data-shop-tab="frame">🖼️ 头像框</button>
+    <button type="button" class="shop-tab active" data-shop-tab="avatar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg> 头像</button>
+    <button type="button" class="shop-tab" data-shop-tab="frame"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-image"/></svg> 头像框</button>
   </div>
 
   <div id="shopLoading" class="loading-row"><span class="spinner"></span>正在加载商品…</div>
   <div class="shop-groups" id="shopGroups" hidden></div>
-  <div class="shop-tip">用星光值兑换后即可永久使用 · 上课表现越棒，星光值越多 ✨</div>
+  <div class="shop-tip">用星光值兑换后即可永久使用 · 上课表现越棒，星光值越多 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></div>
 </div>
 
 <!-- ================= 视图六：班级转盘抽奖 ================= -->
@@ -295,7 +297,7 @@
   <button class="wall-back" id="btnLotteryBack" aria-label="返回班级墙" title="返回班级墙"><span class="back-tri">‹</span></button>
 
   <header class="s-header">
-    <div class="s-mascot">🎡</div>
+    <div class="s-mascot"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wheel"/></svg></div>
     <h1 class="s-title">班级升级转盘</h1>
     <div class="s-date" id="lotterySub">班级每升 1 级，就有 1 次抽奖机会</div>
   </header>
@@ -312,20 +314,20 @@
     <div class="lottery-chance" id="lotteryChance">可抽奖 0 次</div>
 
     <div class="wheel-wrap">
-      <div class="wheel-pointer">▼</div>
+      <div class="wheel-pointer"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chevron-down"/></svg></div>
       <div class="wheel" id="lotteryWheel"></div>
       <button type="button" class="wheel-hub" id="btnSpin">抽奖</button>
     </div>
 
     <div class="lottery-actions">
-      <button type="button" class="btn btn-warn" id="btnSpinMain">开始抽奖 🎁</button>
+      <button type="button" class="btn btn-warn" id="btnSpinMain">开始抽奖 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-gift"/></svg></button>
       <button type="button" class="btn btn-ghost" id="btnLotteryHistory">抽奖记录</button>
     </div>
     <div class="lottery-tip" id="lotteryTip">班级星光值每升 1 级获得 1 次机会，机会可累计</div>
   </section>
 
   <section class="card" id="lotteryHistoryCard" hidden>
-    <div class="card-title red-title">🏆 最近抽奖</div>
+    <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trophy"/></svg> 最近抽奖</div>
     <div id="lotteryHistoryBody" class="lottery-history"></div>
   </section>
 </div>
@@ -333,10 +335,10 @@
 <!-- ================= 抽奖结果弹窗 ================= -->
 <div class="modal-mask" id="prizeModal">
   <div class="modal prize-modal">
-    <div class="prize-icon" id="prizeIcon">🎁</div>
+    <div class="prize-icon" id="prizeIcon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-gift"/></svg></div>
     <h3 class="prize-title" id="prizeName">恭喜中奖</h3>
     <div class="prize-desc" id="prizeDesc"></div>
-    <button type="button" class="btn btn-warn" id="btnPrizeClose">收下啦 ✨</button>
+    <button type="button" class="btn btn-warn" id="btnPrizeClose">收下啦 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></button>
   </div>
 </div>
 
@@ -344,16 +346,16 @@
 <div class="modal-mask" id="detailModal">
   <div class="modal detail-modal">
     <div class="detail-head">
-      <div class="detail-avatar" id="detailAvatar">🐯</div>
+      <div class="detail-avatar" id="detailAvatar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></div>
       <div class="detail-who">
         <h3 id="detailName">同学</h3>
         <div class="text-muted" id="detailSub">在校表现记录</div>
       </div>
-      <button class="detail-close" id="btnDetailClose" aria-label="关闭">✕</button>
+      <button class="detail-close" id="btnDetailClose" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </div>
     <div id="detailBody" class="detail-body"></div>
     <div class="detail-foot" id="detailFoot" hidden>
-      <button class="btn btn-warn" id="btnDetailWrite">✏️ 这是我，记录今天的表现</button>
+      <button class="btn btn-warn" id="btnDetailWrite"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 这是我，记录今天的表现</button>
     </div>
   </div>
 </div>
@@ -362,11 +364,11 @@
 <div class="success-overlay" id="successOverlay" aria-live="polite">
   <div id="confettiBox"></div>
   <div class="success-box">
-    <div class="success-emoji">🎉</div>
+    <div class="success-emoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></div>
     <h2>提交成功！</h2>
     <p id="successMsg">你今天真棒，继续保持哦！</p>
-    <button class="btn btn-warn" id="btnWallFromSuccess">回到班级墙看看 🌈</button>
-    <button class="btn btn-ghost" id="btnAgain" style="margin-top:10px;">再记录一条 ✏️</button>
+    <button class="btn btn-warn" id="btnWallFromSuccess">回到班级墙看看 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rainbow"/></svg></button>
+    <button class="btn btn-ghost" id="btnAgain" style="margin-top:10px;">再记录一条 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></button>
   </div>
 </div>
 
@@ -374,12 +376,12 @@
 <div class="modal-mask" id="avatarModal">
   <div class="modal avatar-modal">
     <div class="detail-head">
-      <div class="detail-avatar" id="avatarModalEmoji">🐯</div>
+      <div class="detail-avatar" id="avatarModalEmoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></div>
       <div class="detail-who">
         <h3>选一个喜欢的头像</h3>
         <div class="text-muted">点一下就保存好啦</div>
       </div>
-      <button class="detail-close" id="btnAvatarClose" aria-label="关闭">✕</button>
+      <button class="detail-close" id="btnAvatarClose" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </div>
     <div class="avatar-picker" id="avatarPicker"></div>
   </div>
@@ -389,19 +391,19 @@
 <div class="modal-mask" id="leaderboardModal">
   <div class="modal leaderboard-modal">
     <div class="detail-head">
-      <div class="detail-avatar" id="lbIcon">🏅</div>
+      <div class="detail-avatar" id="lbIcon"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-medal"/></svg></div>
       <div class="detail-who">
         <h3 id="lbTitle">星光榜</h3>
         <div class="text-muted" id="lbSub">全班累计星光值排名</div>
       </div>
-      <button class="detail-close" id="btnLbClose" aria-label="关闭">✕</button>
+      <button class="detail-close" id="btnLbClose" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </div>
     <div class="leaderboard-body" id="leaderboardBody"></div>
   </div>
 </div>
 
 <!-- 音效开关 -->
-<button type="button" id="btnSound" class="sound-toggle" aria-label="开关声音">🔊</button>
+<button type="button" id="btnSound" class="sound-toggle" aria-label="开关声音"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-volume"/></svg></button>
 
 <div id="toast"></div>
 
@@ -422,7 +424,7 @@
 
 <!-- 天气主题切换（自动按洞口县天气，可手动演示兜底） -->
 <button type="button" id="weatherSwitch" class="weather-switch" aria-label="切换天气主题" title="切换天气主题">
-  <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4.5" fill="#f0b64e"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" stroke="#f0b64e" stroke-width="1.6" stroke-linecap="round"/></svg>
+  <svg class="ico ico-lg" aria-hidden="true"><use href="#i-sun"/></svg>
 </button>
 
 <script src="js/config.js"></script>

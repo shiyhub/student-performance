@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图标集预览 · 在校表现记录平台</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/icons.css">
+<style>
+  body { padding: 28px 22px 60px; background: #f6f8f7; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #7b8a83; font-size: 13px; margin-bottom: 22px; }
+  .panel { background: #fff; border-radius: 18px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 2px 12px rgba(40,60,50,.06); }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; color: #2f4a3d; display: flex; align-items: center; gap: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+  .cell { text-align: center; padding: 12px 4px 9px; border-radius: 12px; background: #f7faf8; border: 1px solid #eef4f1; }
+  .cell .ico { font-size: 26px; color: #35594a; }
+  .cell b { display: block; font-size: 11px; font-weight: 600; color: #6b7d75; margin-top: 7px; word-break: break-all; }
+  .dark { background: #22302a; }
+  .dark .cell { background: #2c3d35; border-color: #3a5046; }
+  .dark .cell .ico { color: #e8f3ed; }
+  .dark .cell b { color: #9db3a8; }
+  .dark h2 { color: #d9e8e0; }
+  .row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .size-demo { display: flex; align-items: baseline; gap: 14px; }
+  .size-demo span { color: #55705f; }
+  .tabbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tab-btn { padding: 10px 14px; border-radius: 12px; border: 1.5px solid #e2ece7; background: #fff; color: #5f746c; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+  .tab-btn.active { background: #3da770; color: #fff; border-color: #3da770; }
+  .rank-row { display: flex; gap: 26px; align-items: center; }
+  .rank-row div { text-align: center; font-size: 12px; color: #6b7d75; }
+  .rank-row .ico { font-size: 30px; display: block; margin: 0 auto 4px; }
+</style>
+</head>
+<body>
+<h1>自制图标集 · 视觉校对</h1>
+<div class="sub">24×24 网格 / 1.7px 描边 / 圆角端点 / currentColor 单色随文字变化 &nbsp;·&nbsp; 共 <b id="cnt">0</b> 枚</div>
+
+<div class="panel">
+  <h2><svg class="ico"><use href="#i-check-circle"/></svg> 全部图标（浅色底）</h2>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="panel dark">
+  <h2><svg class="ico"><use href="#i-moon"/></svg> 同一套图标（深色底，不做任何改动）</h2>
+  <div class="grid" id="gridDark"></div>
+</div>
+
+<div class="panel">
+  <h2><svg class="ico"><use href="#i-settings"/></svg> 尺寸档位（跟随字号，不需要单独出图）</h2>
+  <div class="size-demo" id="sizeDemo"></div>
+</div>
+
+<div class="panel">
+  <h2><svg class="ico"><use href="#i-tag"/></svg> 选中态 / 未选中态（颜色完全继承文字）</h2>
+  <div class="tabbar" id="tabDemo"></div>
+</div>
+
+<div class="panel">
+  <h2><svg class="ico"><use href="#i-medal"/></svg> 名次（同形三色）</h2>
+  <div class="rank-row">
+    <div><svg class="ico rk rk1"><use href="#i-medal"/></svg>第一名</div>
+    <div><svg class="ico rk rk2"><use href="#i-medal"/></svg>第二名</div>
+    <div><svg class="ico rk rk3"><use href="#i-medal"/></svg>第三名</div>
+  </div>
+</div>
+
+<script src="js/icons.js"></script>
+<script>
+  var names = I.names();
+  document.getElementById('cnt').textContent = names.length;
+  function cell(n) {
+    return '<div class="cell">' + I(n) + '<b>' + n + '</b></div>';
+  }
+  document.getElementById('grid').innerHTML = names.map(cell).join('');
+  document.getElementById('gridDark').innerHTML = names.map(cell).join('');
+
+  var sizes = [['ico-xs','xs 0.92em'],['ico-sm','sm 1em'],['','默认 1.08em'],['ico-lg','lg 1.35em'],['ico-xl','xl 1.9em'],['ico-2x','2x 2.4em']];
+  document.getElementById('sizeDemo').innerHTML = sizes.map(function (s) {
+    return '<span style="font-size:20px">' + I('star', s[0]) + ' ' + s[1] + '</span>';
+  }).join('');
+
+  document.getElementById('tabDemo').innerHTML =
+    '<button class="tab-btn active">' + I('clipboard') + ' 表现记录</button>' +
+    '<button class="tab-btn">' + I('checklist') + ' 每日任务</button>' +
+    '<button class="tab-btn">' + I('trophy') + ' 挑战任务</button>' +
+    '<button class="tab-btn">' + I('chart-bar') + ' 数据统计</button>' +
+    '<button class="tab-btn">' + I('lock') + ' 未解锁</button>';
+</script>
+</body>
+</html>
