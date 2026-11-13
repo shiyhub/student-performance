@@ -4,11 +4,13 @@
  *      班级 + 学生姓名 + 家长姓名 三项在数据库端匹配，失败只返回空结果
  * 依赖：js/vendor/supabase.js、js/vendor/qrcode.min.js（本地引入）
  */
-const supabase = window.supabase
-  ? window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey)
+/* 配置守卫：js/config.js 未加载时不抛 TypeError，降级为 supabase=null */
+const SUPABASE_CFG = window.SUPABASE_CONFIG || null;
+const supabase = (window.supabase && SUPABASE_CFG && SUPABASE_CFG.url)
+  ? window.supabase.createClient(SUPABASE_CFG.url, SUPABASE_CFG.anonKey)
   : null;
 const ready = !!supabase &&
-  !String(window.SUPABASE_CONFIG.url || '').includes('YOUR_PROJECT_REF');
+  !String(SUPABASE_CFG.url || '').includes('YOUR_PROJECT_REF');
 
 /* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
  * 家长端：二维码弹窗/试卷弹窗打开时 push 一层 history；

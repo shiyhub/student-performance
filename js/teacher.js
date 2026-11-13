@@ -3,15 +3,17 @@
  * 权限：Supabase Auth 登录（authenticated），三张表全部读写权限
  * Supabase SDK 通过 js/vendor/supabase.js 本地引入（全局 window.supabase）
  */
-const supabase = window.supabase
+/* 配置守卫：js/config.js 未加载时不抛 TypeError，降级为 supabase=null */
+const SUPABASE_CFG = window.SUPABASE_CONFIG || null;
+const supabase = (window.supabase && SUPABASE_CFG && SUPABASE_CFG.url)
   ? window.supabase.createClient(
-      window.SUPABASE_CONFIG.url,
-      window.SUPABASE_CONFIG.anonKey,
+      SUPABASE_CFG.url,
+      SUPABASE_CFG.anonKey,
       { auth: { persistSession: true, autoRefreshToken: true } }
     )
   : null;
 const ready = !!supabase &&
-  !String(window.SUPABASE_CONFIG.url || '').includes('YOUR_PROJECT_REF');
+  !String(SUPABASE_CFG.url || '').includes('YOUR_PROJECT_REF');
 
 /* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
  * 教师端：弹窗（表现记录/班级码/学生码）打开时 push 一层 history，

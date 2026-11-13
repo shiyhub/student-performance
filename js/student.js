@@ -6,11 +6,14 @@
  *   - behavior_tags：只读启用标签
  * Supabase SDK 通过 js/vendor/supabase.js 本地引入（全局 window.supabase）
  */
-const supabase = window.supabase
-  ? window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey)
+/* 配置守卫：js/config.js 未加载（网络中断/文件缺失）时不抛 TypeError，
+   降级为 supabase=null，页面显示「尚未连接数据库」提示而不是白屏 */
+const SUPABASE_CFG = window.SUPABASE_CONFIG || null;
+const supabase = (window.supabase && SUPABASE_CFG && SUPABASE_CFG.url)
+  ? window.supabase.createClient(SUPABASE_CFG.url, SUPABASE_CFG.anonKey)
   : null;
 const ready = !!supabase &&
-  !String((window.SUPABASE_CONFIG || {}).url || '').includes('YOUR_PROJECT_REF');
+  !String(SUPABASE_CFG.url || '').includes('YOUR_PROJECT_REF');
 
 /* ===== 返回导航（RSK-10）：浏览器返回键 / 手机返回手势 → 返回上一级菜单 =====
  * 打开子视图（墙/表单/弹窗）时 push 一层 history；
@@ -135,7 +138,8 @@ const AVATAR_SM_KEYS = new Set([
   'fantasy8','fantasy9','fantasy10','fantasy11',
   'xian1','xian2','xian3','xian4','xian5',
   'chibi1','chibi2','chibi3','chibi4',
-  'moe1','moe2','moe3','moe4','moe5','moe6','moe7','moe8','moe9','moe10'
+  'moe1','moe2','moe3','moe4','moe5','moe6','moe7','moe8','moe9','moe10',
+  'bunny','doll','flower','gothic','horn','lotus','twin'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
@@ -311,7 +315,9 @@ function ensureMobileGate() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doUnlock(); });
   input.focus();
 }
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/;
+/* v170：追加 7 款独立命名头像（bunny/doll/flower/gothic/horn/lotus/twin） */
+const SOLO_AVATAR_KEYS = ['bunny','doll','flower','gothic','horn','lotus','twin'];
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|bunny|doll|flower|gothic|horn|lotus|twin)$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
 function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/.test(String(k || '')); }
@@ -3652,8 +3658,8 @@ function escapeHtml(s) {
   function setTheme(w, manual) {
     if (THEMES.indexOf(w) < 0) w = 'sunny';
     root.setAttribute('data-weather', w);
-    if (flowerL) flowerL.src = 'assets/flowers/flower-' + w + '.png';
-    if (flowerR) flowerR.src = 'assets/flowers/flower-' + w + '.png';
+    if (flowerL) flowerL.src = 'assets/flowers/flower-' + w + '.webp';
+    if (flowerR) flowerR.src = 'assets/flowers/flower-' + w + '.webp';
     renderDeco(w);
     btn.title = '天气：' + (LABELS[w] || w) + '（点按切换）';
     if (manual) {
