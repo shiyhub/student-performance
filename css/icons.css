@@ -1,0 +1,129 @@
+/* ============================================================================
+ * 自制图标系统 · icons.css
+ * ----------------------------------------------------------------------------
+ * 只做三件事：给 .ico 一个统一的盒子、把描边参数集中在一处、按容器微调尺寸。
+ * 颜色一律继承 currentColor —— 所以「明」底深字、「暗」底白字、选中态主色
+ * 三种情况都不需要额外写规则，图标会自动跟文字同色。
+ * ========================================================================== */
+
+:root {
+  --ico-stroke: 1.7;      /* 主形线宽（24 网格单位） */
+  --ico-size: 1.08em;     /* 默认盒尺寸：跟随所在文字的 font-size */
+  --ico-shift: -.135em;   /* 视觉基线微调，让图标与汉字的视觉中心对齐 */
+  --ico-gold: #d8a12a;
+  --ico-silver: #97a3b0;
+  --ico-bronze: #bd7a4c;
+}
+
+/* ---------- 基础盒子 ---------- */
+.ico {
+  display: inline-block;
+  width: var(--ico-size);
+  height: var(--ico-size);
+  flex: 0 0 auto;
+  vertical-align: var(--ico-shift);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--ico-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;               /* 描边圆头不被 viewBox 裁切 */
+  pointer-events: none;            /* 图标不吃点击，点击落到按钮上 */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 尺寸档位：只在需要脱离文字比例时用 */
+.ico-xs { --ico-size: .92em; }
+.ico-sm { --ico-size: 1em; }
+.ico-lg { --ico-size: 1.35em; }
+.ico-xl { --ico-size: 1.9em; }
+.ico-2x { --ico-size: 2.4em; }
+.ico-3x { --ico-size: 3.2em; }
+
+/* ---------- 名次：同形不同色，保持造型语言统一 ---------- */
+.ico.rk { stroke-width: 1.6; }
+.ico.rk1 { color: var(--ico-gold); }
+.ico.rk2 { color: var(--ico-silver); }
+.ico.rk3 { color: var(--ico-bronze); }
+
+/* ---------- 与文字并排时的呼吸位 ---------- */
+/* 纯内联场景（非 flex）靠一个空格即可；flex 场景由容器的 gap 负责 */
+.tab-btn .ico,
+.card-title .ico,
+.section-title .ico { margin-right: 1px; }
+
+/* ---------- 大号装饰位：原来放 48~76px emoji 的容器 ---------- */
+.s-mascot > .ico,
+.success-emoji > .ico,
+.login-emoji > .ico,
+.prize-icon > .ico { --ico-size: 1em; }
+
+.success-emoji > .ico { stroke-width: 1.5; }
+.prize-icon > .ico { stroke-width: 1.5; }
+
+/* 头像占位（未选头像时的默认图形） */
+.identity-avatar-emoji > .ico,
+.mp-avatar > .ico,
+.detail-avatar > .ico,
+.frame-preview-avatar > .ico { --ico-size: .92em; opacity: .9; }
+
+/* 小徽标里的图标（抽奖次数、锁定角标、离线状态等） */
+.class-chance-dot .ico,
+.avatar-lock .ico,
+.mate-badge .ico,
+.pos-badge .ico,
+.neg-badge .ico { --ico-size: .95em; vertical-align: -.12em; }
+
+/* ---------- 主题挂钩 ---------- */
+/* 站点目前只有浅色主题；以下变量为深色主题预留，接入时给 <html data-theme="dark">
+   即可，图标本身无需任何改动（因为全部走 currentColor）。 */
+[data-theme="dark"] {
+  --ico-gold: #e8bb4d;
+  --ico-silver: #b3bfcc;
+  --ico-bronze: #d99263;
+}
+
+/* 高对比（投影仪/大屏）场景下把线加粗一档，避免远看发虚 */
+@media (min-width: 1400px) {
+  :root { --ico-stroke: 1.8; }
+}
+
+/* 打印时不希望图标被反色 */
+@media print {
+  .ico { stroke-width: 1.8; }
+}
+
+/* ---------- 与既有控件的对齐微调 ----------
+   只做「居中 / 间距 / 不吃宽」三件事，不改任何组件原有的尺寸与配色，
+   这样换上图标后不会把原有布局挤变形。 */
+.tab-btn,
+.rf-btn,
+.shop-tab,
+.avatar-shop-go,
+.is-shop-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* 只有图标的方形按钮：让图标精确居中，不被基线推偏 */
+.icon-btn > .ico:only-child,
+.task-edit-btn > .ico:only-child,
+.task-del-btn > .ico:only-child,
+.avatar-lock > .ico:only-child,
+.class-avatar-btn > .ico:only-child {
+  margin: 0 auto;
+  display: block;
+}
+
+/* 卡片标题用的是 flex + gap，不需要额外的右边距 */
+.card-title > .ico,
+.section-title > .ico { margin-right: 0; }
+
+/* 表格 / 列表里的行内小图标不要撑高行距 */
+td .ico,
+li .ico,
+.lh-row .ico,
+.batch-pill .ico { vertical-align: -.11em; }
