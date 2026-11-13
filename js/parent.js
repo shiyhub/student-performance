@@ -52,11 +52,11 @@ function NavBack() {
 const $ = (sel, root) => (root || document).querySelector(sel);
 
 const MOOD_MAP = {
-  happy:  { emoji: '😄', label: '很棒' },
-  good:   { emoji: '🙂', label: '不错' },
-  normal: { emoji: '😐', label: '一般' },
-  down:   { emoji: '😟', label: '有点低落' },
-  sad:    { emoji: '😢', label: '需要加油' }
+  happy:  { lv: 5, label: '很棒' },
+  good:   { lv: 4, label: '不错' },
+  normal: { lv: 3, label: '一般' },
+  down:   { lv: 2, label: '有点低落' },
+  sad:    { lv: 1, label: '需要加油' }
 };
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -172,7 +172,7 @@ async function runWrite(op) {
 async function flushOfflineQueue() {
   if (!window.Offline || !window.Offline.online) return;
   const n = await window.Offline.drain(syncRunner);
-  if (n > 0) toast('📡 已同步 ' + n + ' 条离线操作');
+  if (n > 0) toast('已同步 ' + n + ' 条离线操作');
 }
 window.ParentSync = async () => { await flushOfflineQueue(); };
 if (window.Offline) {
@@ -443,7 +443,7 @@ async function onSubmitHome() {
       return;
     }
     els.homeContent.value = '';
-    toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : '已提交，只有老师能看到哦 🏠');
+    toast(wr.queued ? '已离线保存，联网后自动同步' : '已提交，只有老师能看到哦');
     if (!wr.queued) { try { await refreshHomeThread(); } catch (e3) {} }
   } catch (e) {
     toast('提交失败：' + ((e && e.message) || '请稍后再试'));
@@ -478,13 +478,13 @@ function renderHomeThread(notes) {
       (a.create_at || '').localeCompare(b.create_at || ''));
     return `<div class="ht-card">
               <div class="ht-head">
-                <span class="ht-date">🗓 ${fmtDate(n.record_date)}</span>
+                <span class="ht-date">${I.calendar('ico-xs')} ${fmtDate(n.record_date)}</span>
                 <span class="ht-who">我</span>
               </div>
               <div class="ht-content">${esc(n.content || '')}</div>
               ${replies.map(r => `
                 <div class="ht-reply ${r.sender === 'teacher' ? 'teacher' : 'me'}">
-                  <span class="htr-who">${r.sender === 'teacher' ? '👩‍🏫 老师' : '我'}</span>
+                  <span class="htr-who">${r.sender === 'teacher' ? '' + I.user() + ' 老师' : '我'}</span>
                   <span class="htr-text">${esc(r.content || '')}</span>
                   <span class="htr-time">${fmtTime(r.create_at)}</span>
                 </div>`).join('')}
@@ -508,7 +508,7 @@ function renderHomeThread(notes) {
           p_note_id: noteId, p_content: content.slice(0, 500)
         } });
         if (!wr.ok) { toast('回复失败，请重试'); return; }
-        toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复老师 ✅');
+        toast(wr.queued ? '已保存，联网后自动发送' : '已回复老师');
         if (input) input.value = '';
         await refreshHomeThread();
       } catch (e) {
@@ -760,7 +760,7 @@ function renderSummary(rows) {
       const target = neg ? negMap : posMap;
       if (it.type === 'text') {
         textItems.push({ label, value: it.value || '', date: r.record_date, neg });
-        const k = '✏️ ' + label;
+        const k = '' + I.edit() + ' ' + label;
         target.set(k, (target.get(k) || 0) + 1);
       } else {
         const k = it.value ? `${label} · ${it.value}` : label;
@@ -772,7 +772,7 @@ function renderSummary(rows) {
 
   const moodLine = ['happy', 'good', 'normal', 'down', 'sad']
     .filter(k => moodCount[k] > 0)
-    .map(k => `<span class="sm-item">${MOOD_MAP[k].emoji} ×${moodCount[k]}</span>`)
+    .map(k => `<span class="sm-item">${I.mood(MOOD_MAP[k].lv)} ×${moodCount[k]}</span>`)
     .join('');
 
   const groupHtml = (title, icon, map, cls) => {
@@ -787,7 +787,7 @@ function renderSummary(rows) {
   // 填写型明细（最多展示全部，按日期倒序）
   const textHtml = textItems.length
     ? `<div class="sum-texts">
-         <div class="sum-group-title">📝 填写内容</div>
+         <div class="sum-group-title">${I.edit()} 填写内容</div>
          ${textItems.map(t =>
            `<div class="sum-text ${t.neg ? 'neg' : ''}"><b>${esc(t.label)}（${shortDate(t.date)}）：</b>${esc(t.value)}</div>`
          ).join('')}
@@ -800,8 +800,8 @@ function renderSummary(rows) {
               <div class="sum-range">${rangeTxt}</div>
             </div>
             <div class="sum-moods">${moodLine || '<span class="text-muted">暂无心情数据</span>'}</div>
-            ${groupHtml('积极表现', '🌟', posMap, 'pos')}
-            ${groupHtml('需要加油', '💧', negMap, 'neg')}
+            ${groupHtml('积极表现', '' + I['star-fill']() + '', posMap, 'pos')}
+            ${groupHtml('需要加油', '' + I.drop() + '', negMap, 'neg')}
             ${textHtml}
             <div class="sum-comment-n">老师评语 <b>${commentCount}</b> 条（见逐日明细）</div>
           </div>`;
@@ -815,7 +815,7 @@ function shortDate(ymd) {
 function renderRecordCard(r) {
   const starCount = Number(r.self_evaluation) || 0;
   const stars = starCount
-    ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+    ? ''.repeat(starCount) + ''.repeat(5 - starCount)
     : '<span class="text-muted">本次未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
@@ -829,9 +829,9 @@ function renderRecordCard(r) {
       // 若该标签是某个一级标签下的小项，前面补上一级名（如 欠作业·语文作业）
       const pLabel = (window.__tagOptionMap || {})[label];
       if (pLabel && label.indexOf(pLabel) !== 0) label = pLabel + '·' + label;
-      label = (neg ? '⚠️ ' : '') + escapeHtmlP(label);
+      label = (neg ? '' + I.alert() + ' ' : '') + escapeHtmlP(label);
       const liCls = neg ? ' class="item-neg"' : '';
-      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
+      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick"></span>';
       if (it.type === 'text') {
         itemsHtml += `<li${liCls}><b>${label}：</b>${escapeHtmlP(it.value || '')}</li>`;
       } else if (it.value) {
@@ -850,7 +850,7 @@ function renderRecordCard(r) {
 
   return `<div class="rec-card">
             <div class="rec-topline">
-              <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
+              <span>${mood ? I.mood(mood.lv) + ' ' + mood.label : ''}</span>
               <span class="rec-time">${formatTime(r.create_at)}</span>
             </div>
             <div class="rec-main">
@@ -978,6 +978,7 @@ function formatTime(ts) {
 let toastTimer;
 function toast(msg) {
   const t = document.getElementById('toast');
+  msg = String(msg == null ? '' : msg).replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/\s{2,}/g, ' ').trim();
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
@@ -1075,10 +1076,10 @@ if (els.paperViewModal) {
 function renderTasks(tasks) {
   if (!tasks || !tasks.length) { els.tasksCard.hidden = true; els.tasksList.innerHTML = ''; return; }
   const gradeMap = {
-    none:    { label: '未完成', cls: 'g-none', icon: '⏳' },
-    done:    { label: '完成',   cls: 'g-done', icon: '✅' },
-    good:    { label: '优秀 A', cls: 'g-good', icon: '👍' },
-    perfect: { label: '完美 A+', cls: 'g-perfect', icon: '🏆' }
+    none:    { label: '未完成', cls: 'g-none', icon: '' + I.hourglass() + '' },
+    done:    { label: '完成',   cls: 'g-done', icon: '' + I['check-circle']() + '' },
+    good:    { label: '优秀 A', cls: 'g-good', icon: '' + I.thumb() + '' },
+    perfect: { label: '完美 A+', cls: 'g-perfect', icon: '' + I.trophy() + '' }
   };
   els.tasksCard.hidden = false;
   els.tasksList.innerHTML = tasks.map(t => {

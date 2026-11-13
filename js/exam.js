@@ -289,7 +289,7 @@
       } });
       if (!wr.ok) throw new Error('保存失败');
 
-      toast(wr.queued ? '已离线保存，联网后自动上传 ✅' : '已保存，家长可以在查询页看到这份试卷啦');
+      toast(wr.queued ? '已离线保存，联网后自动上传' : '已保存，家长可以在查询页看到这份试卷啦');
       resetForm();
       await loadPapers();
     } catch (err) {
@@ -352,7 +352,7 @@
           <div class="exam-line2">${esc(r.record_date)} · ${esc(r.subject || '未填科目')} · <b class="exam-score">${esc(String(score))}</b></div>
           ${r.note ? `<div class="exam-line3">${esc(r.note)}</div>` : ''}
         </div>
-        <button type="button" class="btn btn-ghost btn-sm exam-del" data-del="${esc(r.id)}" data-url="${esc(r.image_url)}">🗑️ 删除</button>
+        <button type="button" class="btn btn-ghost btn-sm exam-del" data-del="${esc(r.id)}" data-url="${esc(r.image_url)}">${I.trash('ico-sm')} 删除</button>
       </div>`;
     }).join('');
 
@@ -371,7 +371,7 @@
     try {
       const wr = await runWrite({ name: 'exam_delete', params: { id, path } });
       if (!wr.ok) throw new Error('删除失败');
-      toast(wr.queued ? '已离线删除，联网后同步 ✅' : '试卷已删除');
+      toast(wr.queued ? '已离线删除，联网后同步' : '试卷已删除');
       await loadPapers();
     } catch (err) {
       toast('删除失败：' + ((err && err.message) || '请稍后再试'));
@@ -725,7 +725,7 @@
         rows: payloadRows
       } });
       if (!wr.ok) throw new Error('保存失败');
-      toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : `已保存「${examName}」，家长可在「成绩单」里看到`);
+      toast(wr.queued ? '已离线保存，联网后自动同步' : `已保存「${examName}」，家长可在「成绩单」里看到`);
       resetBatchForm();
       await loadBatchList();
     } catch (err) {
@@ -804,7 +804,7 @@
         </div>
         <div class="batch-item-actions">
           <button type="button" class="btn btn-ghost btn-sm" data-detail="${esc(b.id)}">${open ? '收起明细' : '查看明细'}</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-del="${esc(b.id)}" data-url="${esc(b.image_url || '')}">🗑️ 删除</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-del="${esc(b.id)}" data-url="${esc(b.image_url || '')}">${I.trash('ico-sm')} 删除</button>
         </div>
       </div>`;
     }).join('');
@@ -826,7 +826,7 @@
     try {
       const wr = await runWrite({ name: 'exam_batch_delete', params: { id, path } });
       if (!wr.ok) throw new Error('删除失败');
-      toast(wr.queued ? '已离线删除，联网后同步 ✅' : '成绩单已删除');
+      toast(wr.queued ? '已离线删除，联网后同步' : '成绩单已删除');
       delete state.batchDetailOpen[id];
       await loadBatchList();
     } catch (err) {

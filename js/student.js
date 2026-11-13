@@ -97,11 +97,11 @@ const AVATAR_PARTICLES = {};
 
 // 心情 5 档（索引即等级 1~5），由勾选项自动计算：3 起步，积极 +1，消极 -1
 const MOOD_LEVELS = {
-  1: { key: 'sad',    emoji: '😢', label: '需要加油' },
-  2: { key: 'down',   emoji: '😟', label: '有点低落' },
-  3: { key: 'normal', emoji: '😐', label: '一般' },
-  4: { key: 'good',   emoji: '🙂', label: '不错' },
-  5: { key: 'happy',  emoji: '😄', label: '很棒' }
+  1: { key: 'sad',    lv: 1, label: '需要加油' },
+  2: { key: 'down',   lv: 2, label: '有点低落' },
+  3: { key: 'normal', lv: 3, label: '一般' },
+  4: { key: 'good',   lv: 4, label: '不错' },
+  5: { key: 'happy',  lv: 5, label: '很棒' }
 };
 const MOOD_MAP = Object.fromEntries(Object.values(MOOD_LEVELS).map(m => [m.key, m]));
 const MOOD_BY_LEVEL = l => MOOD_LEVELS[Math.min(5, Math.max(1, l))];
@@ -154,13 +154,13 @@ const CAMPUS_UNLOCK_LEVEL = 3;
 /* v2.1：新头像四档（按图片质量 Lv4/5/6/7 解锁；sweet 最亲民 → fantasy 最华丽）
    v2.1 追加：game1~8 硬核游戏风并入 Lv4（与甜美少女并存） */
 const NEW_GROUPS = [
-  { name: '甜美少女', prefix: 'sweet',   count: 22, level: 4, emoji: '🎀' },
-  { name: '游戏风',   prefix: 'game',    count: 17, level: 4, emoji: '🎮' },
-  { name: '森系田园', prefix: 'nature',  count: 8,  level: 5, emoji: '🌿' },
-  { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6, emoji: '🛡️' },
-  { name: '次元武士', prefix: 'warrior', count: 4,  level: 6, emoji: '⚔️' },
-  { name: '奇幻神域', prefix: 'fantasy', count: 11, level: 7, emoji: '✨' },
-  { name: '国风仙韵', prefix: 'xian',    count: 5,  level: 8, emoji: '🏮' }
+  { name: '甜美少女', prefix: 'sweet',   count: 22, level: 4 },
+  { name: '游戏风',   prefix: 'game',    count: 17, level: 4 },
+  { name: '森系田园', prefix: 'nature',  count: 8,  level: 5 },
+  { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6 },
+  { name: '次元武士', prefix: 'warrior', count: 4,  level: 6 },
+  { name: '奇幻神域', prefix: 'fantasy', count: 11, level: 7 },
+  { name: '国风仙韵', prefix: 'xian',    count: 5,  level: 8 }
 ];
 const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
   for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
@@ -206,60 +206,60 @@ const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2300, 2800, 3
 /* ---------- v105：头像框（CSS 光环）与成就 ---------- */
 // 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
 const FRAMES = [
-  { key: 'none',    name: '无框',   icon: '⚪', need: '默认佩戴' },
-  { key: 'bronze',  name: '铜环',   icon: '🥉', need: '星光商店兑换' },
-  { key: 'silver',  name: '银环',   icon: '🥈', need: '星光商店兑换' },
-  { key: 'gold',    name: '金环',   icon: '🥇', need: '星光商店兑换' },
-  { key: 'rainbow', name: '彩虹环', icon: '🌈', need: '星光商店兑换' },
-  { key: 'star',    name: '星光环', icon: '⭐', need: '星光商店兑换' },
-  { key: 'heart',   name: '爱心环', icon: '💗', need: '星光商店兑换' },
-  { key: 'crown',   name: '皇冠环', icon: '👑', need: '星光商店兑换' },
+  { key: 'none',    name: '无框',   icon: I['circle-dot'](), need: '默认佩戴' },
+  { key: 'bronze',  name: '铜环',   icon: I.medal('rk rk3'), need: '星光商店兑换' },
+  { key: 'silver',  name: '银环',   icon: I.medal('rk rk2'), need: '星光商店兑换' },
+  { key: 'gold',    name: '金环',   icon: I.medal('rk rk1'), need: '星光商店兑换' },
+  { key: 'rainbow', name: '彩虹环', icon: I.rainbow(), need: '星光商店兑换' },
+  { key: 'star',    name: '星光环', icon: I.star(), need: '星光商店兑换' },
+  { key: 'heart',   name: '爱心环', icon: I.heart(), need: '星光商店兑换' },
+  { key: 'crown',   name: '皇冠环', icon: '', need: '星光商店兑换' },
   /* v130(RSK-11)：12 款游戏风头像框，按等级开放 */
-  { key: 'tac',     name: '军事战术', icon: '🎖️', need: '星光商店兑换' },
-  { key: 'sakura',  name: '樱花甜心', icon: '🌸', need: '星光商店兑换' },
-  { key: 'gun',     name: '射击战士', icon: '🎯', need: '星光商店兑换' },
-  { key: 'pixie',   name: '花漾精灵', icon: '🧚', need: '星光商店兑换' },
-  { key: 'mecha',   name: '雷霆机甲', icon: '🤖', need: '星光商店兑换' },
-  { key: 'magic',   name: '魔法星梦', icon: '✨', need: '星光商店兑换' },
-  { key: 'wolf',    name: '战狼之王', icon: '🐺', need: '星光商店兑换' },
-  { key: 'rose',    name: '玫瑰公主', icon: '🌹', need: '星光商店兑换' },
-  { key: 'fairy',   name: '花灵仙子', icon: '🌿', need: '星光商店兑换' },
-  { key: 'dragon',  name: '龙魂战甲', icon: '🐉', need: '星光商店兑换' },
-  { key: 'queen',   name: '星光女王', icon: '🌙', need: '星光商店兑换' },
-  { key: 'princess', name: '梦幻公主', icon: '👸', need: '星光商店兑换' },
+  { key: 'tac',     name: '军事战术', icon: I.award(), need: '星光商店兑换' },
+  { key: 'sakura',  name: '樱花甜心', icon: '', need: '星光商店兑换' },
+  { key: 'gun',     name: '射击战士', icon: I.target(), need: '星光商店兑换' },
+  { key: 'pixie',   name: '花漾精灵', icon: '', need: '星光商店兑换' },
+  { key: 'mecha',   name: '雷霆机甲', icon: I.robot(), need: '星光商店兑换' },
+  { key: 'magic',   name: '魔法星梦', icon: I.sparkle(), need: '星光商店兑换' },
+  { key: 'wolf',    name: '战狼之王', icon: '', need: '星光商店兑换' },
+  { key: 'rose',    name: '玫瑰公主', icon: '', need: '星光商店兑换' },
+  { key: 'fairy',   name: '花灵仙子', icon: I.leaf(), need: '星光商店兑换' },
+  { key: 'dragon',  name: '龙魂战甲', icon: '', need: '星光商店兑换' },
+  { key: 'queen',   name: '星光女王', icon: I.moon(), need: '星光商店兑换' },
+  { key: 'princess', name: '梦幻公主', icon: '', need: '星光商店兑换' },
   /* v142：七风格进阶头像框（Lv.7-10 开放） */
-  { key: 'huadian',  name: '鎏金蝶舞', icon: '🦋', need: '星光商店兑换' },
-  { key: 'blossom',  name: '樱吹雪',   icon: '🗡️', need: '星光商店兑换' },
-  { key: 'ink',      name: '水墨国韵', icon: '🖌️', need: '星光商店兑换' },
-  { key: 'spring',   name: '春日芳菲', icon: '🌷', need: '星光商店兑换' },
-  { key: 'redlily',  name: '彼岸绯红', icon: '🌺', need: '星光商店兑换' },
-  { key: 'mask',     name: '暗夜鬼面', icon: '👹', need: '星光商店兑换' },
-  { key: 'neonwolf', name: '霓虹狼影', icon: '🌌', need: '星光商店兑换' },
+  { key: 'huadian',  name: '鎏金蝶舞', icon: '', need: '星光商店兑换' },
+  { key: 'blossom',  name: '樱吹雪',   icon: '', need: '星光商店兑换' },
+  { key: 'ink',      name: '水墨国韵', icon: '', need: '星光商店兑换' },
+  { key: 'spring',   name: '春日芳菲', icon: '', need: '星光商店兑换' },
+  { key: 'redlily',  name: '彼岸绯红', icon: '', need: '星光商店兑换' },
+  { key: 'mask',     name: '暗夜鬼面', icon: '', need: '星光商店兑换' },
+  { key: 'neonwolf', name: '霓虹狼影', icon: '', need: '星光商店兑换' },
   /* v155：魔法星空 6 款 + 兽耳小铺 9 款（新增款式，原 27 款不变） */
-  { key: 'ice',      name: '冰晶雪翼', icon: '❄️', need: '星光商店兑换' },
-  { key: 'moon',     name: '月神羽翼', icon: '🌙', need: '星光商店兑换' },
-  { key: 'crystal',  name: '水晶星梦', icon: '💎', need: '星光商店兑换' },
-  { key: 'silk',     name: '丝带蝶舞', icon: '🎀', need: '星光商店兑换' },
-  { key: 'goldwing', name: '鎏金圣翼', icon: '🪽', need: '星光商店兑换' },
-  { key: 'kitty',    name: '月眠猫咪', icon: '🐱', need: '星光商店兑换' },
-  { key: 'devilcat', name: '恶魔小猫', icon: '😈', need: '星光商店兑换' },
-  { key: 'angelcat', name: '天使小猫', icon: '😇', need: '星光商店兑换' },
-  { key: 'clover',   name: '四叶祝福', icon: '🍀', need: '星光商店兑换' },
-  { key: 'neko',     name: '奇幻猫耳', icon: '🐾', need: '星光商店兑换' },
-  { key: 'sweets',   name: '甜心点心', icon: '🍩', need: '星光商店兑换' },
-  { key: 'goth',     name: '暗黑哥特', icon: '🖤', need: '星光商店兑换' },
-  { key: 'broken',   name: '破碎之心', icon: '💔', need: '星光商店兑换' },
-  { key: 'mono',     name: '黑白猫耳', icon: '🎹', need: '星光商店兑换' },
-  { key: 'tech',     name: '机能兽耳', icon: '⚙️', need: '星光商店兑换' },
+  { key: 'ice',      name: '冰晶雪翼', icon: '', need: '星光商店兑换' },
+  { key: 'moon',     name: '月神羽翼', icon: I.moon(), need: '星光商店兑换' },
+  { key: 'crystal',  name: '水晶星梦', icon: '', need: '星光商店兑换' },
+  { key: 'silk',     name: '丝带蝶舞', icon: I.ribbon(), need: '星光商店兑换' },
+  { key: 'goldwing', name: '鎏金圣翼', icon: '', need: '星光商店兑换' },
+  { key: 'kitty',    name: '月眠猫咪', icon: '', need: '星光商店兑换' },
+  { key: 'devilcat', name: '恶魔小猫', icon: '', need: '星光商店兑换' },
+  { key: 'angelcat', name: '天使小猫', icon: '', need: '星光商店兑换' },
+  { key: 'clover',   name: '四叶祝福', icon: I.leaf(), need: '星光商店兑换' },
+  { key: 'neko',     name: '奇幻猫耳', icon: I.paw(), need: '星光商店兑换' },
+  { key: 'sweets',   name: '甜心点心', icon: '', need: '星光商店兑换' },
+  { key: 'goth',     name: '暗黑哥特', icon: '', need: '星光商店兑换' },
+  { key: 'broken',   name: '破碎之心', icon: '', need: '星光商店兑换' },
+  { key: 'mono',     name: '黑白猫耳', icon: '', need: '星光商店兑换' },
+  { key: 'tech',     name: '机能兽耳', icon: '', need: '星光商店兑换' },
   /* v161：紫晶蝶梦（新增款式，Lv.8 开放） */
-  { key: 'ribbon',   name: '紫晶蝶梦', icon: '🪻', need: '星光商店兑换' },
+  { key: 'ribbon',   name: '紫晶蝶梦', icon: '', need: '星光商店兑换' },
   /* v162：Lv.8 四款新头像框（用户定制素材：赛博幻梦/霓虹脉冲/彩虹独角兽/黑金曜石） */
-  { key: 'cyber',   name: '赛博幻梦', icon: '🤖', need: '星光商店兑换' },
-  { key: 'pulse',   name: '霓虹脉冲', icon: '⚡', need: '星光商店兑换' },
-  { key: 'unicorn', name: '彩虹独角兽', icon: '🦄', need: '星光商店兑换' },
-  { key: 'onyx',    name: '黑金曜石', icon: '💫', need: '星光商店兑换' },
+  { key: 'cyber',   name: '赛博幻梦', icon: I.robot(), need: '星光商店兑换' },
+  { key: 'pulse',   name: '霓虹脉冲', icon: '', need: '星光商店兑换' },
+  { key: 'unicorn', name: '彩虹独角兽', icon: '', need: '星光商店兑换' },
+  { key: 'onyx',    name: '黑金曜石', icon: '', need: '星光商店兑换' },
   /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
-  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '🪶', need: '星光商店兑换' }
+  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '', need: '星光商店兑换' }
 ];
 const XP_PER_POSITIVE = 2;
 
@@ -267,7 +267,7 @@ const XP_PER_POSITIVE = 2;
 // 说明：数据库 student_info.xp 保留为「累计获得星光值」（只增不减，用于星光等级与排行）；
 //      student_wallet.balance 为可消费余额（货币），兑换只扣余额。
 const STAR_LABEL = '星光值';
-const STAR_ICON = '⭐';
+const STAR_ICON = I.star();
 
 /* v143(RSK-15)：学生端禁用手机查看，教师秘钥解锁。改秘钥只需改这一行 */
 const MOBILE_ACCESS_KEY = 'teacher2026';
@@ -287,7 +287,7 @@ function ensureMobileGate() {
   ov.id = 'mobileLock';
   ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:linear-gradient(160deg,#0b1526,#101d36);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;color:#fff;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;';
   ov.innerHTML =
-    '<div style="font-size:30px">📵</div>' +
+    '<div style="font-size:30px">' + I['wifi-off']() + '</div>' +
     '<div style="font-size:20px;font-weight:700;letter-spacing:1px">学生端暂不支持手机查看</div>' +
     '<div style="font-size:13px;color:#93a5c4;line-height:1.8">请使用电脑浏览器访问本页面。<br>教师如需在手机上查看效果，请输入解锁秘钥。</div>' +
     '<input id="mKeyInput" type="password" placeholder="输入教师秘钥" autocomplete="off" style="width:220px;padding:10px 12px;border-radius:8px;border:1px solid #3b5b8a;background:#0e1a2c;color:#fff;font-size:15px;outline:none;text-align:center;margin-top:6px">' +
@@ -409,7 +409,7 @@ async function flushOfflineQueue() {
   if (!window.Offline || !window.Offline.online) return;
   const n = await window.Offline.drain(syncRunner);
   if (n > 0) {
-    toast('📡 已同步 ' + n + ' 条离线操作');
+    toast('已同步 ' + n + ' 条离线操作');
     loadWall(); loadTags(); loadProfile(); loadStudentTask();
   }
 }
@@ -420,7 +420,7 @@ function ensureOfflineBanner() {
   offlineBanner = document.createElement('div');
   offlineBanner.id = 'offlineBanner';
   offlineBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4e6b5c;color:#fff;text-align:center;font-size:13px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15);';
-  offlineBanner.textContent = '📴 离线模式：正在显示本地缓存，你的操作会先保存，联网后自动同步';
+  offlineBanner.textContent = '离线模式：正在显示本地缓存，你的操作会先保存，联网后自动同步';
   offlineBanner.hidden = true;
   document.body.appendChild(offlineBanner);
 }
@@ -655,7 +655,7 @@ async function loadClasses() {
       if (!state.classes.length) {
         els.wallLoading.innerHTML = '<span class="banner banner-error" style="margin:0;">班级名单加载失败：'
           + esc((error && error.message) || '网络异常')
-          + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">🔄 重新加载</button></span>';
+          + '<br><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="loadClasses()">' + I.sync() + ' 重新加载</button></span>';
         return;
       }
       enterWallFlow();
@@ -762,7 +762,7 @@ function showDeviceGate() {
     if (window.Precache && window.Offline && window.Offline.online) {
       setTimeout(() => {
         window.Precache.runStudent(cls, p => {
-          if (p && p.done === p.total) toast('📥 本班数据已缓存到本机，断网也能完整使用 ✅');
+          if (p && p.done === p.total) toast('本班数据已缓存到本机，断网也能完整使用');
         });
       }, 600);
     }
@@ -775,7 +775,7 @@ function applyReadonlyMode() {
   // 隐藏提交按钮，顶部加预览提示
   const banner = document.createElement('div');
   banner.className = 'preview-banner';
-  banner.innerHTML = '👁 老师预览模式（只读）——你看到的就是这位学生看到的页面，不能提交记录';
+  banner.innerHTML = '' + I.eye() + ' 老师预览模式（只读）——你看到的就是这位学生看到的页面，不能提交记录';
   const card = document.querySelector('.identity-card') || document.querySelector('main');
   if (card && !document.querySelector('.preview-banner')) card.prepend(banner);
   if (els.btnSubmit) {
@@ -955,13 +955,13 @@ function renderWall() {
   // 全班汇总卡：点班级头像 → 转盘抽奖（v167）
   const classCard = `<div class="class-card-inner">
       <button type="button" class="class-avatar-btn" data-classdraw="1" title="点击班级头像进入转盘抽奖">
-        <span class="class-avatar-emoji">🌈</span>
+        <span class="class-avatar-emoji">${I.users('ico-lg')}</span>
         <span class="class-lv-badge">Lv.${classLv}</span>
-        ${chances > 0 ? `<span class="class-chance-dot" title="可抽奖 ${chances} 次">🎡${chances}</span>` : ''}
+        ${chances > 0 ? `<span class="class-chance-dot" title="可抽奖 ${chances} 次">${chances}</span>` : ''}
       </button>
       <div class="class-card-info">
         <div class="class-card-name">${esc(state.currentClass)} 全班</div>
-        <div class="class-card-xp">🧡 班级星光值 <b>${classXp}</b> · ${classLvText}</div>
+        <div class="class-card-xp">${I.heart()} 班级星光值 <b>${classXp}</b> · ${classLvText}</div>
         <div class="class-card-sub">共 ${state.roster.length} 人${chances > 0 ? ` · 可抽奖 ${chances} 次` : ''}</div>
       </div>
       <button type="button" class="class-detail-btn" data-detail="__all__">全班记录 ›</button>
@@ -1015,7 +1015,7 @@ function renderWall() {
     const subMap = {};
     (state.todayTaskSubs || []).forEach(x => { if (x.student_name === s.student_name && x.grade && x.grade !== 'none') subMap[x.task_id] = x.grade; });
     const doneTasks = Object.keys(subMap).length;
-    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">📋 ${doneTasks}/${totalTasks}</span>` : '';
+    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">${doneTasks}/${totalTasks}</span>` : '';
     const todayLevel = todayMood
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
@@ -1027,7 +1027,7 @@ function renderWall() {
       ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
     // v134(RSK-11)：表情移到姓名前、等级移到姓名后，头像框不再被遮挡
     const moodInline = todayMood
-      ? `<span class="mate-today" title="今日心情：${todayMood.label}">${todayMood.emoji}</span>` : '';
+      ? `<span class="mate-today" title="今日心情：${todayMood.label}">${I.mood(todayMood.lv)}</span>` : '';
 
     const rank = rankMap[s.student_name] || 0;   // v150：星光值榜名次（1-5）
     // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
@@ -1037,7 +1037,7 @@ function renderWall() {
         ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">⭐${Number(s.star) || 0}</span></span>
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
       </button>`;
   });
 
@@ -1049,7 +1049,7 @@ function renderWall() {
   const cp = id => document.getElementById(id);
   if (cp('cpXp')) {
     cp('cpXp').textContent = classXp;
-    cp('cpNext').textContent = nextNeed ? `Lv${classLv} → 再${leftNeed} 升 Lv${classLv + 1}${chances ? ` · 可抽奖 ${chances} 次` : ''}` : `Lv${classLv} 满级`;
+    cp('cpNext').textContent = nextNeed ? `Lv${classLv}  再${leftNeed} 升 Lv${classLv + 1}${chances ? ` · 可抽奖 ${chances} 次` : ''}` : `Lv${classLv} 满级`;
     const pct = prog ? (Number(prog.pct) || 0) : (nextNeed ? Math.min(100, classXp / nextNeed * 100) : 100);
     cp('cpFill').style.width = pct + '%';
   }
@@ -1089,8 +1089,8 @@ function openStudentDetail(name) {
     : null;
   const starOf = rosterRow ? (Number(rosterRow.star) || 0) : 0;
   els.detailSub.textContent = (rows.length
-    ? `共 ${rows.length} 条记录${avg ? ' · 平均 ⭐' + avg : ''}`
-    : '还没有提交过表现记录') + ` · ⭐${starOf} 星光值`;
+    ? `共 ${rows.length} 条记录${avg ? ' · 平均 ${I.star()}' + avg : ''}`
+    : '还没有提交过表现记录') + ` · ${I.star()}${starOf} 星光值`;
   // v146(RSK-16)：墙 records 已瘦身（不含 items/teacher_comment），明细点开详情时按需拉取
   els.detailBody.innerHTML = '<div class="detail-loading" style="padding:24px 10px;color:#98a69f;">正在加载详细记录…</div>';
   state.detailName = name;
@@ -1107,14 +1107,14 @@ function openStudentDetail(name) {
       ? (rated2.reduce((s, r) => s + Number(r.self_evaluation), 0) / rated2.length).toFixed(1)
       : null;
     els.detailSub.textContent = rows2.length
-      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ⭐' + avg2 : ''}`
+      ? `共 ${rows2.length} 条记录${avg2 ? ' · 平均 ${I.star()}' + avg2 : ''}`
       : '还没有提交过表现记录';
     els.detailBody.innerHTML = renderRecordTimeline(rows2);
   });
 }
 
 function openClassDetail(avg, todayCount) {
-  els.detailAvatar.textContent = '🌈';
+  els.detailAvatar.textContent = '';
   els.detailAvatar.style.background = 'linear-gradient(135deg,#ffe6c9,#d8f0e2)';
   els.detailName.textContent = state.currentClass + ' · 全班';
   els.detailSub.textContent = `共 ${state.records.length} 条记录 · 今日 ${todayCount} 条`;
@@ -1171,13 +1171,13 @@ function renderClassRanking() {
     .sort((a, b) => b.avg - a.avg || b.n - a.n)
     .slice(0, 10);
   if (!list.length) return '';
-  const medals = ['🥇', '🥈', '🥉'];
-  return `<div class="detail-day-head"><span>⭐ 平均星级榜（前10名）</span></div>
+  const medals = ['' + I.medal('rk rk1') + '', '' + I.medal('rk rk2') + '', '' + I.medal('rk rk3') + ''];
+  return `<div class="detail-day-head"><span>${I.star()} 平均星级榜（前10名）</span></div>
     <div class="detail-rec">${list.map((x, i) =>
       `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13.5px;">
         <span style="width:26px;text-align:center;">${medals[i] || (i + 1)}</span>
         <b style="flex:1;">${esc(x.name)}</b>
-        <span style="color:#b5791b;font-weight:700;">⭐${x.avg.toFixed(1)}</span>
+        <span style="color:#b5791b;font-weight:700;">${I.star('ico-xs')}${x.avg.toFixed(1)}</span>
         <span class="text-muted" style="font-size:12px;">${x.n}条</span>
       </div>`).join('')}</div>`;
 }
@@ -1204,7 +1204,7 @@ function renderRecordTimeline(rows) {
     g.rows.forEach(r => {
       const starCount = Number(r.self_evaluation) || 0;
       const stars = starCount
-        ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+        ? ''.repeat(starCount) + ''.repeat(5 - starCount)
         : '<span class="text-muted" style="letter-spacing:0;">本次未打星</span>';
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
@@ -1217,7 +1217,7 @@ function renderRecordTimeline(rows) {
           const liCls = neg ? ' class="is-neg"' : '';
           const tick = neg
             ? '<span class="neg-tick">!</span>'
-            : '<span class="tick">✓</span>';
+            : '<span class="tick"></span>';
           if (it.type === 'text') {
             itemsHtml += `<li${liCls}><b>${esc(it.label || '')}：</b>${esc(it.value || '')}</li>`;
           } else if (it.value) {
@@ -1236,7 +1236,7 @@ function renderRecordTimeline(rows) {
 
       html += `<div class="detail-rec">
           <div class="detail-rec-line">
-            <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
+            <span>${mood ? I.mood(mood.lv) + ' ' + mood.label : ''}</span>
             <span class="rec-time">${formatTime(r.create_at)}</span>
           </div>
           <div class="detail-stars">${stars}</div>
@@ -1327,12 +1327,12 @@ function renderMoodPreview() {
   const level = state.moodLevel || 3;
   const m = MOOD_BY_LEVEL(level);
   const av = currentAvatar();
-  els.mpAvatar.innerHTML = `${avatarInner(av)}<span class="mp-badge">${m.emoji}</span>`;
+  els.mpAvatar.innerHTML = `${avatarInner(av)}<span class="mp-badge">${I.mood(level)}</span>`;
   els.mpAvatar.style.background = av.bg;
   attachAvatarFx(els.mpAvatar, av.key);
   paintAvatar(els.identityAvatarEmoji, av);
   paintAvatar(els.avatarModalEmoji, av);
-  els.mpLevel.textContent = `${m.emoji} ${m.label}`;
+  els.mpLevel.innerHTML = `${I.mood(level)} ${m.label}`;
   renderIdentityLevel();
   const card = document.getElementById('moodPreviewCard');
   if (card) {
@@ -1529,7 +1529,7 @@ function buildCheckTag(t) {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = 'chip' + (t.category === 'negative' ? ' chip-neg' : '') + (wholeDone ? ' done' : '');
-  chip.textContent = wholeDone ? t.label + ' ✓' : t.label;
+  chip.textContent = wholeDone ? t.label + ' ' : t.label;
   if (wholeDone) {
     chip.disabled = true;
   } else {
@@ -1543,7 +1543,7 @@ function buildCheckTag(t) {
     sub.hidden = true;
     const hint = document.createElement('div');
     hint.className = 'sub-hint';
-    hint.textContent = '再选一个具体的 👇';
+    hint.textContent = '再选一个具体的';
     sub.appendChild(hint);
     t.options.forEach(opt => {
       const b = document.createElement('button');
@@ -1555,7 +1555,7 @@ function buildCheckTag(t) {
       if (t.history_unique !== false && optDone) {
         b.classList.add('done');
         b.disabled = true;
-        b.textContent = opt + ' ✓';
+        b.textContent = opt + ' ';
       }
       b.addEventListener('click', () => {
         sfx.sub();
@@ -1563,7 +1563,7 @@ function buildCheckTag(t) {
         const arr = state.checkOption[t.id];
         const ix = arr.indexOf(opt);
         if (ix >= 0) { arr.splice(ix, 1); b.classList.remove('active'); b.textContent = opt; }
-        else { arr.push(opt); b.classList.add('active'); b.textContent = '✓ ' + opt; }
+        else { arr.push(opt); b.classList.add('active'); b.textContent = ' ' + opt; }
         // 一级标签显示已选数量
         chip.textContent = arr.length ? `${t.label}（已选${arr.length}）` : t.label;
       });
@@ -1712,7 +1712,7 @@ function bindEvents() {
 
 function updateSoundButton() {
   if (!els.btnSound) return;
-  els.btnSound.textContent = sfx.muted ? '🔇' : '🔊';
+  els.btnSound.innerHTML = sfx.muted ? I['volume-off']('ico-lg') : I.volume('ico-lg');
   els.btnSound.classList.toggle('is-off', !!sfx.muted);
 }
 
@@ -1754,8 +1754,8 @@ function renderAvatarPicker() {
   // 顶部：星光值 + 商店入口（v167：不再按等级解锁，改为星光值兑换）
   const tip = document.createElement('div');
   tip.className = 'avatar-shop-tip';
-  tip.innerHTML = `<span>⭐ 我的星光值 <b>${state.wallet.balance}</b> · 头像与头像框都在星光商店兑换</span>
-    <button type="button" class="avatar-shop-go">去商店 🛍️</button>`;
+  tip.innerHTML = `<span>${I.star()} 我的星光值 <b>${state.wallet.balance}</b> · 头像与头像框都在星光商店兑换</span>
+    <button type="button" class="avatar-shop-go">去商店 ${I.shop('ico-sm')}</button>`;
   els.avatarPicker.appendChild(tip);
   tip.querySelector('.avatar-shop-go').addEventListener('click', () => {
     els.avatarModal.classList.remove('show');
@@ -1771,7 +1771,7 @@ function renderAvatarPicker() {
   // —— 免费小动物头像（默认拥有，筛选时也始终可见）——
   const emojiSec = document.createElement('div');
   emojiSec.className = 'avatar-sec';
-  emojiSec.innerHTML = `<div class="avatar-sec-title">🐾 免费头像<span class="avatar-sec-tip ok">默认拥有，可随意更换</span></div>`;
+  emojiSec.innerHTML = `<div class="avatar-sec-title">${I.paw()} 免费头像<span class="avatar-sec-tip ok">默认拥有，可随意更换</span></div>`;
   const emojiGrid = document.createElement('div');
   emojiGrid.className = 'avatar-grid avatar-grid-img';
   AVATARS.forEach(key => emojiGrid.appendChild(buildImgChoice(key, cur.key, true, 0)));
@@ -1838,7 +1838,7 @@ function buildImgChoice(key, selectedKey, owned, price) {
     + (owned ? '' : ' locked');
   b.innerHTML = owned
     ? `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy">`
-    : `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy"><span class="avatar-lock">🔒<em>⭐${price || 0}</em></span>`;
+    : `<img src="${AVATAR_BASE}${avatarFile(key)}" alt="" loading="lazy"><span class="avatar-lock">${I.lock()}<em>${I.star()}${price || 0}</em></span>`;
   b.addEventListener('click', () => {
     if (!owned) {
       sfx.oops();
@@ -2053,7 +2053,7 @@ function updateFramePreview(frameKey) {
   paintAvatar(els.framePreviewAvatar, av);
   applyFrameTo(els.framePreviewAvatar, frameKey || state.myFrame || 'none');
   if (els.framePreviewLevel) {
-    els.framePreviewLevel.textContent = '⭐' + (Number(state.wallet && state.wallet.balance) || 0);
+    els.framePreviewLevel.textContent = '' + (Number(state.wallet && state.wallet.balance) || 0);
   }
 }
 
@@ -2094,7 +2094,7 @@ function renderFramePage() {
     shownCount++;
     const price = f.key === 'none' ? 0 : shopPriceOf('frame', f.key);
     b.innerHTML = `<span class="fc-ring"></span>` +
-      (owned ? `<span class="fc-owned">✓</span>` : `<span class="fc-lock">🔒<em>⭐${price}</em></span>`);
+      (owned ? `<span class="fc-owned"></span>` : `<span class="fc-lock">${I.lock()}<em>${I.star()}${price}</em></span>`);
     b.title = f.name + (owned ? '（已拥有）' : `（${price} 星光值兑换）`);
     b.addEventListener('click', () => {
       if (!owned) {
@@ -2140,7 +2140,7 @@ function closeFramePage() {
 function buildFrameSection() {
   const sec = document.createElement('div');
   sec.className = 'avatar-sec';
-  sec.innerHTML = `<div class="avatar-sec-title">✨ 头像框<span class="avatar-sec-tip">星光商店兑换后即可佩戴</span></div>`;
+  sec.innerHTML = `<div class="avatar-sec-title">${I.sparkle()} 头像框<span class="avatar-sec-tip">星光商店兑换后即可佩戴</span></div>`;
   const grid = document.createElement('div');
   grid.className = 'frame-grid';
   const row = currentRosterRow();
@@ -2152,7 +2152,7 @@ function buildFrameSection() {
     b.className = 'frame-choice fc-' + f.key + (f.key === curFrame ? ' selected' : '');
     const unlocked = f.key === 'none' || unlockedSet.has(f.key);
     b.innerHTML = `<span class="fc-ring"></span>` +
-      (unlocked ? '' : `<span class="fc-lock">🔒<em>${f.need}</em></span>`);
+      (unlocked ? '' : `<span class="fc-lock">${I.lock()}<em>${f.need}</em></span>`);
     b.addEventListener('click', () => {
       if (!unlocked) { sfx.oops(); toast(`这个头像框还没拥有，去星光商店兑换吧～`); return; }
       onChooseFrame(f.key, b);
@@ -2178,7 +2178,7 @@ async function onChooseFrame(key, btn) {
     applyFrameTo(els.identityAvatarEmoji, key);
     if (els.frameView && !els.frameView.hidden) renderFramePage();
     persistWallCache(); renderWall();
-    toast('已离线选好，联网后自动同步 ✅');
+    toast('已离线选好，联网后自动同步');
     setTimeout(() => els.avatarModal.classList.remove('show'), 260);
     return;
   }
@@ -2237,7 +2237,7 @@ async function loadProfile() {
   try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch (e) {}
   const seenSet = new Set(seen);
   const fresh = achs.filter(a => a.unlocked && !seenSet.has(a.key));
-  if (fresh.length) fresh.forEach(a => toast(`🏅 解锁成就「${a.name}」${a.icon}`));
+  if (fresh.length) fresh.forEach(a => toast(`解锁成就「${a.name}」${a.icon}`));
   if (fresh.length) sfx.success();
   try { localStorage.setItem(seenKey, JSON.stringify(achs.filter(a => a.unlocked).map(a => a.key))); } catch (e) {}
 }
@@ -2249,7 +2249,7 @@ function renderAchievements(achs) {
   els.achCount.textContent = `${done}/${achs.length}`;
   els.achGrid.innerHTML = achs.map(a => `
     <div class="ach-item ${a.unlocked ? 'unlocked' : 'locked'}">
-      <div class="ach-ic">${a.unlocked ? a.icon : '🔒'}</div>
+      <div class="ach-ic">${a.unlocked ? a.icon : '' + I.lock() + ''}</div>
       <div class="ach-n">${esc(a.name)}</div>
       <div class="ach-p">${a.unlocked ? esc(a.desc) : `${a.cur}/${a.target}`}</div>
     </div>`).join('');
@@ -2357,7 +2357,7 @@ function shopItemTile(it) {
       ? `<button type="button" class="shop-btn use" data-use="${it.item_type}:${it.item_key}">使用</button>`
       : price === 0
         ? `<button type="button" class="shop-btn use" data-buy="${it.item_key}">领取</button>`
-        : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">⭐ ${price}</button>`;
+        : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">${I.star()} ${price}</button>`;
   return `<div class="shop-item${owned ? ' owned' : ''}">
       ${thumb}
       <div class="shop-name">${esc(it.name || it.item_key)}</div>
@@ -2388,7 +2388,7 @@ function renderShop() {
   let html = '';
   // 免费头像区（小动物 24 款，默认拥有）
   if (state.shopTab === 'avatar') {
-    html += `<section class="shop-group"><div class="shop-group-title">🐾 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
+    html += `<section class="shop-group"><div class="shop-group-title">${I.paw()} 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
       <div class="shop-grid">` +
       AVATARS.map(k => `<div class="shop-item owned${ownsItem('avatar', k) ? '' : ''}">
         <span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(k)}" alt="" loading="lazy"></span>
@@ -2439,7 +2439,7 @@ async function buyShopItem(key, btn) {
       return;
     }
     sfx.success();
-    toast(`兑换成功！${it.name} 已放进你的衣柜 ✨`);
+    toast(`兑换成功！${it.name} 已放进你的衣柜`);
     await Promise.all([loadWallet(), loadShopCatalog()]);
     renderShop();
     if (!els.shopView.hidden) renderShop();
@@ -2538,10 +2538,10 @@ async function loadWheelPrizes() {
   } catch (e) { /* 忽略 */ }
   if (!state.wheelPrizes.length) {
     state.wheelPrizes = [
-      { prize_key: 'star_50', name: '星光值 +50', icon: '⭐' },
-      { prize_key: 'star_100', name: '星光值 +100', icon: '🌟' },
-      { prize_key: 'class_50', name: '全班星光 +50', icon: '🎊' },
-      { prize_key: 'thanks', name: '谢谢参与', icon: '🍀' }
+      { prize_key: 'star_50', name: '星光值 +50', icon: I.star() },
+      { prize_key: 'star_100', name: '星光值 +100', icon: I['star-fill']() },
+      { prize_key: 'class_50', name: '全班星光 +50', icon: I.sparkle() },
+      { prize_key: 'thanks', name: '谢谢参与', icon: I.leaf() }
     ];
   }
 }
@@ -2592,7 +2592,7 @@ async function loadLotteryHistory() {
     els.lotteryHistoryCard.hidden = !rows.length;
     els.lotteryHistoryBody.innerHTML = rows.map(x => `
       <div class="lh-row">
-        <span class="lh-icon">${x.icon || '🎁'}</span>
+        <span class="lh-icon">${prizeIcon(x)}</span>
         <span class="lh-name">${esc(x.name || '')}</span>
         <span class="lh-meta">Lv.${x.level}${x.student_name ? ' · ' + esc(x.student_name) : ''}</span>
         <span class="lh-time">${formatTime(x.drawn_at)}</span>
@@ -2656,9 +2656,16 @@ async function spinLottery() {
   }, 3900);
 }
 
+/* v168：奖品图标按 prize_type 映射到自制图标集，不再依赖库里存的 emoji */
+const PRIZE_ICONS = { star: 'star', class_star: 'heart', avatar: 'image', frame: 'ribbon', none: 'leaf' };
+function prizeIcon(p, cls) {
+  const key = PRIZE_ICONS[(p && p.prize_type) || 'none'] || 'gift';
+  return I[key](cls);
+}
+
 function showPrize(res) {
   if (!els.prizeModal) return;
-  els.prizeIcon.textContent = res.icon || '🎁';
+  els.prizeIcon.innerHTML = prizeIcon(res);
   els.prizeName.textContent = `恭喜！${res.name || '中奖啦'}`;
   let desc = `班级升到 Lv.${res.level} 的奖励`;
   if (res.prize_type === 'star') desc += ` · 已存入你的星光值`;
@@ -2723,7 +2730,7 @@ async function updateSubmitStatus() {
   }
   if (myToday.length) {
     el.hidden = false;
-    el.textContent = `✅ 今天已提交 ${myToday.length} 次，可继续补充表现（不会重复加分）`;
+    el.textContent = `今天已提交 ${myToday.length} 次，可继续补充表现（不会重复加分）`;
     el.className = 'submit-status submit-status-ok';
   } else {
     el.hidden = true;
@@ -2754,9 +2761,9 @@ async function loadTodayTasks() {
     return `<div class="today-task-row${done ? ' done' : ''}">
       <div class="today-task-info">
         <span class="today-task-label">${esc(tag.label || '(任务)')}</span>
-        <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
+        <span class="today-task-state${done ? ' ok' : ''}">${done ? '' + I['check-circle']() + ' 已完成' : '' + I.hourglass() + ' 待完成'}</span>
       </div>
-      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm="${t.id}">✅ 我完成了</button>`}
+      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm="${t.id}">${I['check-circle']()} 我完成了</button>`}
     </div>`;
   }).join('');
   box.querySelectorAll('[data-confirm]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2795,17 +2802,17 @@ async function loadPersonalTasks() {
   } catch (e) {}
   if (!rows.length) { card.hidden = true; return; }
   card.hidden = false;
-  const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
+  const dimName = { de: '' + I.heart() + '德', zhi: '' + I['book-open']() + '智', ti: '' + I.dumbbell() + '体', mei: '' + I.palette() + '美', lao: '' + I.broom() + '劳' };
   box.innerHTML = rows.map(t => {
     const done = t.status === 'done';
     const dl = t.deadline ? ` · 截止 ${String(t.deadline).slice(5)}` : '';
     return `<div class="today-task-row${done ? ' done' : ''}">
       <div class="today-task-info">
-        <span class="today-task-label">🎯 ${esc(t.content)}</span>
-        <span class="today-task-state${done ? ' ok' : ''}">${done ? '✅ 已完成' : '⏳ 待完成'}</span>
+        <span class="today-task-label">${I.target()} ${esc(t.content)}</span>
+        <span class="today-task-state${done ? ' ok' : ''}">${done ? '' + I['check-circle']() + ' 已完成' : '' + I.hourglass() + ' 待完成'}</span>
       </div>
       <div class="today-task-sub">${dimName[t.dim] || ''} · 星光值+${t.xp_value}${dl}</div>
-      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm-ptask="${t.id}">✅ 我完成了</button>`}
+      ${done ? '' : `<button type="button" class="btn btn-warn btn-sm" data-confirm-ptask="${t.id}">${I['check-circle']()} 我完成了</button>`}
     </div>`;
   }).join('');
   box.querySelectorAll('[data-confirm-ptask]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2846,7 +2853,7 @@ async function loadChallengeTasks() {
   } catch (e) {}
   if (!rows.length) { card.hidden = true; return; }
   card.hidden = false;
-  const dimName = { de: '❤️德', zhi: '🧠智', ti: '💪体', mei: '🎨美', lao: '🧹劳' };
+  const dimName = { de: '' + I.heart() + '德', zhi: '' + I['book-open']() + '智', ti: '' + I.dumbbell() + '体', mei: '' + I.palette() + '美', lao: '' + I.broom() + '劳' };
   const defaultLevels = CHALLENGE_LEVELS.map(lv => [lv, lv / 5]);
   box.innerHTML = rows.map(t => {
     const scheme = Array.isArray(t.levels) && t.levels.length ? t.levels : defaultLevels;
@@ -2864,12 +2871,12 @@ async function loadChallengeTasks() {
     }).join('');
     return `<div class="today-task-row ${allDone ? 'done' : ''}">
       <div class="today-task-info">
-        <span class="today-task-label">🏆 ${esc(t.title)}</span>
-        <span class="today-task-state ${allDone ? 'ok' : ''}">${allDone ? '🏆 全部达成 ' + doneArr.length + '/' + scheme.length : '已达成 ' + doneArr.length + '/' + scheme.length + ' 档'}</span>
+        <span class="today-task-label">${I.trophy()} ${esc(t.title)}</span>
+        <span class="today-task-state ${allDone ? 'ok' : ''}">${allDone ? '' + I.trophy() + ' 全部达成 ' + doneArr.length + '/' + scheme.length : '已达成 ' + doneArr.length + '/' + scheme.length + ' 档'}</span>
       </div>
       <div class="today-task-sub">${dimName[t.dim] || ''} · 勾选本次新达成的档位，可多选一次提交</div>
       <div class="chg-chip-box">${chips}</div>
-      ${allDone ? '' : `<div style="margin-top:6px;"><button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">✅ 提交达成</button></div>`}
+      ${allDone ? '' : `<div style="margin-top:6px;"><button type="button" class="btn btn-warn btn-sm" data-confirm-challenge="${t.id}">${I['check-circle']()} 提交达成</button></div>`}
     </div>`;
   }).join('');
   // v152.2：勾选档位高亮（未达成档位勾选时点亮，提交后由 .on 置灰覆盖）
@@ -2886,7 +2893,7 @@ async function loadChallengeTasks() {
     try {
       const wr = await runWrite({ name: 'confirm_challenge_levels', params: { p_task_id: id, p_levels: lvList } });
       if (!wr.ok) { toast('提交失败，请重试'); btn.disabled = false; return; }
-      if (wr.queued) { toast('已离线保存，联网后自动同步 ✅'); loadChallengeTasks(); btn.disabled = false; return; }
+      if (wr.queued) { toast('已离线保存，联网后自动同步'); loadChallengeTasks(); btn.disabled = false; return; }
       const d = wr.res || {};
       if (d.ok === false) { toast('提交失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
@@ -2936,7 +2943,7 @@ async function loadPastTasks() {
       try { subs = JSON.parse(localStorage.getItem('sp_past_subs_' + cls + '_' + name) || '[]'); } catch(e2) { subs = []; }
     }
     const gradeMap = {}; subs.forEach(s => gradeMap[s.task_id] = s.grade);
-    const gLabel = { none:'⏳未完成', done:'✅完成', good:'👍优秀A', perfect:'🏆完美A+' };
+    const gLabel = { none:'' + I.hourglass() + '未完成', done:'' + I['check-circle']() + '完成', good:'' + I.thumb() + '优秀A', perfect:'' + I.trophy() + '完美A+' };
     if (!(tasks||[]).length) { els.pastTaskBody.innerHTML = '<p class="text-muted">近7天没有往日任务。</p>'; return; }
     const now = new Date(); now.setHours(0,0,0,0);
     // 截止日期按本地时区解析（'YYYY-MM-DD' 字符串若用 new Date 会被当 UTC，导致当天任务上午就"已截止"）
@@ -2953,7 +2960,7 @@ async function loadPastTasks() {
       const active = dueDate ? dueDate >= now : false;
       const dueStr = t.due_time ? ` 截止${String(t.due_time).slice(0,10)}`
                   : (t.task_date ? ` 截止${(()=>{const d=parseLocalDate(t.task_date);d.setDate(d.getDate()+7);return fmtLocal(d);})()}` : '');
-      const head = `<div class="past-line1">${t.task_type==='homework'?'🏠':'🏫'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
+      const head = `<div class="past-line1">${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${(t.task_date||'').slice(5)} ${esc(t.title)}${dueStr}</div>`;
       if (!active) {
         return `<div class="past-row">${head}<div class="past-grade">${gLabel[cur] || '已截止'}</div></div>`;
       }
@@ -2971,9 +2978,9 @@ async function loadPastTasks() {
         const d = wr.res || {};
         sfx.pick();
         const xpGain = (d.xp_delta || 0) > 0 ? ` 星光值+${d.xp_delta}` : '';
-        toast(wr.queued ? '已离线保存，联网后自动同步 ✅' : (grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存'));
+        toast(wr.queued ? '已离线保存，联网后自动同步' : (grade === 'perfect' ? `太棒啦！${xpGain}` : grade === 'good' ? `真不错！${xpGain}` : '已保存'));
         const pastResult = document.querySelector(`[data-result="past-${taskId}"]`);
-        if (pastResult) pastResult.textContent = wr.queued ? '已离线保存，联网后自动同步 ✅' : '';
+        if (pastResult) pastResult.textContent = wr.queued ? '已离线保存，联网后自动同步' : '';
         // 离线：同步更新本地往日任务缓存，重渲染时按钮/状态即时反映
         if (wr.queued) {
           try {
@@ -3062,7 +3069,7 @@ async function onSubmit() {
       });
       if (q) {
         sfx.success();
-        toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢');
+        toast('没网也帮你存好了！联网后自动上传，星光值不会丢');
         applyLocalSubmitFeedback(cls, name, items);   // v123：记录合并+即时置灰+缓存持久化
         resetSelections();
         renderMoodPreview();
@@ -3091,7 +3098,7 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+        if (q) { sfx.success(); toast('没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -3167,7 +3174,7 @@ async function onSubmit() {
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('📡 没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      if (q) { sfx.success(); toast('没网也帮你存好了！联网后自动上传，星光值不会丢'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
@@ -3175,7 +3182,7 @@ async function onSubmit() {
     }
   } finally {
     els.btnSubmit.disabled = false;
-    els.btnSubmit.textContent = '提交今天的表现 🎈';
+    els.btnSubmit.textContent = '提交今天的表现';
   }
 }
 
@@ -3214,7 +3221,7 @@ function prefillIdentity() {
 /* ---------- 鼓励动画 ---------- */
 
 function celebrate(gainedXp, leveledUp) {
-  const emojis = ['⭐', '🌟', '✨', '🎉', '💛', '🌈', '👏', '🚌', '📚'];
+  const emojis = ['' + I.star() + '', '' + I['star-fill']() + '', '' + I.sparkle() + '', '' + I.sparkle() + '', '' + I.heart() + '', '' + I.rainbow() + '', '' + I.thumb() + '', '' + I.school() + '', '' + I.book() + ''];
   els.confettiBox.innerHTML = '';
   for (let i = 0; i < 42; i++) {
     const piece = document.createElement('span');
@@ -3229,9 +3236,9 @@ function celebrate(gainedXp, leveledUp) {
   let msg;
   if (leveledUp) {
     const row = currentRosterRow();
-    msg = `🎉 星光等级提升！你现在是 Lv.${row ? row.level : ''}，去星光商店看看新装扮吧！`;
+    msg = `${I.sparkle()} 星光等级提升！你现在是 Lv.${row ? row.level : ''}，去星光商店看看新装扮吧！`;
   } else if (gainedXp > 0) {
-    msg = `太棒啦！本次获得 ${gainedXp} 点星光值 ⭐ 现在有 ${state.wallet.balance} 点可以花啦`;
+    msg = `太棒啦！本次获得 ${gainedXp} 点星光值 ${I.star()} 现在有 ${state.wallet.balance} 点可以花啦`;
   } else {
     const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
     msg = pool[Math.floor(Math.random() * pool.length)];
@@ -3293,6 +3300,7 @@ function $$(sel, root) { return Array.from((root || document).querySelectorAll(s
 let toastTimer;
 function toast(msg) {
   const t = document.getElementById('toast');
+  msg = String(msg == null ? '' : msg).replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/\s{2,}/g, ' ').trim();
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
@@ -3301,10 +3309,10 @@ function toast(msg) {
 
 /* ================= 今日学习任务 ================= */
 const TASK_GRADES = [
-  { key: 'none',    label: '还没做',   icon: '⏳' },
-  { key: 'done',    label: '完成了',   icon: '✅' },
-  { key: 'good',    label: '优秀 A',   icon: '👍' },
-  { key: 'perfect', label: '完美 A+',  icon: '🏆' }
+  { key: 'none',    label: '还没做',   icon: I.hourglass() },
+  { key: 'done',    label: '完成了',   icon: I['check-circle']() },
+  { key: 'good',    label: '优秀 A',   icon: I.thumb() },
+  { key: 'perfect', label: '完美 A+',  icon: I.trophy() }
 ];
 
 async function loadStudentTask() {
@@ -3348,8 +3356,8 @@ async function loadStudentTask() {
     return list.map(t => {
       const my = t.my_grade || 'none';
       const grades = short
-        ? [['none','⏳ 未完成'],['done','✅ 完成']]
-        : [['none','⏳ 还没做'],['done','✅ 完成了'],['good','👍 优秀 A'],['perfect','🏆 完美 A+']];
+        ? [['none','' + I.hourglass() + ' 未完成'],['done','' + I['check-circle']() + ' 完成']]
+        : [['none','' + I.hourglass() + ' 还没做'],['done','' + I['check-circle']() + ' 完成了'],['good','' + I.thumb() + ' 优秀 A'],['perfect','' + I.trophy() + ' 完美 A+']];
       const done = my && my !== 'none';
       return `<div class="stu-task${done ? ' done' : ''}">
         <div class="stu-task-title">${escapeHtml(t.title)}</div>
@@ -3389,7 +3397,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
     if (grade === 'none') {
       resultEl.textContent = '好的，继续加油把任务完成吧！';
     } else if (wr.queued) {
-      resultEl.textContent = '已离线保存，联网后自动同步 ✅';
+      resultEl.textContent = '已离线保存，联网后自动同步';
       // 离线：本地即时反映状态（按钮高亮 + 缓存），联网后以服务端为准
       document.querySelectorAll(`.stu-task-grade[data-task="${taskId}"]`).forEach(b => b.classList.toggle('on', b.dataset.grade === grade));
       try {
@@ -3405,7 +3413,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
       resultEl.textContent = grade === 'perfect' ? `太棒啦，完美完成！${xpGain}`
                           : grade === 'good'    ? `真不错，继续保持！${xpGain}`
                           :                       `完成啦，辛苦啦！${xpGain}`;
-      if (d.mood_awarded) resultEl.textContent += ' 心情+1 😊';
+      if (d.mood_awarded) resultEl.textContent += ' 心情+1 ' + I['mood-4']() + '';
     }
   }
   const row = state.roster.find(s => s.class === cls && s.student_name === name);
@@ -3704,12 +3712,12 @@ function openLeaderboard(kind) {
   if (kind === 'xp') {
     els.lbTitle.textContent = '星光榜';
     els.lbSub.textContent = cls ? cls + ' 全班累计星光值排名' : '全班累计星光值排名';
-    els.lbIcon.textContent = '🏅';
+    els.lbIcon.textContent = '';
     loadLeaderboardXp(cls);
   } else {
     els.lbTitle.textContent = '挑战榜';
     els.lbSub.textContent = '点击榜单查看最高档位排名';
-    els.lbIcon.textContent = '🏆';
+    els.lbIcon.textContent = '';
     loadLeaderboardChallenge(cls);
   }
 }
@@ -3734,7 +3742,7 @@ async function loadLeaderboardXp(cls) {
     box.innerHTML = '<div class="lb-empty">还没有同学获得星光值，暂时不排名。<br>完成表现记录或任务后，这里会按累积星光值排位。</div>';
     return;
   }
-  const medal = ['🥇', '🥈', '🥉'];
+  const medal = ['' + I.medal('rk rk1') + '', '' + I.medal('rk rk2') + '', '' + I.medal('rk rk3') + ''];
   let rank = 0, prevXp = null;
   box.innerHTML = ranked.map((s, i) => {
     const xp = Number(s.xp) || 0;
@@ -3746,7 +3754,7 @@ async function loadLeaderboardXp(cls) {
       <span class="lb-rank ${topCls}">${rankTxt}</span>
       <span class="lb-name">${esc(s.student_name)}</span>
       <span class="lb-val">Lv.${s.level}</span>
-      <span class="lb-val">⭐${xp}</span>
+      <span class="lb-val">${I.star()}${xp}</span>
     </div>`;
   }).join('');
 }
@@ -3773,10 +3781,10 @@ async function loadLeaderboardChallenge(cls) {
   });
   const list = Array.from(groups.values()).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   box.innerHTML = `
-    <button type="button" class="lb-back" data-lb-back style="display:none;">← 返回榜单列表</button>
+    <button type="button" class="lb-back" data-lb-back style="display:none;">${I['arrow-left']()} 返回榜单列表</button>
     <div id="lbList">${list.map(g => `
       <div class="lb-challenge-item" data-lb-challenge="${esc(g.title)}">
-        <div class="lb-c-title">🏆 ${esc(g.title)}</div>
+        <div class="lb-c-title">${I.trophy()} ${esc(g.title)}</div>
         <div class="lb-c-meta">${esc(g.date || '')} · ${g.items.length} 名学生参与</div>
       </div>`).join('')}</div>
     <div id="lbDetail" style="display:none"></div>`;
@@ -3797,7 +3805,7 @@ function renderChallengeDetail(list, title) {
   const box = els.leaderboardBody;
   const g = list.find(x => x.title === title);
   if (!g) return;
-  const medal = ['🥇', '🥈', '🥉'];
+  const medal = ['' + I.medal('rk rk1') + '', '' + I.medal('rk rk2') + '', '' + I.medal('rk rk3') + ''];
   const items = g.items.slice().sort((a, b) => {
     const ma = Number(a.max_level) || -1, mb = Number(b.max_level) || -1;
     return mb - ma;
@@ -3805,7 +3813,7 @@ function renderChallengeDetail(list, title) {
   document.getElementById('lbList').style.display = 'none';
   document.getElementById('lbDetail').style.display = '';
   document.getElementById('lbDetail').innerHTML = `
-    <div class="lb-c-title" style="margin:4px 0 8px;">🏆 ${esc(title)} <span style="font-weight:400;color:#8a7a66;font-size:12px;">按最高档位排名</span></div>
+    <div class="lb-c-title" style="margin:4px 0 8px;">${I.trophy()} ${esc(title)} <span style="font-weight:400;color:#8a7a66;font-size:12px;">按最高档位排名</span></div>
     ${items.map((s, i) => {
       const lv = Number(s.max_level) || 0;
       const done = (Array.isArray(s.done_levels) ? s.done_levels : []).length;

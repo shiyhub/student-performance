@@ -48,11 +48,11 @@ const $ = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
 const MOOD_MAP = {
-  happy:  { emoji: '😄', label: '很棒' },
-  good:   { emoji: '🙂', label: '不错' },
-  normal: { emoji: '😐', label: '一般' },
-  down:   { emoji: '😟', label: '有点低落' },
-  sad:    { emoji: '😢', label: '需要加油' }
+  happy:  { lv: 5, label: '很棒' },
+  good:   { lv: 4, label: '不错' },
+  normal: { lv: 3, label: '一般' },
+  down:   { lv: 2, label: '有点低落' },
+  sad:    { lv: 1, label: '需要加油' }
 };
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -318,7 +318,7 @@ async function runWrite(op) {
 async function flushOfflineQueue() {
   if (!window.Offline || !window.Offline.online) return;
   const n = await window.Offline.drain(syncRunner);
-  if (n > 0) { toast('📡 已同步 ' + n + ' 条离线操作'); loadTaskReport(); }
+  if (n > 0) { toast('已同步 ' + n + ' 条离线操作'); loadTaskReport(); }
 }
 let teacherBanner = null;
 function ensureOfflineBanner() {
@@ -326,7 +326,7 @@ function ensureOfflineBanner() {
   teacherBanner = document.createElement('div');
   teacherBanner.id = 'offlineBanner';
   teacherBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4e6b5c;color:#fff;text-align:center;font-size:13px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15);';
-  teacherBanner.textContent = '📴 离线模式：显示本地缓存，批改/发布会先保存，联网后自动同步';
+  teacherBanner.textContent = '离线模式：显示本地缓存，批改/发布会先保存，联网后自动同步';
   teacherBanner.hidden = true;
   document.body.appendChild(teacherBanner);
 }
@@ -538,13 +538,13 @@ async function runPrecache(from) {
     if (!p.done || p.done === p.total) return;
     if (!precacheToastTimer && (p.done === 1 || p.done % Math.max(1, Math.round(p.total / 5)) === 0)) {
       precacheToastTimer = setTimeout(() => { precacheToastTimer = null; }, 2500);
-      toast('📥 预缓存中 ' + p.done + '/' + p.total + '（' + (p.label || '') + '）');
+      toast('预缓存中 ' + p.done + '/' + p.total + '（' + (p.label || '') + '）');
     }
   });
   if (ok) {
     const okN = (window.Precache.lastResult && window.Precache.lastResult.ok) || 0;
-    if (okN === 0) toast('📥 预缓存失败：所有数据都没能下载（可能当前离线），联网后会自动重试');
-    else toast('📥 预缓存完成：' + okN + ' 项数据已存到本机，断网可完整使用 ✅');
+    if (okN === 0) toast('预缓存失败：所有数据都没能下载（可能当前离线），联网后会自动重试');
+    else toast('预缓存完成：' + okN + ' 项数据已存到本机，断网可完整使用');
   }
   else toast('预缓存未执行（可能正在运行或当前离线）');
 }
@@ -756,7 +756,7 @@ function renderRecordList(data, notes) {
   let html = '';
   if (notes.length) html += renderHomeNotes(notes);
   if (data.length) {
-    html += '<div class="rec-section-title">📒 在校表现记录</div>';
+    html += '<div class="rec-section-title">' + I.notebook() + ' 在校表现记录</div>';
     html += data.map(r => renderRecordCard(r)).join('');
   }
   if (!notes.length && !data.length) {
@@ -798,7 +798,7 @@ function renderRecordList(data, notes) {
       const wr = await runWrite({ name: 'teacher_home_reply', params: { note_id: noteId, sender: 'teacher', content: content.slice(0, 500) } });
       btn.disabled = false;
       if (!wr.ok) { toast('回复失败，请重试'); return; }
-      toast(wr.queued ? '已保存，联网后自动发送 ✅' : '已回复家长 ✅');
+      toast(wr.queued ? '已保存，联网后自动发送' : '已回复家长');
       invalidateRecCache();
       loadRecords();
     });
@@ -820,7 +820,7 @@ function invalidateRecCache() {
 }
 
 function renderHomeNotes(notes) {
-  let html = '<div class="rec-section-title home">🏠 家长留言 · 在家表现<span class="n">仅老师可见</span></div>';
+  let html = '<div class="rec-section-title home">' + I.home() + ' 家长留言 · 在家表现<span class="n">仅老师可见</span></div>';
   notes.forEach(n => {
     const info = n.student_info || {};
     // v50：回复线程（按时间正序展示，教师评论 / 家长回复多轮交流）
@@ -830,17 +830,17 @@ function renderHomeNotes(notes) {
               <div class="rec-meta">
                 <span class="class-pill">${esc(info.class || '')}</span>
                 <b>${esc(info.student_name || '')}</b>
-                <span class="home-who">👪 ${esc(n.parent_name)}</span>
+                <span class="home-who">${I.users('ico-xs')} ${esc(n.parent_name)}</span>
                 <span class="rec-when">${formatDate(n.record_date)} ${formatTime(n.create_at)}</span>
                 <span class="rec-tools">
-                  <button class="btn btn-ghost btn-sm danger-text" data-del-note="${n.id}">🗑️ 删除</button>
+                  <button class="btn btn-ghost btn-sm danger-text" data-del-note="${n.id}">${I.trash('ico-sm')} 删除</button>
                 </span>
               </div>
               <div class="home-content">${esc(n.content || '')}</div>
               <div class="home-replies">
                 ${replies.map(r => `
                   <div class="home-reply ${r.sender === 'teacher' ? 't' : 'p'}">
-                    <span class="hr-who">${r.sender === 'teacher' ? '👩‍🏫 老师' : '👪 家长'}</span>
+                    <span class="hr-who">${r.sender === 'teacher' ? '' + I.user() + ' 老师' : '' + I.users() + ' 家长'}</span>
                     <span class="hr-text">${esc(r.content || '')}</span>
                     <span class="hr-time">${formatTime(r.create_at)}</span>
                   </div>`).join('')}
@@ -892,11 +892,11 @@ async function deleteHomeNote(id) {
 /* ---------------- 新增 / 修改记录弹窗 ---------------- */
 
 const MOOD_LEVELS_T = [
-  { key: 'sad',    emoji: '😢', label: '需要加油' },
-  { key: 'down',   emoji: '😟', label: '有点低落' },
-  { key: 'normal', emoji: '😐', label: '一般' },
-  { key: 'good',   emoji: '🙂', label: '不错' },
-  { key: 'happy',  emoji: '😄', label: '很棒' }
+  { key: 'sad',    lv: 1, label: '需要加油' },
+  { key: 'down',   lv: 2, label: '有点低落' },
+  { key: 'normal', lv: 3, label: '一般' },
+  { key: 'good',   lv: 4, label: '不错' },
+  { key: 'happy',  lv: 5, label: '很棒' }
 ];
 let recState = null;
 
@@ -1056,7 +1056,7 @@ function renderRecStars() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'rec-star' + (i <= recState.stars ? '' : ' off');
-    b.textContent = '★';
+    b.textContent = '';
     b.addEventListener('click', () => {
       // 再点一次当前星级 = 清空（不打星）
       recState.stars = (recState.stars === i) ? 0 : i;
@@ -1077,7 +1077,7 @@ function recMoodLevel() {
 }
 function updateRecMood() {
   const m = MOOD_LEVELS_T[recMoodLevel() - 1];
-  els.recMood.textContent = `${m.emoji} ${m.label}`;
+  els.recMood.innerHTML = `${I.mood(m.lv)} ${m.label}`;
   els.recMood.className = 'rec-mood lv' + recMoodLevel();
 }
 
@@ -1127,7 +1127,7 @@ function renderRecTags() {
       }).join('') + '</div></div>';
   }
 
-  els.recTags.innerHTML = group('🌟 积极表现', pos, 'pos') + group('💧 需要加油', neg, 'neg') + extra;
+  els.recTags.innerHTML = group('' + I['star-fill']() + ' 积极表现', pos, 'pos') + group('' + I.drop() + ' 需要加油', neg, 'neg') + extra;
 
   $$('[data-rec-tag]', els.recTags).forEach(b => {
     b.addEventListener('click', () => {
@@ -1256,7 +1256,7 @@ function showRecError(msg) {
 function renderRecordCard(r) {
   const starCount = Number(r.self_evaluation) || 0;
   const stars = starCount
-    ? '★'.repeat(starCount) + '☆'.repeat(5 - starCount)
+    ? ''.repeat(starCount) + ''.repeat(5 - starCount)
     : '<span style="color:#98a69f;font-weight:600;">未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
@@ -1268,7 +1268,7 @@ function renderRecordCard(r) {
       const label = esc(it.label || '');
       const neg = it.category === 'negative';
       const liCls = neg ? ' class="item-neg"' : '';
-      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick">✓</span>';
+      const tick = neg ? '<span class="neg-tick">!</span>' : '<span class="tick"></span>';
       if (it.type === 'text') {
         itemsHtml += `<li${liCls}><b>${label}：</b>${esc(it.value || '')}</li>`;
       } else if (it.value) {
@@ -1298,7 +1298,7 @@ function renderRecordCard(r) {
          </div>
        </div>`
     : `<div class="no-comment" id="commentView-${r.id}">
-         <button class="btn btn-ghost btn-sm" data-edit-comment="${r.id}">✏️ 添加教师评语</button>
+         <button class="btn btn-ghost btn-sm" data-edit-comment="${r.id}">${I.edit('ico-sm')} 添加教师评语</button>
        </div>
        <div class="comment-editor" id="commentEdit-${r.id}" hidden>
          <textarea class="input" id="commentText-${r.id}" placeholder="给孩子写几句鼓励的话…"></textarea>
@@ -1313,11 +1313,11 @@ function renderRecordCard(r) {
               <input type="checkbox" class="rec-check" value="${r.id}" title="选择">
               <span class="class-pill">${esc(r.class)}</span>
               <b>${esc(r.student_name)}</b>
-              <span>${mood ? mood.emoji + ' ' + mood.label : ''}</span>
+              <span>${mood ? I.mood(mood.lv) + ' ' + mood.label : ''}</span>
               <span class="rec-when">${formatDate(r.record_date)} ${formatTime(r.create_at)}</span>
               <span class="rec-tools">
-                <button class="btn btn-ghost btn-sm" data-edit-rec="${r.id}">✏️ 修改</button>
-                <button class="btn btn-ghost btn-sm danger-text" data-del-rec="${r.id}">🗑️ 删除</button>
+                <button class="btn btn-ghost btn-sm" data-edit-rec="${r.id}">${I.edit('ico-sm')} 修改</button>
+                <button class="btn btn-ghost btn-sm danger-text" data-del-rec="${r.id}">${I.trash('ico-sm')} 删除</button>
               </span>
             </div>
             <div class="rec-body">
@@ -1390,7 +1390,7 @@ async function loadStudents() {
     html += `<div class="roster-group">
                <h4>
                  <span class="rg-title">${esc(cls)} <span class="n">${groups.get(cls).length} 人</span></span>
-                 <button type="button" class="btn btn-ghost btn-sm class-qr-btn" data-qr-class="${esc(cls)}">📱 本班家长查询码</button>
+                 <button type="button" class="btn btn-ghost btn-sm class-qr-btn" data-qr-class="${esc(cls)}">${I.phone('ico-sm')} 本班家长查询码</button>
                </h4>`;
     groups.get(cls).forEach(s => {
       const parents = (s.student_parent || [])
@@ -1407,20 +1407,20 @@ async function loadStudents() {
       html += `<div class="roster-row">
                  <div class="roster-who">
                    <div class="sname">${esc(s.student_name)}
-                     <span class="xp-badge" title="累计星光值 ${xp}">Lv${lv} · ⭐${xp}</span>
+                     <span class="xp-badge" title="累计星光值 ${xp}">Lv${lv} · ${I.star('ico-xs')}${xp}</span>
                      <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
                              data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
-                             data-xp-cur="${xp}" title="手动调整该学生星光值">✏️ 调星光值</button>
+                             data-xp-cur="${xp}" title="手动调整该学生星光值">${I.edit('ico-sm')} 调星光值</button>
                      <button type="button" class="btn btn-ghost btn-sm stu-qr-btn"
                              data-stu-cls="${esc(s.class)}" data-stu-name="${esc(s.student_name)}"
-                             title="设置密码并生成学生个人二维码">🔑 个人码</button>
+                             title="设置密码并生成学生个人二维码">${I.key('ico-sm')} 个人码</button>
                    </div>
                    <div class="pchips" data-chips-for="${s.id}">
                      ${chips}
                      <button type="button" class="pchip-add" data-add-parent="${s.id}">＋家长</button>
                    </div>
                  </div>
-                 <button class="icon-btn danger" title="删除学生" data-del-id="${s.id}">🗑️</button>
+                 <button class="icon-btn danger" title="删除学生" data-del-id="${s.id}">${I.trash('ico-sm')}</button>
                </div>`;
     });
     html += '</div>';
@@ -1659,7 +1659,7 @@ function renderStuQr(code) {
   els.stuQrLink.textContent = '';
   els.stuQrImage.innerHTML = '';
   if (!code || !stuQrCtx) {
-    els.stuQrImage.innerHTML = '<p class="text-muted">尚未设置密码：点「🎲 生成新密码」后自动出二维码。</p>';
+    els.stuQrImage.innerHTML = '<p class="text-muted">尚未设置密码：点「' + I.dice() + ' 生成新密码」后自动出二维码。</p>';
     return;
   }
   const link = studentQrLink(stuQrCtx.cls, stuQrCtx.name, code);
@@ -1854,7 +1854,7 @@ function onBatchCheck() {
       return `<li><b>${esc(c)}</b>：${list.length} 名学生、${pCount} 位家长 —— ${preview}${more}</li>`;
     }).join('');
     html += `<div class="banner banner-success batch-preview">
-               ✅ 检查通过，本次将导入 <b>${students.length}</b> 名学生、共 <b>${totalParents}</b> 位家长：
+               ${I['check-circle']()} 检查通过，本次将导入 <b>${students.length}</b> 名学生、共 <b>${totalParents}</b> 位家长：
                <ul>${groupHtml}</ul>
                确认无误后点「② 确认导入」；已存在的学生和家长会自动跳过，新家长会追加到已有学生名下。
              </div>`;
@@ -1863,7 +1863,7 @@ function onBatchCheck() {
   }
   if (bad.length) {
     html += `<div class="banner banner-error batch-bad">
-               ⚠️ 有 <b>${bad.length}</b> 行无法识别，已排除（不影响其他行导入）：
+               ${I.alert()} 有 <b>${bad.length}</b> 行无法识别，已排除（不影响其他行导入）：
                <ul>${bad.map(b => `<li>第 ${b.lineNo} 行「${esc(b.raw)}」——${esc(b.reason)}</li>`).join('')}</ul>
              </div>`;
   }
@@ -1991,7 +1991,7 @@ async function renderTags() {
   cache.tags = data;
 
   const DIM_OPT = (sel, val) => [
-    ['de','❤️ 德'],['zhi','🧠 智'],['ti','💪 体'],['mei','🎨 美'],['lao','🧹 劳']
+    ['de','' + I.heart() + ' 德'],['zhi','' + I['book-open']() + ' 智'],['ti','' + I.dumbbell() + ' 体'],['mei','' + I.palette() + ' 美'],['lao','' + I.broom() + ' 劳']
   ].map(([v, l]) => `<option value="${v}"${v === val ? ' selected' : ''}>${l}</option>`).join('');
 
   els.tagBox.innerHTML = data.map(t => `
@@ -2000,8 +2000,8 @@ async function renderTags() {
       <input type="text" class="tag-options" value="${esc((t.options || []).join(','))}"
              maxlength="600" placeholder="二级标签，逗号分隔（选填），如：语文作业,数学作业">
       <select class="tag-cat" title="心情分类（影响学生心情）">
-        <option value="positive"${t.category === 'positive' ? ' selected' : ''}>🌟 积极</option>
-        <option value="negative"${t.category === 'negative' ? ' selected' : ''}>💧 消极</option>
+        <option value="positive"${t.category === 'positive' ? ' selected' : ''}>积极</option>
+        <option value="negative"${t.category === 'negative' ? ' selected' : ''}>消极</option>
       </select>
       <select class="tag-dim" title="加分维度（星光值加进该维度）">${DIM_OPT('', t.dim)}</select>
       <span class="tag-type-badge" title="仅支持勾选型">勾选型</span>
@@ -2124,7 +2124,7 @@ async function onAddTag(e) {
 /* ---------------- 自动化任务（五维星光值自动加分） ---------------- */
 
 const DIM_LABEL = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
-const DIM_ICON = { de: '❤️', zhi: '🧠', ti: '💪', mei: '🎨', lao: '🧹' };
+const DIM_ICON = { de: '' + I.heart() + '', zhi: '' + I['book-open']() + '', ti: '' + I.dumbbell() + '', mei: '' + I.palette() + '', lao: '' + I.broom() + '' };
 const WEEK_LABEL = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 async function loadAutoTab() {
@@ -2222,10 +2222,10 @@ document.getElementById('btnManualAssign')?.addEventListener('click', async () =
       p_students: manualState.students.map(n => ({ value: n }))
     }});
     if (!wr.ok) { toast('分配失败，请重试'); return; }
-    if (wr.queued) { toast('已离线保存，联网后自动分配 ✅'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动分配'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('分配失败：' + (d.reason || '')); return; }
-    toast(`已分配 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    toast(`已分配 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''}`);
     await loadManualTasks();
   } catch (e) { toast('分配失败，请重试'); }
   finally { btn.disabled = false; }
@@ -2258,7 +2258,7 @@ async function loadManualTasks() {
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0, 10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           <span class="badge-dim">${esc(t.student_name)}</span>
           <span class="badge-tag">${esc(t.behavior_tags && t.behavior_tags.label || '(标签已删)')}</span>
-          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? '✅ 已完成' : '⏳ 待完成'}</span>
+          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? '' + I['check-circle']() + ' 已完成' : '' + I.hourglass() + ' 待完成'}</span>
         </div>
       </div>
       <div class="rule-actions">
@@ -2269,7 +2269,7 @@ async function loadManualTasks() {
     if (!confirm('取消这条任务分配？（未加分，学生端将不再显示）')) return;
     const wr = await runWrite({ name: 'delete_manual_task', params: { p_task_id: btn.dataset.delTask } });
     if (!wr.ok) { toast('取消失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '已取消');
+    toast(wr.queued ? '已离线保存，联网后同步' : '已取消');
     loadManualTasks();
   }));
 }
@@ -2357,10 +2357,10 @@ document.getElementById('btnPersonalAssign')?.addEventListener('click', async ()
       p_students: personalState.students.map(n => ({ value: n }))
     }});
     if (!wr.ok) { toast('发布失败，请重试'); return; }
-    if (wr.queued) { toast('已离线保存，联网后自动发布 ✅'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动发布'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
-    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''}`);
     els.personalTaskContent.value = '';
     await loadPersonalTasks();
   } catch (e) { toast('发布失败，请重试'); }
@@ -2399,7 +2399,7 @@ async function loadPersonalTasks() {
           <span class="badge-dim">${esc(t.student_name)}</span>
           <span class="badge-tag">${esc(t.content)}</span>
           <span class="badge-dim" style="margin-left:4px;">${DIM_META[t.dim] ? DIM_META[t.dim].label : (DIM_LABEL[t.dim] || t.dim)}+${t.xp_value}</span>
-          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? (t.filled_by === 'teacher' ? '✅ 教师代填' : '✅ 已完成') : '⏳ 待完成'}</span>
+          <span class="badge-${t.status === 'done' ? 'off' : 'dim'}" style="margin-left:6px;">${t.status === 'done' ? (t.filled_by === 'teacher' ? '' + I['check-circle']() + ' 教师代填' : '' + I['check-circle']() + ' 已完成') : '' + I.hourglass() + ' 待完成'}</span>
         </div>
       </div>
       <div class="rule-actions">
@@ -2415,7 +2415,7 @@ async function loadPersonalTasks() {
     if (!wr.ok) { toast('代填失败，请重试'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('代填失败：' + (d.reason || '')); return; }
-    toast(`已代填，星光值+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''} ✅`);
+    toast(`已代填，星光值+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''}`);
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2425,7 +2425,7 @@ async function loadPersonalTasks() {
     const d2 = wr.res || {};
     if (d2.ok === false) { toast('删除失败：' + (d2.reason || '')); return; }
     const refund2 = Number(d2.refund_xp) || 0;
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund2 ? '已删除，回退星光值 ' + refund2 + 'xp' : '已删除'));
+    toast(wr.queued ? '已离线保存，联网后同步' : (refund2 ? '已删除，回退星光值 ' + refund2 + 'xp' : '已删除'));
     loadPersonalTasks();
   }));
   box.querySelectorAll('input[data-sel-ptask]').forEach(cb => cb.addEventListener('change', refreshPtaskSel));
@@ -2531,10 +2531,10 @@ document.getElementById('btnChallengeAssign')?.addEventListener('click', async (
       p_students: challengeState.students.map(n => ({ value: n }))
     }});
     if (!wr.ok) { toast('发布失败：请确认已执行 82 号 SQL（挑战任务 v2）'); return; }
-    if (wr.queued) { toast('已离线保存，联网后自动发布 ✅'); return; }
+    if (wr.queued) { toast('已离线保存，联网后自动发布'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('发布失败：' + (d.reason || '')); return; }
-    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''} ✅`);
+    toast(`已发布给 ${d.created} 名学生${d.skipped ? '（跳过重复 ' + d.skipped + '）' : ''}`);
     els.challengeTitle.value = '';
     await loadChallengeTasks();
   } catch (e) { toast('发布失败，请重试'); }
@@ -2599,9 +2599,9 @@ async function loadChallengeTasks() {
       <div class="rule-info">
         <div class="rule-title">${esc(t.task_date || '')}${String(t.task_date || '').slice(0,10) === today ? '<span class="badge-off" style="margin-left:6px;">今天</span>' : ''}
           <span class="badge-dim">${esc(t.student_name)}</span>
-          <span class="badge-tag">🏆 ${esc(t.title)}</span>
+          <span class="badge-tag">${I.trophy('ico-xs')} ${esc(t.title)}</span>
           <span class="badge-dim" style="margin-left:4px;">${DIM_LABEL[t.dim] || t.dim}</span>
-          <span class="badge-${allDone ? 'off' : 'dim'}" style="margin-left:6px;">${allDone ? `🏆 全部达成 ${doneArr.length}/${total} · 共+${gain}xp` : `进行中 ${doneArr.length}/${total} 档 · 已+${gain}xp`}</span>
+          <span class="badge-${allDone ? 'off' : 'dim'}" style="margin-left:6px;">${allDone ? `${I.trophy()} 全部达成 ${doneArr.length}/${total} · 共+${gain}xp` : `进行中 ${doneArr.length}/${total} 档 · 已+${gain}xp`}</span>
         </div>
       </div>
       <div class="rule-actions">
@@ -2640,7 +2640,7 @@ async function loadChallengeTasks() {
     const d3 = wr.res || {};
     if (d3.ok === false) { toast('删除失败：' + (d3.reason || '')); return; }
     const refund3 = Number(d3.refund_xp) || 0;
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : (refund3 ? '已删除，回退星光值 ' + refund3 + 'xp' : '已删除'));
+    toast(wr.queued ? '已离线保存，联网后同步' : (refund3 ? '已删除，回退星光值 ' + refund3 + 'xp' : '已删除'));
     loadChallengeTasks();
   }));
   box.querySelectorAll('input[data-sel-challenge]').forEach(cb => cb.addEventListener('change', refreshChallengeSel));
@@ -2677,7 +2677,7 @@ async function loadAutoRules() {
       <span class="rule-badge badge-dim">${DIM_ICON[r.dim] || ''} ${DIM_LABEL[r.dim] || '智'} +${r.xp_value}</span>
       <span class="rule-badge badge-tag">${r.trigger_type === 'no_tag' ? '当天没有' : '当天有'}「${esc((r.behavior_tags && r.behavior_tags.label) || '(标签已删除)')}」</span>
       <span class="rule-meta">⏰ ${fmtRange(r)} · ${fmtWeek(r.weekdays)}</span>
-      <span class="rule-meta">${r.is_active ? '🟢 生效中' : '⚪ 已停用'}</span>
+      <span class="rule-meta">${r.is_active ? '' + I['circle-dot']() + ' 生效中' : '' + I['circle-dot']() + ' 已停用'}</span>
       <div class="rule-actions">
         <button class="btn btn-ghost btn-sm rule-toggle">${r.is_active ? '停用' : '启用'}</button>
         <button class="btn btn-danger-ghost btn-sm rule-delete">删除</button>
@@ -2753,7 +2753,7 @@ async function onRecalcXp() {
       toast('重算失败：' + error.message);
       return;
     }
-    els.recalcResult.textContent = `✅ 完成，重放了 ${data && data.records_replayed} 条记录`;
+    els.recalcResult.textContent = `完成，重放了 ${data && data.records_replayed} 条记录`;
     toast('星光值已重算');
     loadStudents();
   } catch (e) {
@@ -2784,7 +2784,7 @@ async function scanXpAnomaly() {
     const rows = (data && data.rows) || [];
     if (hint) hint.textContent = '';
     if (!rows.length) {
-      box.innerHTML = '<div class="banner">✅ 全班当前星光值与流水应得一致，无异常差额。</div>';
+      box.innerHTML = '<div class="banner">' + I['check-circle']() + ' 全班当前星光值与流水应得一致，无异常差额。</div>';
       return;
     }
     const rowsHtml = rows.map(r => {
@@ -2910,7 +2910,7 @@ async function loadXpAnomalyZone() {
     const rows = (data && data.rows) || [];
     const cnt = (data && data.open_count) || 0;
     if (badge) badge.textContent = cnt ? cnt + ' 条待处理' : '无待处理';
-    if (!rows.length) { box.innerHTML = '<div class="banner">✅ 暂无自动上报的星光值异常。</div>'; return; }
+    if (!rows.length) { box.innerHTML = '<div class="banner">' + I['check-circle']() + ' 暂无自动上报的星光值异常。</div>'; return; }
     const rowsHtml = rows.map(r => {
       const d = r.detail || {};
       let extra = '';
@@ -3112,6 +3112,7 @@ function formatTime(ts) {
 let toastTimer;
 function toast(msg) {
   const t = document.getElementById('toast');
+  msg = String(msg == null ? '' : msg).replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/\s{2,}/g, ' ').trim();
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
@@ -3175,12 +3176,12 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
   if (editingTaskId) {
     const wr = await runWrite({ name: 'task_update', params: { id: editingTaskId, data: { class: cls, task_date: date, semester: semOf(date), task_type: type, title, detail, due_time: due } } });
     if (!wr.ok) { toast('保存失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '任务已更新');
+    toast(wr.queued ? '已离线保存，联网后同步' : '任务已更新');
     cancelTaskEdit();
   } else {
     const wr = await runWrite({ name: 'task_insert', params: { class: cls, task_date: date, semester: semOf(date), task_type: type, title, detail, due_time: due } });
     if (!wr.ok) { toast('发布失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后发布 ✅' : '任务已发布，学生端今天就能看到啦');
+    toast(wr.queued ? '已离线保存，联网后发布' : '任务已发布，学生端今天就能看到啦');
   }
   document.getElementById('taskTitle').value = '';
   document.getElementById('taskDetail').value = '';
@@ -3213,7 +3214,7 @@ function beginTaskEdit(t) {
   document.getElementById('taskDetail').value = t.detail || '';
   document.getElementById('taskDue').value = (t.due_time || '').slice(0, 10);
   const btn = document.querySelector('#taskForm button[type="submit"]');
-  if (btn) btn.textContent = '💾 保存修改';
+  if (btn) btn.textContent = '保存修改';
   const cancelBtn = document.getElementById('btnCancelTaskEdit');
   if (cancelBtn) cancelBtn.hidden = false;
   const note = document.querySelector('#taskForm .text-muted');
@@ -3223,7 +3224,7 @@ function beginTaskEdit(t) {
 
 document.getElementById('btnLoadReport')?.addEventListener('click', loadTaskReport);
 
-const TASK_TYPE_LABEL = { classwork: '🏫 课堂作业', homework: '🏠 家庭作业' };
+const TASK_TYPE_LABEL = { classwork: '' + I.school() + ' 课堂作业', homework: '' + I.home() + ' 家庭作业' };
 
 async function loadTaskReport() {
   const cls = document.getElementById('reportClass').value;
@@ -3315,7 +3316,7 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
   // 任务筛选条：当天多任务时显示（点任务只看它，点"全部"看所有）
   if (tasks.length > 1) {
     html += `<div class="report-filter">
-      <button type="button" class="rf-btn${reportTaskFilter === 'all' ? ' on' : ''}" data-rf="all">📋 全部任务（${tasks.length}）</button>
+      <button type="button" class="rf-btn${reportTaskFilter === 'all' ? ' on' : ''}" data-rf="all">${I.checklist('ico-sm')} 全部任务（${tasks.length}）</button>
       ${tasks.map(t => `<button type="button" class="rf-btn${reportTaskFilter === t.id ? ' on' : ''}" data-rf="${t.id}">${TASK_TYPE_LABEL[t.task_type] || t.task_type}·${esc(t.title)}</button>`).join('')}
     </div>`;
   }
@@ -3331,11 +3332,11 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
         <div>
           <span class="task-type-tag ${t.task_type}">${TASK_TYPE_LABEL[t.task_type] || t.task_type}</span>
           <b>${esc(t.title)}</b>
-          <button type="button" class="task-edit-btn" data-edit-id="${t.id}" data-title="${esc(t.title)}" data-detail="${esc(t.detail||'')}" data-type="${t.task_type}" data-date="${(t.task_date||'').slice(0,10)}" title="编辑">✏️</button>
-          <button type="button" class="task-del-btn" data-del="${t.id}" title="删除这条任务">🗑</button>
+          <button type="button" class="task-edit-btn" data-edit-id="${t.id}" data-title="${esc(t.title)}" data-detail="${esc(t.detail||'')}" data-type="${t.task_type}" data-date="${(t.task_date||'').slice(0,10)}" title="编辑">${I.edit('ico-sm')}</button>
+          <button type="button" class="task-del-btn" data-del="${t.id}" title="删除这条任务">${I.trash('ico-sm')}</button>
           ${t.detail ? '<br><span class="text-muted">' + esc(t.detail) + '</span>' : ''}
         </div>
-        <div class="task-stats">⏳未完成 ${counts.none} · ✅完成 ${counts.done} · 👍优秀 ${counts.good} · 🏆完美 ${counts.perfect}</div>
+        <div class="task-stats">${I.hourglass('ico-xs')}未完成 ${counts.none} · ${I['check-circle']('ico-xs')}完成 ${counts.done} · ${I.thumb('ico-xs')}优秀 ${counts.good} · ${I.trophy('ico-xs')}完美 ${counts.perfect}</div>
       </div>
       <div class="task-stu-grid">`;
     allStudents.forEach(name => {
@@ -3370,7 +3371,7 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
       const grade = btn.dataset.grade;
       const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: student, p_task_id: taskId, p_grade: grade } });
       if (!wr.ok) { toast('保存失败，请重试'); return; }
-      toast(wr.queued ? student + ' 已离线保存，联网后同步 ✅' : student + ' 已评为：' + btn.textContent.trim());
+      toast(wr.queued ? student + ' 已离线保存，联网后同步' : student + ' 已评为：' + btn.textContent.trim());
       loadTaskReport();
     });
   });
@@ -3379,7 +3380,7 @@ function renderTaskReportData(tasks, allStudents, seatMap, cls, date) {
       if (!confirm('确定删除这条任务吗？学生已获得的星光值会保留。')) return;
       const wr = await runWrite({ name: 'task_delete', params: { p_task_id: btn.dataset.del } });
       if (!wr.ok) { toast('删除失败，请重试'); return; }
-      toast(wr.queued ? '已离线删除，联网后同步 ✅' : '已删除'); loadTaskReport();
+      toast(wr.queued ? '已离线删除，联网后同步' : '已删除'); loadTaskReport();
     });
   });
   box.querySelectorAll('[data-edit-id]').forEach(btn => {
@@ -3499,7 +3500,7 @@ function renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date) {
       const st = seatMap[name];
       const seatTag = st ? `<span class="task-stu-seat">${st.r + 1}排${st.c + 1}座</span>` : '';
       const mood = r && r.behavior && r.behavior.mood ? MOOD_MAP[r.behavior.mood] : null;
-      const moodTag = mood ? `<span class="tag-mood">${mood.emoji}</span>` : '';
+      const moodTag = mood ? `<span class="tag-mood">${I.mood(mood.lv)}</span>` : '';
       if (!items.length) {
         return `<div class="task-stu" style="border-left:3px solid #ddd;">
           <div class="task-stu-name">${esc(name)}${seatTag}</div>
@@ -3517,7 +3518,7 @@ function renderTagReportData(recs, tagMap, allStudents, seatMap, cls, date) {
         <div class="task-stu-name">${esc(name)}${seatTag}${moodTag}</div>
         <div style="padding:6px 0;">${chips || '<span class="text-muted">未填写</span>'}</div></div>`;
     }).join('') + `</div>
-    <div style="margin-top:12px;color:#c0392b;">❌ 未填写（${notFilled.length}）：${notFilled.map(n => `<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ') || '全部填写🎉'}</div>`;
+    <div style="margin-top:12px;color:#c0392b;">${I['x-circle']()} 未填写（${notFilled.length}）：${notFilled.map(n => `<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ') || '全部填写' + I.sparkle() + ''}</div>`;
 }
 
 document.getElementById('btnLoadTagReport')?.addEventListener('click', loadTagReport);
@@ -3582,7 +3583,7 @@ async function loadAwardTasks(cls) {
     .order('task_type');
   sel.innerHTML = '<option value="">请选择任务</option>' +
     ((tasks && tasks.length)
-      ? tasks.map(t => `<option value="${t.id}">${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('')
+      ? tasks.map(t => `<option value="${t.id}">${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${esc(t.title)}</option>`).join('')
       : '<option value="" disabled>当天没有任务</option>');
 }
 
@@ -3601,12 +3602,12 @@ async function runBatchTaskGrade() {
     });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
-    result.textContent = '✅ ' + (row && row.message ? row.message : '完成');
+    result.textContent = '' + (row && row.message ? row.message : '完成');
     toast('任务批量评分完成！');
   } catch (e) {
-    result.textContent = '❌ ' + (e.message || '失败');
+    result.textContent = '' + (e.message || '失败');
   } finally {
-    btn.disabled = false; btn.textContent = '🚀 批量给所选学生评等级';
+    btn.disabled = false; btn.textContent = '批量给所选学生评等级';
   }
 }
 
@@ -3699,12 +3700,12 @@ async function runBatchAward() {
       total += (row && row.ok_count) || 0;
       lastMsg = (row && row.message) || '';
     }
-    result.textContent = '✅ 共写入 ' + total + ' 条（' + lastMsg + '）';
+    result.textContent = '共写入 ' + total + ' 条（' + lastMsg + '）';
     toast('批量评价完成！');
   } catch (e) {
-    result.textContent = '❌ ' + (e.message || '失败');
+    result.textContent = '' + (e.message || '失败');
   } finally {
-    btn.disabled = false; btn.textContent = '🚀 一键批量评价';
+    btn.disabled = false; btn.textContent = '一键批量评价';
   }
 }
 
@@ -3760,7 +3761,7 @@ async function activateStatsTab() {
   const stuSel = document.getElementById('statsStudent');
   stuSel.innerHTML = '<option value="">全班汇总</option>' + (stu||[]).map(s=>`<option value="${esc(s.student_name)}">${esc(s.class)} · ${esc(s.student_name)}</option>`).join('');
   const { data: tasks } = await supabase.from('daily_task').select('id,title,task_date,task_type').order('task_date',{ascending:false}).limit(200);
-  document.getElementById('statsTask').innerHTML = '<option value="">不按任务</option>' + (tasks||[]).map(t=>`<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'🏠':'🏫'} ${esc(t.title)}</option>`).join('');
+  document.getElementById('statsTask').innerHTML = '<option value="">不按任务</option>' + (tasks||[]).map(t=>`<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${esc(t.title)}</option>`).join('');
   const { data: allTags } = await supabase.from('behavior_tags').select('id,label,options,category').eq('is_active',true);
   let opt = '<option value="">不按小项</option>';
   (allTags||[]).forEach(t => {
@@ -3813,13 +3814,13 @@ async function runStats() {
   // 单个学生历史时间线
   let timelineHtml = '';
   if (student) {
-    timelineHtml = '<h3 style="margin:14px 0 6px;">🕘 '+esc(student)+' 历史表现</h3>';
+    timelineHtml = '<h3 style="margin:14px 0 6px;">' + I.clock() + ' '+esc(student)+' 历史表现</h3>';
     const list = (recs||[]).slice(0,60);
     if (!list.length) timelineHtml += '<div class="text-muted">该时间段没有记录。</div>';
     list.forEach(r => {
       const items = ((r.behavior&&r.behavior.items)||[]).filter(it => it && typeof it === 'object').map(it =>
         `<span class="batch-chip" style="${it.category==='negative'?'background:#fde3e3;color:#c0392b;':''}">${esc(it.label)}</span>`).join(' ');
-      const comment = r.teacher_comment ? `<div style="color:#888;margin-top:4px;">💬 ${esc(r.teacher_comment)}</div>` : '';
+      const comment = r.teacher_comment ? `<div style="color:#888;margin-top:4px;">${I.message()} ${esc(r.teacher_comment)}</div>` : '';
       timelineHtml += `<div style="border-bottom:1px dashed #eee;padding:8px 0;">
         <b>${esc(r.record_date&&r.record_date.slice(0,10))}</b>
         <span style="margin-left:8px;">${items||'<span class="text-muted">无标签</span>'}</span>${comment}</div>`;
@@ -3839,9 +3840,9 @@ async function runStats() {
     const did = allStudents.filter(n=>doneMap[n]);
     const not = allStudents.filter(n=>!doneMap[n]);
     const gname = {none:'未完成',done:'完成',good:'优秀A',perfect:'完美A+'};
-    taskHtml = `<h3 style="margin-top:16px;">📋 任务完成情况</h3>
-      <div style="color:#27ae60;">✅ 已完成（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}${doneMap[n]&&doneMap[n]!=='done'?'·'+gname[doneMap[n]]:''}</span>`).join(' ')||'无人'}</div>
-      <div style="color:#c0392b;margin-top:8px;">❌ 未完成（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部完成🎉'}</div>`;
+    taskHtml = `<h3 style="margin-top:16px;">${I.checklist()} 任务完成情况</h3>
+      <div style="color:#27ae60;">${I['check-circle']()} 已完成（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}${doneMap[n]&&doneMap[n]!=='done'?'·'+gname[doneMap[n]]:''}</span>`).join(' ')||'无人'}</div>
+      <div style="color:#c0392b;margin-top:8px;">${I['x-circle']()} 未完成（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部完成' + I.sparkle() + ''}</div>`;
   }
 
   // 小项谁做到/没做到（如背了某课）
@@ -3858,9 +3859,9 @@ async function runStats() {
     });
     const did = allStudents.filter(n=>didSet.has(n));
     const not = allStudents.filter(n=>!didSet.has(n));
-    tagHtml = `<h3 style="margin-top:16px;">🏷️ 「${esc(val)}」达成情况</h3>
-      <div style="color:#27ae60;">✅ 已做到（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}</span>`).join(' ')||'无人'}</div>
-      <div style="color:#c0392b;margin-top:8px;">❌ 还没做到（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部做到🎉'}</div>`;
+    tagHtml = `<h3 style="margin-top:16px;">${I.tag()} 「${esc(val)}」达成情况</h3>
+      <div style="color:#27ae60;">${I['check-circle']()} 已做到（${did.length}）：${did.map(n=>`<span class="batch-pill">${esc(n)}</span>`).join(' ')||'无人'}</div>
+      <div style="color:#c0392b;margin-top:8px;">${I['x-circle']()} 还没做到（${not.length}）：${not.map(n=>`<span class="batch-pill" style="background:#fde3e3;">${esc(n)}</span>`).join(' ')||'全部做到' + I.sparkle() + ''}</div>`;
   }
 
   out.innerHTML = `
@@ -3872,7 +3873,7 @@ async function runStats() {
     </div>
     ${taskHtml}
     ${tagHtml}
-    <h3 style="margin-top:16px;">🏷️ 各标签次数</h3>
+    <h3 style="margin-top:16px;">${I.tag()} 各标签次数</h3>
     <table class="tbl" style="width:100%;border-collapse:collapse;">
       <tr style="text-align:left;"><th style="padding:6px;border-bottom:2px solid #eee;">标签</th><th>积极</th><th>消极</th><th>合计</th></tr>
       ${tagRows.map(([k,v])=>`<tr>
@@ -3881,12 +3882,12 @@ async function runStats() {
         <td style="color:#c0392b;">${v.neg}</td>
         <td><b>${v.pos+v.neg}</b></td></tr>`).join('') || '<tr><td colspan=4 class="text-muted">无数据</td></tr>'}
     </table>
-    <h3 style="margin-top:16px;">✅ 任务评级分布</h3>
+    <h3 style="margin-top:16px;">${I['check-circle']()} 任务评级分布</h3>
     <div style="display:flex;gap:14px;flex-wrap:wrap;">
       <span>⏳ 未完成：<b>${gradeCount.none}</b></span>
-      <span>✅ 完成：<b>${gradeCount.done}</b></span>
-      <span>👍 优秀A：<b style="color:#e67e22;">${gradeCount.good}</b></span>
-      <span>🏆 完美A+：<b style="color:#f1c40f;">${gradeCount.perfect}</b></span>
+      <span>${I['check-circle']('ico-xs')} 完成：<b>${gradeCount.done}</b></span>
+      <span>${I.thumb('ico-xs')} 优秀A：<b style="color:#e67e22;">${gradeCount.good}</b></span>
+      <span>${I.trophy('ico-xs')} 完美A+：<b style="color:#f1c40f;">${gradeCount.perfect}</b></span>
     </div>
     ${timelineHtml}`;
 }
@@ -3989,7 +3990,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const wr = await runWrite({ name: 'seat_save', params: { class: cls, rows } });
     if (!wr.ok) { toast('保存失败，请重试'); return; }
-    toast(wr.queued ? '已离线保存，联网后同步 ✅' : '座位已保存');
+    toast(wr.queued ? '已离线保存，联网后同步' : '座位已保存');
     if (!wr.queued) await window.Offline.set('seat_' + cls, {
       placed: Object.entries(seatState.placed).map(([k, name]) => { const [r, c] = k.split('_').map(Number); return { r, c, name }; }),
       names: seatAllNames
@@ -4026,7 +4027,7 @@ document.getElementById('btnPtaskDelBatch')?.addEventListener('click', async () 
     const refund = Number(d.refund_xp) || 0;
     const del = Number(d.deleted) || 0;
     const fail = Number(d.failed) || 0;
-    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''}`);
     loadPersonalTasks();
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
@@ -4060,7 +4061,7 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
     const refund = Number(d.refund_xp) || 0;
     const del = Number(d.deleted) || 0;
     const fail = Number(d.failed) || 0;
-    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''} ✅`);
+    toast(`已删除 ${del} 条${refund ? '，回退星光值 ' + refund + 'xp' : ''}${fail ? '（失败 ' + fail + ' 条）' : ''}`);
     loadChallengeTasks();
   } catch (e) { toast('删除失败，请重试'); }
   finally { btn.disabled = false; }
@@ -4111,7 +4112,7 @@ async function loadStarProgress() {
       <div class="sp-bar"><i style="width:${pct}%"></i></div>
       <div class="sp-foot">
         <span>${d.next_need ? `再 ${d.next_level_need} 点升 Lv.${(d.level || 1) + 1}` : '已达最高等级'}</span>
-        <span class="${d.chances ? 'sp-chance has' : 'sp-chance'}">🎡 可抽奖 ${d.chances || 0} 次</span>
+        <span class="${d.chances ? 'sp-chance has' : 'sp-chance'}">${I.wheel('ico-xs')} 可抽奖 ${d.chances || 0} 次</span>
       </div>
     </div>`;
   loadStarDraws();
@@ -4130,7 +4131,7 @@ async function loadStarDraws() {
   els.starDrawBox.innerHTML = `<table class="star-table"><thead><tr>
       <th>时间</th><th>升级</th><th>奖品</th><th>抽奖学生</th></tr></thead><tbody>` +
     rows.map(x => `<tr><td>${fmtTime(x.drawn_at)}</td><td>Lv.${x.level}</td>
-      <td>${x.icon || '🎁'} ${esc(x.name || '')}</td><td>${esc(x.student_name || '—')}</td></tr>`).join('') +
+      <td>${x.icon || '' + I.gift() + ''} ${esc(x.name || '')}</td><td>${esc(x.student_name || '—')}</td></tr>`).join('') +
     `</tbody></table>`;
 }
 
@@ -4147,7 +4148,7 @@ async function loadShopAdmin() {
     return;
   }
   els.shopItemSel.innerHTML = items.map(x =>
-    `<option value="${esc(x.item_key)}" data-price="${x.price}">${x.item_type === 'avatar' ? '👤' : '🖼️'} ${esc(x.name)} · ${x.price}</option>`).join('');
+    `<option value="${esc(x.item_key)}" data-price="${x.price}">${x.item_type === 'avatar' ? '${I.user()}' : '${I.image()}'} ${esc(x.name)} · ${x.price}</option>`).join('');
   syncShopPriceInput();
 }
 
@@ -4164,8 +4165,8 @@ async function saveShopPrice() {
   if (!Number.isFinite(price) || price < 0) return toast('价格需为不小于 0 的整数');
   const r = await supabase.from('shop_item').update({ price: Math.round(price), updated_at: new Date().toISOString() }).eq('item_key', key);
   if (r.error) return toast('保存失败：' + r.error.message);
-  if (els.shopAdminMsg) els.shopAdminMsg.textContent = `已更新价格：${key} → ${Math.round(price)} 星光值`;
-  toast('价格已更新 ✅');
+  if (els.shopAdminMsg) els.shopAdminMsg.textContent = `已更新价格：${key}  ${Math.round(price)} 星光值`;
+  toast('价格已更新');
   loadShopAdmin();
 }
 
@@ -4215,7 +4216,7 @@ async function showArchiveRecords(batchId, btn) {
 
 async function doArchiveAll() {
   const label = (els.archiveLabel && els.archiveLabel.value || '').trim();
-  const tip = `即将封存并重置全部学生数据：\n\n· 表现记录、任务、挑战、试卷、留言、成就、星光流水、抽奖记录 → 归档\n· 学生星光值、班级星光值 → 归零\n· 名单 / 头像 / 头像框 / 家长凭据 → 保留\n\n此操作不可撤销，确定继续吗？`;
+  const tip = `即将封存并重置全部学生数据：\n\n· 表现记录、任务、挑战、试卷、留言、成就、星光流水、抽奖记录  归档\n· 学生星光值、班级星光值  归零\n· 名单 / 头像 / 头像框 / 家长凭据  保留\n\n此操作不可撤销，确定继续吗？`;
   if (!confirm(tip)) return;
   if (!confirm('再次确认：现在执行封存与重置？')) return;
   if (els.btnArchive) els.btnArchive.disabled = true;
@@ -4225,9 +4226,9 @@ async function doArchiveAll() {
     const d = r.data || {};
     if (d.ok === false) { toast('封存失败：' + (d.reason || '')); return; }
     const st = d.stats || {};
-    els.archiveResult.innerHTML = `<div class="banner banner-info">✅ 已封存「${esc(d.label || '')}」：` +
+    els.archiveResult.innerHTML = `<div class="banner banner-info">${I['check-circle']()} 已封存「${esc(d.label || '')}」：` +
       Object.entries(st).filter(([k]) => k !== 'ok').map(([k, v]) => `${k} ${v} 条`).join('、') + `</div>`;
-    toast('封存完成，已开始新一轮统计 ✅');
+    toast('封存完成，已开始新一轮统计');
     await Promise.all([loadStarProgress(), loadArchiveBatches()]);
   } catch (e) {
     toast('封存失败，请检查网络');
@@ -4254,7 +4255,7 @@ if (els.btnStarAddXp) els.btnStarAddXp.addEventListener('click', async () => {
   if (!Number.isFinite(n) || n <= 0) return toast('请输入大于 0 的星光值');
   const r = await supabase.rpc('class_add_xp', { p_class: cls, p_amount: Math.round(n) });
   if (r.error) return toast('发放失败：' + r.error.message);
-  toast(`已为 ${cls} 发放 ${Math.round(n)} 班级星光值${r.data && r.data.gained_level ? `，升了 ${r.data.gained_level} 级 🎉` : ''}`);
+  toast(`已为 ${cls} 发放 ${Math.round(n)} 班级星光值${r.data && r.data.gained_level ? `，升了 ${r.data.gained_level} 级` : ''}`);
   if (els.starAddXp) els.starAddXp.value = '';
   loadStarProgress();
 });

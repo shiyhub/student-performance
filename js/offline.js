@@ -150,7 +150,7 @@
         if (window.StudentSync) window.StudentSync();
         if (window.ParentSync) window.ParentSync();
       });
-      const render = n => { b.textContent = '⏳ 待同步 ' + n; b.style.display = n > 0 ? 'block' : 'none'; };
+      const render = n => { b.textContent = '待同步 ' + n; b.style.display = n > 0 ? 'block' : 'none'; };
       this.onPending(render);
       return b;
     }
