@@ -1,5 +1,5 @@
 /* ========== 教师后台：信息密度更高，桌面/手机均可用 ========== */
-body { background: #f3f6f5; }
+body { background: linear-gradient(172deg, #f2f7ff 0%, #f6f3ff 46%, #eefcf8 100%); background-attachment: fixed; }
 
 /* 登录 */
 .login-wrap { max-width: 380px; margin: 64px auto 0; padding: 0 16px; }

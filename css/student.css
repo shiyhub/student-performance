@@ -5,7 +5,7 @@ body {
 }
 .s-header { text-align: center; padding: 12px 0 18px; }
 .s-mascot { font-size: 48px; line-height: 1.2; }
-.s-title { font-size: 25px; font-weight: 800; color: #e07a3f; margin-top: 2px; }
+.s-title { font-size: 25px; font-weight: 800; color: #ff7a59; margin-top: 2px; }
 .s-date { color: #8a9a92; font-size: 13px; margin-top: 2px; }
 
 /* 星级 */
@@ -134,11 +134,11 @@ body {
 /* ========== 班级头像墙 ========== */
 .wall-back {
   display: inline-flex; align-items: center; gap: 6px;
-  background: linear-gradient(180deg,#5cc892,#3da770);
+  background: linear-gradient(180deg,#2ed4c0,#0fa89a);
   border: none; border-radius: 999px;
   padding: 13px 28px; font-size: 18px; font-weight: 800;
   color: #fff; margin-bottom: 14px; cursor: pointer;
-  box-shadow: 0 4px 12px rgba(61,167,112,.35);
+  box-shadow: 0 6px 16px rgba(28,190,178,.32);
   transition: transform .12s;
 }
 .wall-back:hover { transform: translateY(-1px); }
@@ -546,7 +546,7 @@ body {
   position: fixed; left: 0; top: 50%; transform: translateY(-50%);
   width: 46px; height: 96px; padding: 0; margin: 0;
   border: none; border-radius: 0 18px 18px 0;
-  background: linear-gradient(180deg,#5cc892,#3da770);
+  background: linear-gradient(180deg,#2ed4c0,#0fa89a);
   color: #fff; cursor: pointer; z-index: 800;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 3px 4px 14px rgba(61,167,112,.4);
@@ -708,10 +708,10 @@ body {
 .class-progress { margin-top:14px; }
 .cp-row { display:flex; justify-content:space-between; font-size:14px; color:#666; margin:6px 0 4px; }
 .cp-row b { color:#e8821e; }
-.cp-bar { height:12px; background:#f0e6d6; border-radius:8px; overflow:hidden; }
-.cp-fill { height:100%; width:0; background:linear-gradient(90deg,#ffb347,#ff8c42); border-radius:8px; transition:width .6s; }
-.cp-bar.green { background:#dfeee2; }
-.cp-fill.green { background:linear-gradient(90deg,#7bc98a,#3aa655); }
+.cp-bar { height:12px; background:#eaeffa; border-radius:8px; overflow:hidden; }
+.cp-fill { height:100%; width:0; background:linear-gradient(90deg,#2ed4c0,#4f9dff 62%,#7c6cf0); border-radius:8px; transition:width .6s; box-shadow:0 0 10px rgba(79,157,255,.35); }
+.cp-bar.green { background:#e2f2ff; }
+.cp-fill.green { background:linear-gradient(90deg,#2ed4c0,#3f9dff); }
 .device-gate{position:fixed;inset:0;background:linear-gradient(160deg,#eaf6ec,#fdf3e3);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;}
 .gate-card{background:#fff;border-radius:20px;padding:26px;max-width:640px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.12);}
 .gate-students{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
@@ -741,10 +741,20 @@ body {
 .red-sub{background:#fff8f8;border:1px dashed #e8a0a0;border-radius:10px;padding:10px;}
 .s-header h1.s-title{color:#d23b3b;}
 @media (max-width:1000px){.diary3{flex-direction:column;}.diary-col.c1{flex:none;}}
-html,body{background:#eef3ee !important;}
-body{background:#eef3ee;}
-.student-view,.wall-view{background:#eef3ee;}
-.red-card{background:#fdfbf7;}
+/* ===== v173：清透背景（配色年轻化，替换原米灰底） ===== */
+html,body{background:linear-gradient(172deg,#f2f7ff 0%,#f6f3ff 46%,#eefcf8 100%) !important;background-attachment:fixed !important;}
+.student-view,.wall-view{background:transparent;}
+.red-card{background:#fff;}
+/* ===== v173：年轻化强调色（替换原莫兰迪配色） ===== */
+.red-card{background:#fffdfd;border:1.5px solid #eddcf9;}
+.red-title{color:#f2506e !important;}
+.red-sub{background:#fff5f8;border:1px dashed #ffc9d6;}
+.s-header h1.s-title{color:#ff7a59;}
+.tag-group-title.pos{color:#0ea891 !important;}
+.tag-group-title.neg{color:#ef6076 !important;}
+.tag-grid button{background:#fbfcff;border:1.5px solid #e6ecf8;}
+.tag-grid button.on{background:var(--primary-soft);border-color:var(--primary);}
+#btnSubmit{background:linear-gradient(135deg,#14c9b4,#4f9dff) !important;box-shadow:0 8px 22px rgba(35,180,190,.28) !important;}
 .diary-col{background:transparent;}
 .container{background:transparent;}
 #formView{max-width:none !important;width:100%;padding:16px 24px;}
@@ -776,18 +786,7 @@ body{background:#eef3ee;}
 #formView .diary-col.c3{flex:2 !important;}
 #formView #tagsCard,#formView #pastTaskCard,#formView #taskCard{width:100% !important;max-width:none !important;}
 #formView .tag-grid{grid-template-columns:repeat(3,1fr) !important;}
-/* ===== 莫兰迪护眼配色 ===== */
-html,body{background:#e8e6e1 !important;}
-.student-view,.wall-view{background:#e8e6e1;}
-.red-card{background:#f4f1ec;border:1.5px solid #b8a9a0;}
-.red-title{color:#a67b6e !important;}
-.red-sub{background:#efe9e2;border:1px dashed #c9b8ad;}
-.s-header h1.s-title{color:#9c6b5e;}
-.tag-group-title.pos{color:#7a9b76 !important;}
-.tag-group-title.neg{color:#b0857c !important;}
-.tag-grid button{background:#fbf9f5;border:1.5px solid #c9c2b8;}
-.tag-grid button.on{background:#c8d5c0;border-color:#8aa083;}
-#btnSubmit{background:#c9a08e !important;}
+/* ===== v173：护眼配色已并入上方年轻化方案，原莫兰迪色块移除 ===== */
 .s-header{padding:6px 0 4px;display:flex;align-items:center;gap:12px;}
 .s-header .s-mascot{flex:0 0 auto;}
 .s-header .s-title{margin:0;font-size:1.3em;}
@@ -1105,7 +1104,7 @@ html,body{background:#e8e6e1 !important;}
 /* ============================================================
    v105：成就徽章墙
    ============================================================ */
-.ach-count { font-size: 13px; font-weight: 700; color: #e07a3f; }
+.ach-count { font-size: 13px; font-weight: 700; color: #f2506e; }
 .ach-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
 .ach-item {
   text-align: center; padding: 8px 4px 7px; border-radius: 14px;
@@ -1230,10 +1229,11 @@ html,body{background:#e8e6e1 !important;}
 .identity-avatar-emoji.ap-breathe { position:relative; }
 
 /* ============ 天气联动主题（v21：跟随洞口县实时天气，仅背景/侧边/卡片微样式，布局不动） ============ */
-html[data-weather="sunny"]{ --wx-bg1:#fdf8ec; --wx-bg2:#fdf3dc; --wx-card:#fffdf7; --wx-shadow:0 4px 18px rgba(232,180,76,.20);  --wx-deco:#e9c878; }
-html[data-weather="cloudy"]{ --wx-bg1:#eef3f6; --wx-bg2:#e3eaf0; --wx-card:#fbfcfa; --wx-shadow:0 4px 14px rgba(120,136,148,.16); --wx-deco:#9fb2bd; }
-html[data-weather="rainy"]{ --wx-bg1:#eef3f7; --wx-bg2:#dde7ee; --wx-card:#f6fafd; --wx-shadow:0 8px 24px rgba(96,128,150,.16);  --wx-deco:#8fb0c4; }
-html[data-weather="snowy"]{ --wx-bg1:#f0f5f8; --wx-bg2:#dde6ee; --wx-card:#fcfdfc; --wx-shadow:0 4px 16px rgba(150,168,182,.16), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#b8cbd8; }
+/* v173：四套天气底色统一调成清透浅色，与年轻化配色一致 */
+html[data-weather="sunny"]{ --wx-bg1:#fffaf3; --wx-bg2:#eef6ff; --wx-card:#fffdf8; --wx-shadow:0 8px 24px rgba(226,178,84,.16);  --wx-deco:#f0c874; }
+html[data-weather="cloudy"]{ --wx-bg1:#f5f8fd; --wx-bg2:#e8effa; --wx-card:#fdfeff; --wx-shadow:0 8px 22px rgba(120,140,178,.13); --wx-deco:#a8bbd4; }
+html[data-weather="rainy"]{ --wx-bg1:#eff4fa; --wx-bg2:#dce8f4; --wx-card:#fbfdff; --wx-shadow:0 10px 26px rgba(96,128,166,.15); --wx-deco:#8fb0cc; }
+html[data-weather="snowy"]{ --wx-bg1:#f5f9ff; --wx-bg2:#e5eefa; --wx-card:#fdfeff; --wx-shadow:0 8px 22px rgba(150,172,200,.14), inset 0 1px 3px rgba(255,255,255,.7); --wx-deco:#b6cbe0; }
 
 html[data-weather] body{
   background:linear-gradient(180deg,var(--wx-bg1) 0%,var(--wx-bg2) 100%) !important;
@@ -1251,8 +1251,24 @@ html[data-weather] .card.wall-class-card{
 /* ===== 装饰层：粒子容器（JS 填充） ===== */
 .sky-deco{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;transition:opacity 1.2s ease}
 /* v3.0：雨/雪 Canvas 粒子（参考雪花粒子系统：发光光点/雨丝，卡片后方 z-index:1） */
-#wxCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
+/* v173：画布提到内容之上，雨雪才能盖住卡片被看见（pointer-events 保持穿透，不影响点击） */
+#wxCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:6}
 @media (prefers-reduced-motion: reduce){ #wxCanvas{display:none} }
+
+/* v173：雨 / 雪 的整体氛围层（很淡，只压一层空气感，不影响阅读） */
+html[data-weather="rainy"]::after,
+html[data-weather="snowy"]::after{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:5;
+}
+html[data-weather="rainy"]::after{
+  background:
+    linear-gradient(180deg, rgba(92,122,160,.13) 0%, rgba(92,122,160,.05) 34%, rgba(92,122,160,0) 66%),
+    linear-gradient(0deg, rgba(110,140,175,.06) 0%, rgba(110,140,175,0) 40%);
+}
+html[data-weather="snowy"]::after{
+  background:
+    linear-gradient(180deg, rgba(178,203,232,.16) 0%, rgba(210,228,246,.06) 40%, rgba(255,255,255,0) 70%);
+}
 .star{position:absolute;top:-8px;border-radius:50%;background:#fff;opacity:0;
   box-shadow:0 0 6px 1px var(--wx-deco);animation:wxStarFloat linear infinite}
 @keyframes wxStarFloat{
@@ -1552,7 +1568,7 @@ html[data-weather] .wall-view{background:transparent}
 }
 
 /* ---------- 星光商店 ---------- */
-.shop-wallet-card { background: linear-gradient(135deg,#fff8e8,#ffeecd); text-align: center; }
+.shop-wallet-card { background: linear-gradient(135deg,#fff8e8,#ffeed6 52%,#f2ecff); text-align: center; }
 .shop-wallet-main { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
 .shop-wallet-icon { font-size: 22px; }
 .shop-wallet-main b { font-size: 34px; font-weight: 800; color: #d9821f; }
@@ -1564,7 +1580,7 @@ html[data-weather] .wall-view{background:transparent}
   flex: 1; padding: 10px 0; border-radius: 12px; font-size: 14px; font-weight: 700;
   background: #fff; color: #6b7c74; box-shadow: var(--shadow);
 }
-.shop-tab.active { background: var(--warn); color: #fff; box-shadow: 0 4px 12px rgba(239,154,62,.3); }
+.shop-tab.active { background: linear-gradient(135deg,#ffbe55,#ff8f45); color: #fff; box-shadow: 0 6px 16px rgba(255,138,69,.32); }
 
 .shop-groups { display: block; }
 .shop-group { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px; }
@@ -1586,10 +1602,10 @@ html[data-weather] .wall-view{background:transparent}
   width: 100%; padding: 5px 4px; border-radius: 999px; font-size: 12px; font-weight: 700;
   background: var(--primary-soft); color: var(--primary-d);
 }
-.shop-btn.buy { background: linear-gradient(135deg,#ffd97a,#f5b23c); color: #7a4d05; }
+.shop-btn.buy { background: linear-gradient(135deg,#ffd76b,#ffa726); color: #7a4d05; }
 .shop-btn.buy.poor { background: #f0f2f1; color: #9aa7a1; }
 .shop-btn.equipped { background: #eef3f1; color: #8a9a93; }
-.shop-btn.use { background: #e9f6f0; color: #2c7a4e; }
+.shop-btn.use { background: #e4fbf5; color: #0d8f7e; }
 .shop-tip { font-size: 12px; color: #93a29b; text-align: center; margin: 4px 0 8px; }
 
 /* v172：首次半价提示 / 划掉原价 / 日常卡 */
@@ -1699,7 +1715,7 @@ html[data-weather] .wall-view{background:transparent}
 }
 .of-btn:hover { border-color: #b9d6c7; }
 .of-btn.on {
-  background: linear-gradient(135deg,#5cc892,#3da770); border-color: #3da770;
+  background: linear-gradient(135deg,#2ed4c0,#3f9dff); border-color: #3da770;
   color: #fff; box-shadow: 0 3px 10px rgba(61,167,112,.25);
 }
 .of-btn:active { transform: scale(.97); }
@@ -1790,3 +1806,95 @@ html[data-weather] .wall-view{background:transparent}
   .avatar-shop-tip { font-size: 22px; padding: 14px 20px; border-radius: 18px; }
   .avatar-shop-go { font-size: 22px; }
 }
+
+/* ============================================================
+   v173 · 卡片主题（三套水彩羽毛角饰）
+   ------------------------------------------------------------
+   素材是「四角装饰 + 中央留白」的竖版整幅图。直接整幅铺进卡片，
+   卡片一窄就会把羽毛横向压扁。
+   所以只取图案最密的上下两条：顶部带 + 底部带，
+   宽度铺满、等比缩放（background-size:100% auto），图案不变形；
+   卡片中段保持干净，不压文字与头像。
+   ============================================================ */
+.card-theme {
+  position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; z-index: 0; overflow: hidden;
+}
+.card-theme i {
+  position: absolute; left: 0; width: 100%;
+  height: 46%;
+  background-image: var(--ct-img);
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  opacity: .88;
+}
+.card-theme .ct-top { top: 0;    background-position: center top; }
+.card-theme .ct-bot { bottom: 0; background-position: center bottom; }
+
+/* 三套主题：图片 + 底色 + 描边 + 强调色 */
+[data-ct="feather-moon"]   { --ct-img: url("../assets/themes/feather-moon.webp");
+  --ct-bg: linear-gradient(168deg, #fffdf5 0%, #f8f2ff 56%, #edf4ff 100%);
+  --ct-line: rgba(186, 164, 232, .5); --ct-accent: #8c6fd6; --ct-soft: #f3eeff; }
+[data-ct="feather-violet"] { --ct-img: url("../assets/themes/feather-violet.webp");
+  --ct-bg: linear-gradient(168deg, #fdfaff 0%, #f1eaff 52%, #e8f1ff 100%);
+  --ct-line: rgba(168, 140, 226, .5); --ct-accent: #7b5cc9; --ct-soft: #f4edff; }
+[data-ct="feather-night"]  { --ct-img: url("../assets/themes/feather-night.webp");
+  --ct-bg: linear-gradient(168deg, #f8f6ff 0%, #eae4fb 54%, #e5edfc 100%);
+  --ct-line: rgba(140, 124, 200, .5); --ct-accent: #6a58b8; --ct-soft: #ece7fb; }
+
+/* 个人主页身份卡 */
+#identityCard[data-ct],
+.red-card[data-ct] {
+  position: relative; overflow: hidden;
+  background: var(--ct-bg) !important;
+  border-color: var(--ct-line) !important;
+}
+#identityCard[data-ct] > *:not(.card-theme),
+.red-card[data-ct] > *:not(.card-theme) { position: relative; z-index: 1; }
+#identityCard[data-ct] { box-shadow: 0 8px 26px rgba(124, 104, 200, .16); }
+#identityCard[data-ct] .red-title { color: var(--ct-accent) !important; }
+
+/* 班级墙上的同学卡片：角饰放大取景，只做轻点缀 */
+.mate[data-ct] { overflow: hidden; border: 1px solid var(--ct-line); background: var(--ct-bg) !important; }
+/* 小卡：只留上下两条细带，作为轻边框点缀 */
+.mate[data-ct] .card-theme i { height: 30%; opacity: .55; }
+.mate[data-ct] .mate-avatar { z-index: 2; }
+.mate[data-ct] .mate-name { position: relative; z-index: 2; }
+.mate[data-ct] .mate-badge { z-index: 3; }
+.mate[data-ct] .rank-corner,
+.mate[data-ct] .rank-deco { z-index: 3; }
+html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
+
+/* 商店里的主题缩略图 */
+.shop-thumb.theme-thumb {
+  background: linear-gradient(160deg, #fffdf7, #f3ecff 60%, #eaf2ff);
+}
+.shop-thumb.theme-thumb img {
+  width: 122%; height: 122%; object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(122, 100, 190, .18));
+}
+.shop-item[data-ct-preview] { border-radius: 14px; }
+
+/* 主题商店：4 个分类时压缩内边距，避免文字换行 */
+.shop-tabs { gap: 6px; }
+.shop-tab { font-size: 13px; padding: 10px 2px; }
+.shop-thumb.theme-none { background: #f3f7fe; color: #a9b6cd; }
+
+/* ============ v173：标题与卡片细节的年轻化收尾 ============ */
+.s-header h1.s-title,
+.s-header .s-title {
+  background: linear-gradient(94deg, #ff8a4c 0%, #ff5f8f 52%, #7c6cf0 100%);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent !important;
+  letter-spacing: .5px;
+}
+/* 卡片更轻盈的投影，配合明亮底色 */
+.card, .mate, .shop-group { box-shadow: var(--shadow); }
+#wallView .wall-class-card { border-radius: 20px; }
+/* 顶部日期与说明文字提高一点可读性 */
+.s-date { color: #8493b0; }
+
+/* 紫羽流风：花纹集中在左上与右下，装饰带按这两角取景 */
+[data-ct="feather-violet"] .card-theme .ct-top { background-position: left top; }
+[data-ct="feather-violet"] .card-theme .ct-bot { background-position: right bottom; }
+[data-ct="feather-violet"] .card-theme i { height: 48%; opacity: 1; }

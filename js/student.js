@@ -265,6 +265,43 @@ const FRAMES = [
   /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
   { key: 'rosefeather', name: '白玫瑰黑羽', icon: '', need: '星光商店兑换' }
 ];
+/* ---------- v173：个人卡片主题（三套水彩羽毛角饰） ----------
+   与数据库 shop_item(item_type='theme') 的 item_key 一一对应；
+   更换主题走 RPC set_student_card_theme，佩戴信息存在 student_info.card_theme。 */
+const CARD_THEMES = [
+  { key: 'feather-moon',   name: '月羽星穹', file: 'feather-moon.webp',   desc: '奶金与淡紫' },
+  { key: 'feather-violet', name: '紫羽流风', file: 'feather-violet.webp', desc: '薰衣草紫' },
+  { key: 'feather-night',  name: '夜羽星尘', file: 'feather-night.webp',  desc: '雾蓝夜空' }
+];
+const CARD_THEME_BASE = 'assets/themes/';
+function cardThemeFile(key) {
+  const t = CARD_THEMES.find(x => x.key === key);
+  return t ? CARD_THEME_BASE + t.file : '';
+}
+function cardThemeName(key) {
+  const t = CARD_THEMES.find(x => x.key === key);
+  return t ? t.name : '';
+}
+// 卡片角饰层：上下各一条装饰带（等比缩放，不拉伸图案），中间保持干净
+function cardThemeHTML(key) {
+  if (!CARD_THEMES.some(x => x.key === key)) return '';
+  return `<div class="card-theme" aria-hidden="true" data-t="${key}"><i class="ct-top"></i><i class="ct-bot"></i></div>`;
+}
+// 给容器套用/清除主题（data-ct 驱动 CSS 变量）
+function applyCardTheme(el, key) {
+  if (!el) return;
+  const ok = key && CARD_THEMES.some(x => x.key === key);
+  if (!ok) {
+    el.removeAttribute('data-ct');
+    const old = el.querySelector(':scope > .card-theme');
+    if (old) old.remove();
+    return;
+  }
+  el.setAttribute('data-ct', key);
+  if (!el.querySelector(':scope > .card-theme')) {
+    el.insertAdjacentHTML('afterbegin', cardThemeHTML(key));
+  }
+}
 const XP_PER_POSITIVE = 2;
 
 /* ---------- v167：星光值体系（原「经验值」整体改为「星光值」） ---------- */
@@ -388,6 +425,8 @@ async function syncRunner(op) {
     if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
     if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
     if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error, data: r.data, error: r.error }; }
+    /* v173：卡片主题佩戴 */
+    if (op.name === 'set_student_card_theme') { const r = await supabase.rpc('set_student_card_theme', p); return { ok: !r.error, data: r.data, error: r.error }; }
     /* v152：挑战任务提交（82 号 SQL：confirm_challenge_levels，多档位数组） */
     if (op.name === 'confirm_challenge_levels') { const r = await supabase.rpc('confirm_challenge_levels', p); return { ok: !r.error, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
@@ -595,6 +634,8 @@ const state = {
   classProgress: null,    // 班级星光值/等级/抽奖机会
   wheelPrizes: [],        // 转盘奖项
   spinning: false,        // 转盘动画中
+  // v173：个人卡片主题（''/null = 未佩戴）
+  myCardTheme: null,
   // v167.4：换装扮时的「仅显示已拥有」筛选（记忆到本次会话，不落库）
   avatarOwnedOnly: false,
   frameOwnedOnly: false
@@ -1145,7 +1186,11 @@ function renderWall() {
     const rank = rankMap[s.student_name] || 0;   // v150：星光值榜名次（1-5）
     // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
     const rankDeco = (rank >= 1 && rank <= 3) ? `<span class="rank-deco deco-${rank}"></span>` : '';
-    html += `<button class="mate${rank ? ` rank-${rank}` : ''}" data-detail="${esc(s.student_name)}">
+    // v173：个人卡片主题（未购买则不渲染角饰层）
+    const ct = (s.card_theme && CARD_THEMES.some(t => t.key === s.card_theme)) ? s.card_theme : '';
+    const ctAttr = ct ? ` data-ct="${ct}"` : '';
+    html += `<button class="mate${rank ? ` rank-${rank}` : ''}"${ctAttr} data-detail="${esc(s.student_name)}">
+        ${ct ? cardThemeHTML(ct) : ''}
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
@@ -2330,6 +2375,18 @@ async function loadProfile() {
 
   state.profile = data;
   state.myFrame = data.frame || 'none';
+  // v173：卡片主题（独立轻量接口；失败时退回班级墙 roster 里的值）
+  let ctVal = null;
+  try {
+    const tr = await withTimeout(supabase.rpc('get_student_card_theme', { p_class: cls, p_student: name }), DATA_TIMEOUT);
+    if (!tr.error && tr.data && tr.data.ok !== false) ctVal = tr.data.card_theme || null;
+  } catch (e) { /* 忽略，走 roster 兜底 */ }
+  if (!ctVal) {
+    const r0 = currentRosterRow();
+    if (r0 && r0.card_theme) ctVal = r0.card_theme;
+  }
+  state.myCardTheme = (ctVal && CARD_THEMES.some(t => t.key === ctVal)) ? ctVal : null;
+  applyCardTheme(document.getElementById('identityCard'), state.myCardTheme);
 
   // 已解锁头像框集合（与服务端 set_student_frame 同口径，v135(RSK-12)：bronze/silver 改为累计天数）
   const achs = data.achievements || [];
@@ -2474,6 +2531,11 @@ function shopItemTile(it) {
     thumb = `<span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(it.item_key)}" alt="" loading="lazy"></span>`;
   } else if (it.item_type === 'daily') {
     thumb = `<span class="shop-thumb daily-thumb">${I.ticket('ico-2x')}</span>`;
+  } else if (it.item_type === 'theme') {
+    const f = cardThemeFile(it.item_key);
+    thumb = f
+      ? `<span class="shop-thumb theme-thumb"><img src="${f}" alt="" loading="lazy"></span>`
+      : `<span class="shop-thumb theme-thumb">${I.sparkle('ico-2x')}</span>`;
   } else {
     thumb = `<span class="shop-thumb frame-choice fc-${it.item_key}"><span class="fc-ring"></span></span>`;
   }
@@ -2523,6 +2585,19 @@ function renderShop() {
   });
 
   let html = state.firstDiscount ? '<div class="shop-promo">首次兑换半价</div>' : '';
+  // v173：主题分类置顶「不使用主题」，方便随时取下
+  if (state.shopTab === 'theme') {
+    html += `<section class="shop-group"><div class="shop-group-title">${I.sparkle()} 我的卡片主题</div>
+      <div class="shop-grid">
+        <div class="shop-item${state.myCardTheme ? '' : ' owned'}">
+          <span class="shop-thumb theme-thumb theme-none">${I['circle-dot']('ico-2x')}</span>
+          <div class="shop-name">不使用主题</div>
+          ${state.myCardTheme
+            ? `<button type="button" class="shop-btn use" data-use="theme:">取下</button>`
+            : `<span class="shop-btn equipped">当前</span>`}
+        </div>
+      </div></section>`;
+  }
   // 免费头像区（小动物 24 款，默认拥有）
   if (state.shopTab === 'avatar') {
     html += `<section class="shop-group"><div class="shop-group-title">${I.paw()} 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
@@ -2549,7 +2624,8 @@ function renderShop() {
   $$('[data-use]', els.shopGroups).forEach(b => b.addEventListener('click', () => {
     const [type, key] = b.dataset.use.split(':');
     if (type === 'avatar') doChooseAvatar(key);
-    else doChooseFrame(key);
+    else if (type === 'frame') doChooseFrame(key);
+    else if (type === 'theme') doChooseCardTheme(key);
   }));
 }
 
@@ -2660,6 +2736,30 @@ async function doChooseFrame(key) {
   await loadShopCatalog();
   if (els.shopView && !els.shopView.hidden) renderShop();
   toast(key === 'none' ? '已取下头像框' : '头像框戴好啦，真好看！');
+}
+
+/* v173：卡片主题佩戴（null = 取下） */
+async function doChooseCardTheme(key) {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return starHintNoIdentity();
+  const val = key || null;
+  const wr = await runWrite({ name: 'set_student_card_theme', params: { p_class: cls, p_student: name, p_card_theme: val } });
+  if (!wr.ok || (wr.res && wr.res.ok === false)) {
+    sfx.oops();
+    const reason = wr.res && wr.res.reason;
+    toast(reason === 'not_owned' ? '这个主题还没拥有' : '保存失败，请重试');
+    return;
+  }
+  sfx.pick();
+  state.myCardTheme = val;
+  const row = currentRosterRow();
+  if (row) row.card_theme = val;
+  applyCardTheme(document.getElementById('identityCard'), val);
+  persistWallCache(); renderWall();
+  await loadShopCatalog();
+  if (els.shopView && !els.shopView.hidden) renderShop();
+  toast(val ? `已换上「${cardThemeName(val)}」` : '已取下卡片主题');
 }
 
 /* ---------------- 班级转盘抽奖 ---------------- */
@@ -3622,9 +3722,16 @@ function escapeHtml(s) {
     return seg * i + (Math.random() - 0.5) * seg * (jitter || 1);
   }
 
-  /* ============ v3.0：雨/雪 Canvas 粒子引擎 ============
-     参考雪花粒子系统：球面随机发射 · 左右摆动飘落 · additive 叠加发光 ·
-     淡入淡出 · 密度按面积自适应 · DPR≤2 · reduced-motion 停用 */
+  /* ============ v173：雨 / 雪 Canvas 粒子引擎（重写） ============
+     上一版的问题：
+       1) 用 'lighter' 叠加 + 近白色描边，在浅色页面上几乎看不见；
+       2) 画布压在内容层之下，雨雪只能出现在页面空白处；
+       3) 雨丝过短且几乎无风，看起来像飘浮光点。
+     本版做法：
+       · source-over 正常混合，雨用深蓝灰、雪用"白心 + 淡蓝描边"，浅底可见；
+       · 雨丝按风向倾斜，三层景深（远细短淡 / 近粗长浓）；
+       · 雪花按瓣预渲染成离屏精灵，逐片缩放 + 旋转，避免每帧画矢量；
+       · 密度按视口面积自适应，DPR 上限 2，reduced-motion 停用。 */
   var wxCanvas = document.getElementById('wxCanvas');
   var wxCtx = wxCanvas ? wxCanvas.getContext('2d') : null;
   var wxParticles = [];
@@ -3634,14 +3741,72 @@ function escapeHtml(s) {
   var wxDPR = Math.min(window.devicePixelRatio || 1, 2);
   var wxW = 0, wxH = 0, wxMax = 400;
   var wxReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var wxSnowSprites = [];
+
   var WX_CFG = {
-    rain: { rate: 160, lifeMin: 1.0, lifeMax: 2.2, sizeMin: 3.0, sizeMax: 5.5,
-            vyMin: 520, vyMax: 840, vxMin: -30, vxMax: 30, swayAmp: 10, swayFreq: 1.4,
-            areaPer: 1200, lenK: 4 },
-    snow: { rate: 40, lifeMin: 8, lifeMax: 20, sizeMin: 2, sizeMax: 30,
-            vyMin: 40, vyMax: 75, vxMin: -25, vxMax: -8, swayAmp: 27, swayFreq: 0.9,
-            areaPer: 4800, lenK: 2.1 }
+    rain: {
+      areaPer: 3600, maxN: 480,
+      layers: [
+        { share: 0.50, w: 1.0, lenMin: 10, lenMax: 16, spdMin: 560,  spdMax: 720,  vx: 20, alpha: 0.30 },
+        { share: 0.34, w: 1.5, lenMin: 19, lenMax: 28, spdMin: 900,  spdMax: 1150, vx: 30, alpha: 0.42 },
+        { share: 0.16, w: 2.2, lenMin: 32, lenMax: 48, spdMin: 1350, spdMax: 1700, vx: 42, alpha: 0.55 }
+      ]
+    },
+    snow: {
+      areaPer: 5200, maxN: 340,
+      layers: [
+        { share: 0.50, rMin: 1.9, rMax: 3.0, spdMin: 22, spdMax: 38, sway: 9,  alpha: 0.62, spin: 0 },
+        { share: 0.34, rMin: 3.3, rMax: 5.2, spdMin: 40, spdMax: 62, sway: 16, alpha: 0.85, spin: 0.5 },
+        { share: 0.16, rMin: 6.2, rMax: 9.6, spdMin: 62, spdMax: 92, sway: 26, alpha: 1.0,  spin: 1.0 }
+      ]
+    }
   };
+  var WX_WIND = 26;           // 雪的横向漂移（px/s）
+  var WX_SNOW_R = [2.4, 4.6, 8.8];   // 三层雪花精灵的参考半径
+
+  /* 雪花精灵：白色光晕 + 淡蓝六瓣枝晶，浅色底上也能看清 */
+  function wxBuildSnowSprites() {
+    if (wxSnowSprites.length) return;
+    try {
+      if (!document.createElement('canvas').getContext) return;
+    } catch (e) { return; }
+    for (var k = 0; k < WX_SNOW_R.length; k++) {
+      var r = WX_SNOW_R[k];
+      var pad = Math.max(2.6, r * 0.5);
+      var size = Math.ceil((r + pad) * 2);
+      var cv = document.createElement('canvas');
+      cv.width = cv.height = Math.ceil(size * wxDPR);
+      var c = cv.getContext('2d');
+      c.scale(wxDPR, wxDPR);
+      var cx = size / 2, cy = size / 2;
+      var g = c.createRadialGradient(cx, cy, r * 0.1, cx, cy, r + pad);
+      g.addColorStop(0, 'rgba(255,255,255,.98)');
+      g.addColorStop(0.42, 'rgba(233,244,255,.60)');
+      g.addColorStop(1, 'rgba(198,220,244,0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(cx, cy, r + pad, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(130,168,214,.94)';
+      c.lineWidth = Math.max(0.7, r * 0.16);
+      c.lineCap = 'round';
+      for (var i = 0; i < 6; i++) {
+        var a = i * Math.PI / 3;
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(cx + Math.cos(a) * r * 0.84, cy + Math.sin(a) * r * 0.84);
+        c.stroke();
+        var bx = cx + Math.cos(a) * r * 0.5, by = cy + Math.sin(a) * r * 0.5;
+        c.beginPath();
+        c.moveTo(bx, by);
+        c.lineTo(bx + Math.cos(a + 0.85) * r * 0.3, by + Math.sin(a + 0.85) * r * 0.3);
+        c.moveTo(bx, by);
+        c.lineTo(bx + Math.cos(a - 0.85) * r * 0.3, by + Math.sin(a - 0.85) * r * 0.3);
+        c.stroke();
+      }
+      c.fillStyle = 'rgba(255,255,255,.9)';
+      c.beginPath(); c.arc(cx, cy, Math.max(0.6, r * 0.2), 0, Math.PI * 2); c.fill();
+      wxSnowSprites.push({ cv: cv, size: size, r0: r });
+    }
+  }
 
   function wxResize() {
     if (!wxCanvas || !wxCtx) return;
@@ -3652,74 +3817,100 @@ function escapeHtml(s) {
     wxCanvas.style.height = wxH + 'px';
     wxCtx.setTransform(wxDPR, 0, 0, wxDPR, 0, 0);
     var cfg = WX_CFG[wxMode];
-    wxMax = cfg ? Math.max(120, Math.min(900, Math.round((wxW * wxH) / cfg.areaPer))) : 400;
+    wxMax = cfg ? Math.max(60, Math.min(cfg.maxN, Math.round((wxW * wxH) / cfg.areaPer))) : 300;
+  }
+
+  /* 按 share 抽层：远层多、近层少，形成景深 */
+  function wxPickLayer(cfg) {
+    var rnd = Math.random(), acc = 0, li = 0;
+    for (var k = 0; k < cfg.layers.length; k++) {
+      acc += cfg.layers[k].share;
+      li = k;
+      if (rnd <= acc) break;
+    }
+    return li;
   }
 
   function wxSpawn(force) {
     var cfg = WX_CFG[wxMode];
     if (!cfg || wxParticles.length >= wxMax) return;
+    var li = wxPickLayer(cfg);
+    var L = cfg.layers[li];
     var p = {
-      x: Math.random() * wxW * 1.12 - wxW * 0.06,
-      y: force ? Math.random() * wxH * 0.5 : -20 - Math.random() * wxH * 0.06,
-      life: 0,
-      maxLife: (cfg.lifeMin + Math.random() * (cfg.lifeMax - cfg.lifeMin)) * 60,
-      size: cfg.sizeMin + Math.random() * (cfg.sizeMax - cfg.sizeMin),
-      vx: cfg.vxMin + Math.random() * (cfg.vxMax - cfg.vxMin),
-      vy: cfg.vyMin + Math.random() * (cfg.vyMax - cfg.vyMin),
-      swayAmp: cfg.swayAmp * (0.6 + Math.random() * 0.8),
-      swayFreq: cfg.swayFreq + Math.random() * 0.3,
+      l: li,
+      x: Math.random() * (wxW + 80) - 40,
+      y: force ? Math.random() * wxH : -34 - Math.random() * 40,
       phase: Math.random() * Math.PI * 2,
-      alpha: 0.7 + Math.random() * 0.3,
-      shade: Math.random()
+      alpha: L.alpha * (0.82 + Math.random() * 0.36)
     };
+    if (wxMode === 'rain') {
+      p.len = L.lenMin + Math.random() * (L.lenMax - L.lenMin);
+      p.vy = L.spdMin + Math.random() * (L.spdMax - L.spdMin);
+      p.vx = L.vx;
+    } else {
+      p.r = L.rMin + Math.random() * (L.rMax - L.rMin);
+      p.vy = L.spdMin + Math.random() * (L.spdMax - L.spdMin);
+      p.vx = WX_WIND + (Math.random() - 0.5) * 16;
+      p.sway = L.sway * (0.7 + Math.random() * 0.7);
+      p.swayFreq = 0.4 + Math.random() * 0.7;
+      p.spin = L.spin ? (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 1.1) : 0;
+      p.rot = Math.random() * Math.PI * 2;
+    }
     wxParticles.push(p);
   }
 
-  function wxDraw(p, t) {
+  /* 生成速率：按"填满屏幕一次要多久"反推，避免开头空场或过密 */
+  function wxRate() {
     var cfg = WX_CFG[wxMode];
-    if (!cfg) return;
-    var fadeIn = Math.min(p.life / (0.1 * 60), 1);          // 0.1s 淡入
-    var fadeOut = Math.min((p.maxLife - p.life) / (0.12 * 60), 1);
-    var a = p.alpha * fadeIn * fadeOut;
-    if (a <= 0.01) return;
-    var sway = Math.sin(t * p.swayFreq + p.phase) * p.swayAmp;
-    var x = p.x + sway, y = p.y;
-    var r = p.size * (wxW / 1920);                          // 按视口缩放
-    if (r < 0.8) r = 0.8;
-    if (r > 26) r = 26;
-    if (wxMode === 'rain') {
-      // 雨点：发光光点 + 短雨痕（参考发光点风格，浅色底上保证可见）
-      var len = r * cfg.lenK;
-      var g = wxCtx.createLinearGradient(x, y - len, x, y);
-      g.addColorStop(0, 'rgba(196,226,248,0)');
-      g.addColorStop(1, 'rgba(216,238,252,' + (a * 0.8) + ')');
-      wxCtx.strokeStyle = g;
-      wxCtx.lineWidth = Math.max(1.2, r * 0.5);
+    if (!cfg) return 0;
+    var life = Math.max(0.9, wxH / (wxMode === 'rain' ? 950 : 52));
+    return wxMax / life;
+  }
+
+  function wxDrawRain(t) {
+    var cfg = WX_CFG.rain;
+    for (var li = 0; li < cfg.layers.length; li++) {
+      var L = cfg.layers[li];
+      var avgVy = (L.spdMin + L.spdMax) / 2;
+      wxCtx.strokeStyle = 'rgba(74,124,190,' + L.alpha + ')';
+      wxCtx.lineWidth = L.w;
       wxCtx.lineCap = 'round';
       wxCtx.beginPath();
-      wxCtx.moveTo(x, y - len); wxCtx.lineTo(x, y);
-      wxCtx.stroke();
-      var gg = wxCtx.createRadialGradient(x, y, 0, x, y, r * 4.2);
-      gg.addColorStop(0, 'rgba(234,246,254,' + a + ')');
-      gg.addColorStop(0.55, 'rgba(206,232,250,' + (a * 0.55) + ')');
-      gg.addColorStop(1, 'rgba(206,232,250,0)');
-      wxCtx.fillStyle = gg;
-      wxCtx.beginPath(); wxCtx.arc(x, y, r * 4.2, 0, Math.PI * 2); wxCtx.fill();
-    } else {
-      // 雪花：柔和发光光点（白→淡灰蓝，chromaticdot 风格）
-      var gg2 = wxCtx.createRadialGradient(x, y, 0, x, y, r * 2.1);
-      var t0 = 0.85 + p.shade * 0.15;
-      if (p.shade > 0.72) {
-        gg2.addColorStop(0, 'rgba(' + Math.round(232 + (1 - t0) * 23) + ',' + Math.round(247 + (1 - t0) * 8) + ',255,' + a + ')');
-        gg2.addColorStop(0.45, 'rgba(216,240,255,' + (a * 0.55) + ')');
-      } else {
-        gg2.addColorStop(0, 'rgba(255,255,255,' + a + ')');
-        gg2.addColorStop(0.45, 'rgba(236,246,252,' + (a * 0.5) + ')');
+      var drew = false;
+      for (var i = 0; i < wxParticles.length; i++) {
+        var p = wxParticles[i];
+        if (p.l !== li) continue;
+        var dx = (p.vx / avgVy) * p.len;   // 雨丝顺着风向倾斜
+        wxCtx.moveTo(p.x + dx, p.y - p.len);
+        wxCtx.lineTo(p.x, p.y);
+        drew = true;
       }
-      gg2.addColorStop(1, 'rgba(230,244,252,0)');
-      wxCtx.fillStyle = gg2;
-      wxCtx.beginPath(); wxCtx.arc(x, y, r * 2.1, 0, Math.PI * 2); wxCtx.fill();
+      if (drew) wxCtx.stroke();
     }
+  }
+
+  function wxDrawSnow(t) {
+    wxBuildSnowSprites();
+    for (var i = 0; i < wxParticles.length; i++) {
+      var p = wxParticles[i];
+      var sp = wxSnowSprites[p.l] || wxSnowSprites[0];
+      if (!sp) continue;
+      var k = p.r / sp.r0;
+      var sz = sp.size * k;
+      var sway = Math.sin(t * p.swayFreq + p.phase) * p.sway;
+      var x = p.x + sway, y = p.y;
+      wxCtx.globalAlpha = Math.min(1, p.alpha);
+      if (p.spin) {
+        wxCtx.save();
+        wxCtx.translate(x, y);
+        wxCtx.rotate(p.rot);
+        wxCtx.drawImage(sp.cv, -sz / 2, -sz / 2, sz, sz);
+        wxCtx.restore();
+      } else {
+        wxCtx.drawImage(sp.cv, x - sz / 2, y - sz / 2, sz, sz);
+      }
+    }
+    wxCtx.globalAlpha = 1;
   }
 
   function wxFrame(now) {
@@ -3729,24 +3920,29 @@ function escapeHtml(s) {
     wxLastT = now;
     var cfg = WX_CFG[wxMode];
     if (!cfg) return;
-    wxAcc += cfg.rate * dt;
+
+    wxAcc += wxRate() * dt;
     while (wxAcc >= 1) { wxSpawn(false); wxAcc -= 1; }
-    if (wxParticles.length < wxMax * 0.5 && Math.random() < 0.3) wxSpawn(false);
+
     wxCtx.clearRect(0, 0, wxW, wxH);
-    wxCtx.globalCompositeOperation = 'lighter';            // additive 叠加
     var t = now / 1000;
     var i = wxParticles.length;
     while (i--) {
       var p = wxParticles[i];
-      p.life += dt * 60;                       // 帧单位寿命
-      p.x += p.vx * dt;                        // vx/vy 为 px/秒
       p.y += p.vy * dt;
-      if (p.life >= p.maxLife || p.y > wxH + 60 || p.x < -160 || p.x > wxW + 160) {
-        wxParticles.splice(i, 1); continue;
+      if (wxMode === 'snow') {
+        p.x += (p.vx + Math.sin(t * p.swayFreq + p.phase) * p.sway) * dt;
+        p.rot += p.spin * dt;
+      } else {
+        p.x += p.vx * dt;
       }
-      wxDraw(p, t);
+      if (p.y > wxH + 50 || p.x < -140 || p.x > wxW + 140) {
+        wxParticles.splice(i, 1);
+      }
     }
-    wxCtx.globalCompositeOperation = 'source-over';
+
+    if (wxMode === 'rain') wxDrawRain(t);
+    else wxDrawSnow(t);
   }
 
   function wxStart(mode) {
@@ -3756,7 +3952,10 @@ function escapeHtml(s) {
     wxParticles = [];
     wxAcc = 0;
     wxResize();
-    for (var k = 0; k < Math.min(90, wxMax); k++) wxSpawn(true);
+    if (mode === 'snow') wxBuildSnowSprites();
+    // 首屏先铺 55%，剩下交给生成速率补齐，避免开场全空
+    var seed = Math.min(wxMax, Math.round(wxMax * 0.62));
+    for (var k = 0; k < seed; k++) wxSpawn(true);
     if (!wxRunning) {
       wxRunning = true;
       wxLastT = performance.now();
@@ -3775,7 +3974,7 @@ function escapeHtml(s) {
   window.addEventListener('resize', wxResize);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { wxRunning = false; }
-    else if (wxMode) { wxRunning = true; wxLastT = performance.now(); }
+    else if (wxMode) { wxRunning = true; wxLastT = performance.now(); wxRafId = requestAnimationFrame(wxFrame); }
   });
 
   function renderDeco(w) {

@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v83';
+const CACHE = 'sp-cache-v84';
 const ASSETS = [
   './',
   './index.html',
@@ -274,6 +274,9 @@ const ASSETS = [
   './assets/avatars/bunny-s.webp',
   './assets/avatars/gothic.webp',
   './assets/avatars/gothic-s.webp',
+  './assets/themes/feather-moon.webp',
+  './assets/themes/feather-violet.webp',
+  './assets/themes/feather-night.webp',
 ];
 
 /* v170：预缓存分层 + 限并发

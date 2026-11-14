@@ -1,26 +1,35 @@
 /* ========== 基础重置与设计变量 ========== */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 :root {
-  --ink: #26332e;
-  --ink-2: #5f746c;
-  --line: #e4ebe7;
-  --bg: #f5f8f6;
-  --primary: #2f9e84;
-  --primary-d: #237f6a;
-  --primary-soft: #e3f4ef;
-  --warn: #ef9a3e;
-  --warn-d: #d9821f;
-  --warn-soft: #fdf0dd;
-  --danger: #d95a53;
-  --danger-soft: #fdecea;
-  --radius: 16px;
-  --shadow: 0 4px 18px rgba(38, 51, 46, .07);
+  /* v173：整体配色年轻化——深靛蓝文字 + 明亮青绿主色 + 紫粉辅助 */
+  --ink: #1f2b46;
+  --ink-2: #66738f;
+  --line: #e6ecf8;
+  --bg: #f6f8ff;
+  --primary: #12b8a6;
+  --primary-d: #0e9c8d;
+  --primary-soft: #e1fbf6;
+  --warn: #ffab3d;
+  --warn-d: #f0910e;
+  --warn-soft: #fff5e3;
+  --danger: #ff6b81;
+  --danger-soft: #ffeff2;
+  /* 辅助色：紫 / 粉 / 蓝，供强调元素与渐变使用 */
+  --violet: #7c6cf0;
+  --violet-soft: #efecfe;
+  --pink: #ff7aa8;
+  --pink-soft: #ffeef4;
+  --sky: #4f9dff;
+  --sky-soft: #e8f2ff;
+  --radius: 18px;
+  --shadow: 0 6px 20px rgba(74, 99, 168, .09);
 }
 html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
                "Microsoft YaHei", "Segoe UI", sans-serif;
-  background: var(--bg);
+  background: linear-gradient(172deg, #f2f7ff 0%, #f6f3ff 46%, #eefcf8 100%);
+  background-attachment: fixed;
   color: var(--ink);
   line-height: 1.6;
   font-size: 16px;
@@ -63,7 +72,7 @@ textarea.input { resize: vertical; min-height: 72px; }
   transition: transform .08s, filter .15s, background .15s, border-color .15s;
 }
 .btn:active { transform: scale(.98); }
-.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary { background: linear-gradient(135deg, #14bda9 0%, #0d94cf 100%); color: #fff; }
 .btn-primary:hover { filter: brightness(1.05); }
 .btn-warn { background: var(--warn); color: #fff; }
 .btn-warn:hover { background: var(--warn-d); }
@@ -121,7 +130,7 @@ textarea.input { resize: vertical; min-height: 72px; }
 .field{margin-bottom:14px;}
 .grid,.filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
 .btn{width:auto;padding:12px 20px;font-weight:600;}
-.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary{background:linear-gradient(135deg,#14bda9 0%,#0d94cf 100%);color:#fff;}
 .btn-danger{background:var(--danger);color:#fff;}
 .btn-warn{background:var(--warn);color:#fff;}
 .btn-ghost{background:var(--primary-soft);color:var(--primary-d);}
