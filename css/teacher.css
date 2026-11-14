@@ -345,9 +345,35 @@ body { background: #f3f6f5; }
 }
 .batch-table .score-input:focus { outline: 2px solid #b9d8c6; border-color: #9cc7ae; }
 .batch-table .st-cell { width: 118px; font-size: 12.5px; }
+.batch-table .star-cell { width: 78px; color: #c68a1c; font-weight: 700; }
+.batch-table .star-cell.zero { color: #b9c4be; font-weight: 400; }
 .batch-table tr.matched .st-cell { color: #2e7d4f; }
 .batch-table tr.unmatched .st-cell { color: #b4761f; }
 .batch-table tr.unmatched { background: #fffdf6; }
+
+/* v116：星光加成倍数 / 家长可见 / Excel 异常清单 */
+.chk-line {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13.5px; color: #3f5749; padding: 9px 0; cursor: pointer;
+}
+.chk-line input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4e8a68; margin: 0; }
+.exam-star-preview {
+  font-size: 13px; color: #8a6a1e; background: #fffaf0;
+  border: 1px solid #f2e2bd; border-radius: 10px; padding: 8px 12px;
+}
+.exam-star-preview b { font-size: 15px; color: #c68a1c; }
+.batch-issues {
+  font-size: 12.5px; color: #9a6216; background: #fff7e8;
+  border: 1px solid #f0d8a8; border-radius: 10px; padding: 8px 10px; line-height: 1.6;
+  max-height: 168px; overflow: auto;
+}
+.batch-issues ul { margin: 4px 0 0; padding-left: 18px; }
+.batch-issues li { margin: 2px 0; }
+.badge-hidden {
+  display: inline-block; font-size: 11.5px; font-weight: 600; color: #8a6a1e;
+  background: #fff5dc; border: 1px solid #f0dcaa; border-radius: 6px;
+  padding: 1px 6px; margin-left: 6px;
+}
 .batch-unmatched {
   margin-top: 10px; font-size: 13px; color: #9a6216; background: #fff7e8;
   border: 1px solid #f0d8a8; border-radius: 10px; padding: 10px 12px; line-height: 1.6;
@@ -499,3 +525,121 @@ body { background: #f3f6f5; }
 
 /* v167：星光是新增标签页，允许换行避免溢出 */
 .tabs { flex-wrap: wrap; }
+
+/* ============ v171：设备检测 · 手机 / 电脑双布局 ============
+ * 判定由 js/device.js 完成，结果写到 <html data-device="pc|mobile">。
+ * 手机端沿用原「顶栏 + 横向标签栏」；电脑端改为「左侧菜单 + 右侧内容」。
+ * 两侧共用同一份 DOM，切换设备时不重建结构，只换排版。 */
+
+/* --- 公共 --- */
+.app-side { display: block; }
+.brand { min-width: 0; flex: 1 1 auto; }
+.topbar-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: 0 0 auto; }
+.topbar-actions .btn { margin-left: 0; }
+.side-foot { display: none; }
+.device-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.device-row .btn { margin-left: auto; }
+
+/* 标签栏已移出 .shell，需自行承担宽度与左右留白。
+ * 14 个入口在窄屏不可能一行放下，改为横向滑动，避免按钮被压成竖排文字。 */
+.tabs {
+  max-width: 1000px; margin: 0 auto; padding: 14px 16px;
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn { flex: 0 0 auto; white-space: nowrap; padding: 10px 14px; }
+.shell { padding-top: 0; }
+
+/* 概览与筛选条允许换行，窄屏不再顶出屏幕 */
+.overview-card { flex-wrap: wrap; gap: 12px 22px; }
+.filter-actions { flex-wrap: wrap; }
+
+@media (max-width: 520px) {
+  .topbar-inner { gap: 8px; padding: 10px 12px; }
+  .topbar-title { font-size: 15px; }
+  .btn-compact .btn-label { display: none; }
+  .btn-compact { padding: 6px 9px; }
+}
+
+/* --- 电脑端 --- */
+html[data-device="pc"] #appView {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
+}
+html[data-device="pc"] .app-side {
+  position: sticky; top: 0;
+  height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: 16px 12px 12px;
+  background: #fff;
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+html[data-device="pc"] .topbar {
+  position: static; z-index: auto;
+  background: transparent; border-bottom: none;
+  flex: 0 0 auto;
+}
+html[data-device="pc"] .topbar-inner {
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 10px; max-width: none; margin: 0; padding: 0;
+}
+html[data-device="pc"] .brand { padding: 0 4px; }
+html[data-device="pc"] .topbar-title { font-size: 15.5px; line-height: 1.35; }
+html[data-device="pc"] .topbar-email {
+  margin: 2px 0 0; font-size: 11.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-device="pc"] .topbar-actions { flex-direction: row; gap: 6px; margin: 0; }
+html[data-device="pc"] .topbar-actions .btn {
+  flex: 1 1 0; min-width: 0; margin-left: 0;
+  justify-content: center; gap: 4px;
+  padding: 6px; font-size: 12.5px;
+}
+html[data-device="pc"] .tabs {
+  flex-direction: column; flex-wrap: nowrap;
+  max-width: none; margin: 14px 0 0; padding: 0;
+  gap: 2px; flex: 1 1 auto; min-height: 0;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+html[data-device="pc"] .tab-btn {
+  flex: 0 0 auto; width: 100%;
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border: none; border-radius: 9px;
+  background: transparent; color: var(--ink-2);
+  font-size: 13.5px; font-weight: 600; text-align: left;
+  white-space: nowrap;
+}
+html[data-device="pc"] .tab-btn .ico { --ico-size: 1.1em; }
+html[data-device="pc"] .tab-btn:hover { background: #f1f7f4; color: var(--primary-d); }
+html[data-device="pc"] .tab-btn.active { background: var(--primary); color: #fff; }
+html[data-device="pc"] .side-foot {
+  display: block; flex: 0 0 auto;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+html[data-device="pc"] .side-device { width: 100%; }
+.side-device {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 9px;
+  background: #f2f7f5; color: var(--ink-2);
+  font-size: 12.5px; font-weight: 700;
+}
+.side-device:hover { background: var(--primary-soft); color: var(--primary-d); }
+.side-device .ico { --ico-size: 1.15em; }
+
+html[data-device="pc"] .shell {
+  min-width: 0; width: 100%;
+  max-width: 1320px; margin: 0 auto;
+  padding: 22px 30px 70px;
+}
+@media (min-width: 1800px) {
+  html[data-device="pc"] .shell { max-width: 1500px; }
+}
+/* 座位页已并入内容区，电脑端跟随内容宽度，不再单独收窄 */
+html[data-device="pc"] #tabSeat { max-width: none; }

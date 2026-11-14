@@ -206,6 +206,9 @@ const els = {
 
 /* ---------- v107：统一离线层辅助（老师端） ---------- */
 const isNetErr = e => !navigator.onLine || /fetch|network|Failed to fetch|NetworkError|Load failed|timeout/i.test((e && e.message) || '');
+/* 116 号脚本未执行时，RPC 不存在 → 退回旧的直插写法，保证功能不断档 */
+const isMissingRpc = e => /could not find the function|PGRST202|schema cache|function .* does not exist/i
+  .test(String((e && (e.message || e.details || e.hint)) || e || ''));
 async function cacheRead(key, fetcher) {
   if (!window.Offline || !window.Offline.online) {
     const v = await window.Offline.get(key);
@@ -243,19 +246,52 @@ async function syncRunner(op) {
       const { error: upErr } = await supabase.storage
         .from('exam-papers')
         .upload(fileName, imageBlob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
-      if (upErr) return { ok: false };
+      if (upErr) return { ok: false, error: upErr };
       const { data: pub } = supabase.storage.from('exam-papers').getPublicUrl(fileName);
       if (!pub || !pub.publicUrl) return { ok: false };
-      const r = await supabase.from('exam_paper').insert(Object.assign({ image_url: pub.publicUrl }, p));
-      return { ok: !r.error, error: r.error };
+      // v116：走 RPC，由服务端计算星光值并按「家长可见」落库
+      const r = await supabase.rpc('exam_paper_save', {
+        p_student_id: p.student_id || null,
+        p_class: p.class,
+        p_student_name: p.student_name,
+        p_record_date: p.record_date,
+        p_subject: p.subject || null,
+        p_score: (p.score === null || p.score === undefined || p.score === '') ? null : Number(p.score),
+        p_score_text: p.score_text || null,
+        p_note: p.note || null,
+        p_image_url: pub.publicUrl,
+        p_multiplier: p.multiplier == null ? 1 : Number(p.multiplier),
+        p_visible: p.visible !== false
+      });
+      if (r.error && isMissingRpc(r.error)) {
+        // 旧库未执行 116 号脚本：退回原直插（无星光加成、家长默认可见）
+        const ins = await supabase.from('exam_paper').insert({
+          image_url: pub.publicUrl,
+          student_id: p.student_id,
+          class: p.class,
+          student_name: p.student_name,
+          record_date: p.record_date,
+          subject: p.subject || null,
+          score: p.score,
+          score_text: p.score_text || null,
+          note: p.note || null
+        });
+        return { ok: !ins.error, data: { ok: !ins.error, fallback: true }, error: ins.error };
+      }
+      return { ok: !!(r.data && r.data.ok), data: r.data, error: r.error };
     }
     if (op.name === 'exam_delete') {
       if (p.path) { await supabase.storage.from('exam-papers').remove([p.path]); }
-      const r = await supabase.from('exam_paper').delete().eq('id', p.id);
-      return { ok: !r.error, error: r.error };
+      const r = await supabase.rpc('exam_paper_delete', { p_id: p.id });
+      if (r.error && isMissingRpc(r.error)) {
+        const del = await supabase.from('exam_paper').delete().eq('id', p.id);
+        return { ok: !del.error, data: { ok: !del.error, fallback: true }, error: del.error };
+      }
+      return { ok: !!(r.data && r.data.ok), data: r.data, error: r.error };
     }
     if (op.name === 'exam_batch_save') {
       // v153：成绩单批次 —— 可选成绩单原图上传 + exam_batch + exam_score
+      // v116：改走 RPC，服务端统一校验并发放星光值；旧库自动退回原直插
       let imageUrl = null;
       if (p.imageBlob && p.fileName) {
         const { error: upErr } = await supabase.storage
@@ -266,33 +302,52 @@ async function syncRunner(op) {
         if (!pub || !pub.publicUrl) return { ok: false };
         imageUrl = pub.publicUrl;
       }
-      const ins = await supabase.from('exam_batch').insert({
-        class: p.class,
-        exam_name: p.exam_name,
-        subject: p.subject || null,
-        exam_date: p.exam_date,
-        note: p.note || null,
-        image_url: imageUrl
-      }).select('id').single();
-      if (ins.error) return { ok: false, error: ins.error };
-      const batchId = ins.data && ins.data.id;
-      const rows = (p.rows || []).map(r => ({
-        batch_id: batchId,
-        student_id: r.student_id || null,
-        class: p.class,
-        student_name: r.student_name,
-        score: r.score
-      }));
-      if (rows.length) {
-        const sr = await supabase.from('exam_score').insert(rows);
-        if (sr.error) return { ok: false, error: sr.error };
+
+      const r = await supabase.rpc('exam_batch_save', {
+        p_class: p.class,
+        p_exam_name: p.exam_name,
+        p_subject: p.subject || null,
+        p_exam_date: p.exam_date,
+        p_note: p.note || null,
+        p_image_url: imageUrl,
+        p_multiplier: p.multiplier == null ? 1 : Number(p.multiplier),
+        p_visible: p.visible !== false,
+        p_rows: p.rows || []
+      });
+      if (r.error && isMissingRpc(r.error)) {
+        const ins = await supabase.from('exam_batch').insert({
+          class: p.class,
+          exam_name: p.exam_name,
+          subject: p.subject || null,
+          exam_date: p.exam_date,
+          note: p.note || null,
+          image_url: imageUrl
+        }).select('id').single();
+        if (ins.error) return { ok: false, error: ins.error };
+        const batchId = ins.data && ins.data.id;
+        const rows = (p.rows || []).map(rw => ({
+          batch_id: batchId,
+          student_id: rw.student_id || null,
+          class: p.class,
+          student_name: rw.student_name,
+          score: rw.score
+        }));
+        if (rows.length) {
+          const sr = await supabase.from('exam_score').insert(rows);
+          if (sr.error) return { ok: false, error: sr.error };
+        }
+        return { ok: true, data: { ok: true, fallback: true, batch_id: batchId } };
       }
-      return { ok: true, data: { batch_id: batchId } };
+      return { ok: !!(r.data && r.data.ok), data: r.data, error: r.error };
     }
     if (op.name === 'exam_batch_delete') {
       if (p.path) { await supabase.storage.from('exam-papers').remove([p.path]); }
-      const r = await supabase.from('exam_batch').delete().eq('id', p.id);
-      return { ok: !r.error, error: r.error };
+      const r = await supabase.rpc('exam_batch_delete', { p_id: p.id });
+      if (r.error && isMissingRpc(r.error)) {
+        const del = await supabase.from('exam_batch').delete().eq('id', p.id);
+        return { ok: !del.error, data: { ok: !del.error, fallback: true }, error: del.error };
+      }
+      return { ok: !!(r.data && r.data.ok), data: r.data, error: r.error };
     }
     if (op.name === 'seat_save') {
       const del = await supabase.from('seat_grid').delete().eq('class', p.class);
@@ -313,7 +368,8 @@ async function runWrite(op) {
     if (r.ok) return { ok: true, queued: false, res: r.data };
     // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
     if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
-    return { ok: false, queued: false };
+    // 业务失败也把服务端返回体带出去，调用方才能显示具体原因（如「已有同名考试」）
+    return { ok: false, queued: false, data: r.data };   // v116
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
     return { ok: false, queued: false };

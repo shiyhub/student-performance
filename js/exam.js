@@ -24,6 +24,9 @@
     examScore: $('#examScore'),
     examScoreText: $('#examScoreText'),
     examNote: $('#examNote'),
+    examMultiplier: $('#examMultiplier'),
+    examHideParent: $('#examHideParent'),
+    examStarPreview: $('#examStarPreview'),
     examOcrStatus: $('#examOcrStatus'),
     btnExamSave: $('#btnExamSave'),
     btnExamReset: $('#btnExamReset'),
@@ -38,6 +41,9 @@
     batchImgStatus: $('#ebImgStatus'),
     batchXlsx: $('#ebXlsx'),
     batchXlsxStatus: $('#ebXlsxStatus'),
+    batchXlsxIssues: $('#ebXlsxIssues'),
+    batchMultiplier: $('#ebMultiplier'),
+    batchHideParent: $('#ebHideParent'),
     btnBatchTpl: $('#btnEbTpl'),
     batchTableWrap: $('#ebTableWrap'),
     batchTableBody: $('#ebTableBody'),
@@ -98,6 +104,37 @@
     return String(Math.round(n * 10) / 10);
   }
 
+  /* ------------ v116：星光值加成 ------------ */
+  const STAR_MULTIPLIERS = [0.25, 0.5, 0.75, 1, 1.5, 2];
+  const MULT_LABEL = { 0.25: '0.25 倍', 0.5: '0.5 倍', 0.75: '0.75 倍', 1: '1 倍', 1.5: '1.5 倍', 2: '2 倍' };
+
+  function normMultiplier(v) {
+    const n = Number(v);
+    return STAR_MULTIPLIERS.indexOf(n) >= 0 ? n : 1;
+  }
+  /** 星光值口径：分数 ÷ 10 × 倍数，四舍五入取整（与 116 号脚本 star_from_score 一致） */
+  function starsFromScore(score, mult) {
+    if (score == null || String(score).trim() === '') return 0;
+    const n = Number(score);
+    if (!isFinite(n)) return 0;
+    return Math.max(0, Math.round((n / 10) * normMultiplier(mult)));
+  }
+  function batchMultiplier() { return normMultiplier(els.batchMultiplier ? els.batchMultiplier.value : 1); }
+  function isParentVisible(hideEl) { return !(hideEl && hideEl.checked); }
+  function setSaveLabel(btn, visible, idleText) {
+    if (!btn) return;
+    btn.textContent = visible ? idleText : '保存（不发送家长）';
+  }
+  function syncExamPreview() {
+    if (!els.examStarPreview) return;
+    const mult = normMultiplier(els.examMultiplier && els.examMultiplier.value);
+    const sc = sanitizeScore(els.examScore.value);
+    const stars = starsFromScore(sc, mult);
+    els.examStarPreview.innerHTML = sc === null
+      ? `星光值 +0 · ${MULT_LABEL[mult]}（填写分数后显示）`
+      : `星光值 <b>+${stars}</b> · ${sc} 分 ÷ 10 × ${MULT_LABEL[mult]}`;
+  }
+
   /* ------------ 标签页激活（首次加载名单） ------------ */
   async function activate() {
     if (state.ready) return;
@@ -108,6 +145,8 @@
     bindBatchEvents();
     await loadRoster();
     await Promise.all([loadPapers(), loadBatchList()]);
+    syncSaveLabels();
+    syncExamPreview();
   }
 
   function bindEvents() {
@@ -115,6 +154,15 @@
     els.examFile.addEventListener('change', onFilePicked);
     els.btnExamSave.addEventListener('click', onSave);
     els.btnExamReset.addEventListener('click', resetForm);
+    if (els.examMultiplier) els.examMultiplier.addEventListener('change', () => { syncExamPreview(); syncSaveLabels(); });
+    if (els.examScore) els.examScore.addEventListener('input', syncExamPreview);
+    if (els.examHideParent) els.examHideParent.addEventListener('change', syncSaveLabels);
+  }
+
+  /* 保存按钮文案随「不发送给家长」联动，避免老师点下去才发现发错 */
+  function syncSaveLabels() {
+    setSaveLabel(els.btnExamSave, isParentVisible(els.examHideParent), '保存并发送给家长');
+    setSaveLabel(els.btnBatchSave, isParentVisible(els.batchHideParent), '保存本次成绩并发送给家长');
   }
 
   async function loadRoster() {
@@ -259,6 +307,8 @@
     const note = els.examNote.value.trim();
     const scoreRaw = els.examScore.value.trim();
     const scoreText = els.examScoreText.value.trim();
+    const mult = normMultiplier(els.examMultiplier && els.examMultiplier.value);
+    const visible = isParentVisible(els.examHideParent);
 
     if (!cls || !studentId) { toast('请先选择班级和学生'); return; }
     if (!state.imageBlob) { toast('请先拍照或选择试卷图片'); return; }
@@ -285,11 +335,19 @@
         subject: subject || null,
         score,
         score_text: scoreText || null,
-        note: note || null
+        note: note || null,
+        multiplier: mult,
+        visible
       } });
-      if (!wr.ok) throw new Error('保存失败');
-
-      toast(wr.queued ? '已离线保存，联网后自动上传' : '已保存，家长可见');
+      if (!wr.ok) {
+        const code = wr.data && wr.data.message;
+        throw new Error(code || '保存失败');
+      }
+      const awarded = (wr.res && wr.res.awarded) || starsFromScore(score, mult);
+      const tip = visible ? '已保存，家长可见' : '已保存，不发送给家长';
+      toast(wr.queued
+        ? '已离线保存，联网后自动上传'
+        : (awarded > 0 ? `${tip} · 星光 +${awarded}` : tip));
       resetForm();
       await loadPapers();
     } catch (err) {
@@ -297,7 +355,7 @@
     } finally {
       state.saving = false;
       els.btnExamSave.disabled = false;
-      els.btnExamSave.textContent = '保存并发送给家长';
+      syncSaveLabels();
     }
   }
 
@@ -312,6 +370,10 @@
     els.examNote.value = '';
     els.examSubject.value = '';
     els.examDate.value = todayStr();
+    if (els.examMultiplier) els.examMultiplier.value = '1';
+    if (els.examHideParent) els.examHideParent.checked = false;
+    syncExamPreview();
+    syncSaveLabels();
     setOcrStatus('');
   }
 
@@ -343,13 +405,15 @@
       const score = (r.score !== null && r.score !== undefined && r.score !== '')
         ? parseFloat(Number(r.score).toFixed(1)) + ' 分'
         : (r.score_text || '成绩待补');
+      const hidden = r.visible_parent === false;
+      const stars = Number(r.star_awarded) || 0;
       return `<div class="exam-item" data-id="${esc(r.id)}">
         <a class="exam-thumb" href="${esc(r.image_url)}" target="_blank" rel="noopener">
           <img src="${esc(r.image_url)}" alt="试卷" loading="lazy">
         </a>
         <div class="exam-info">
-          <div class="exam-line1"><b>${esc(r.student_name)}</b><span>${esc(r.class)}</span></div>
-          <div class="exam-line2">${esc(r.record_date)} · ${esc(r.subject || '未填科目')} · <b class="exam-score">${esc(String(score))}</b></div>
+          <div class="exam-line1"><b>${esc(r.student_name)}</b><span>${esc(r.class)}</span>${hidden ? '<span class="badge-hidden">家长不可见</span>' : ''}</div>
+          <div class="exam-line2">${esc(r.record_date)} · ${esc(r.subject || '未填科目')} · <b class="exam-score">${esc(String(score))}</b>${stars ? ` · 星光 +${stars}` : ''}</div>
           ${r.note ? `<div class="exam-line3">${esc(r.note)}</div>` : ''}
         </div>
         <button type="button" class="btn btn-ghost btn-sm exam-del" data-del="${esc(r.id)}" data-url="${esc(r.image_url)}">${I.trash('ico-sm')} 删除</button>
@@ -362,7 +426,7 @@
   }
 
   async function onDelete(id, url) {
-    if (!window.confirm('删除这份试卷？家长端将不可见')) return;
+    if (!window.confirm('删除这份试卷？已发的星光值会一并扣回')) return;
     let path = null;
     if (url) {
       const m = String(url).match(/exam-papers\/([^?#]+)/);
@@ -371,7 +435,10 @@
     try {
       const wr = await runWrite({ name: 'exam_delete', params: { id, path } });
       if (!wr.ok) throw new Error('删除失败');
-      toast(wr.queued ? '已离线删除，联网后同步' : '试卷已删除');
+      const refund = (wr.res && wr.res.refund) || 0;
+      toast(wr.queued
+        ? '已离线删除，联网后同步'
+        : (refund ? `试卷已删除，扣回星光 ${refund}` : '试卷已删除'));
       await loadPapers();
     } catch (err) {
       toast('删除失败：' + ((err && err.message) || '请稍后再试'));
@@ -389,6 +456,8 @@
     els.batchXlsx.addEventListener('change', onXlsxPicked);
     els.batchImg.addEventListener('change', onBatchImagePicked);
     els.btnBatchSave.addEventListener('click', onBatchSave);
+    if (els.batchMultiplier) els.batchMultiplier.addEventListener('change', () => { renderBatchTable(); syncSaveLabels(); });
+    if (els.batchHideParent) els.batchHideParent.addEventListener('change', syncSaveLabels);
     els.btnBatchClear.addEventListener('click', () => {
       const cls = els.batchClass.value;
       state.batchRows = rosterOf(cls).map(s => ({ student_id: s.id, student_name: s.student_name, score: '' }));
@@ -398,6 +467,7 @@
       els.batchXlsx.value = '';
       setStatus(els.batchXlsxStatus, '');
       els.batchUnmatched.hidden = true;
+      clearXlsxIssues();
       renderBatchTable();
     });
   }
@@ -424,10 +494,12 @@
     els.batchTableBody.innerHTML = rows.map((r, i) => {
       const filled = String(r.score || '').trim() !== '';
       const srcTxt = filled ? (r.source === 'ocr' ? '识别填充' : r.source === 'excel' ? 'Excel 导入' : '手动填写') : '待填';
+      const stars = filled ? starsFromScore(sanitizeScore(r.score), batchMultiplier()) : 0;
       return `<tr data-name="${esc(r.student_name)}" class="${filled ? 'matched' : ''}">
         <td class="idx-col">${i + 1}</td>
         <td>${esc(r.student_name)}</td>
         <td class="score-cell"><input class="score-input" type="text" inputmode="decimal" maxlength="6" data-i="${i}" value="${esc(String(r.score || ''))}" placeholder="—"></td>
+        <td class="star-cell${stars ? '' : ' zero'}">${stars ? '+' + stars : '—'}</td>
         <td class="st-cell">${srcTxt}</td>
       </tr>`;
     }).join('');
@@ -442,6 +514,12 @@
           tr.classList.toggle('matched', filled);
           const st = tr.querySelector('.st-cell');
           if (st) st.textContent = filled ? '手动填写' : '待填';
+          const sc = tr.querySelector('.star-cell');
+          if (sc) {
+            const stars = filled ? starsFromScore(sanitizeScore(inp.value.trim()), batchMultiplier()) : 0;
+            sc.textContent = stars ? '+' + stars : '—';
+            sc.classList.toggle('zero', !stars);
+          }
         }
         updateBatchSummary();
       });
@@ -453,11 +531,22 @@
     if (!els.batchSummary) return;
     const total = state.batchRows.length;
     const filled = state.batchRows.filter(r => String(r.score || '').trim() !== '');
-    if (!filled.length) { els.batchSummary.textContent = `共 ${total} 人，尚未填写分数`; return; }
+    const mult = batchMultiplier();
+    if (!filled.length) {
+      els.batchSummary.textContent = `共 ${total} 人，尚未填写分数 · 星光 ${MULT_LABEL[mult]}`;
+      return;
+    }
     const nums = filled.map(r => Number(sanitizeScore(r.score))).filter(n => !isNaN(n));
+    if (!nums.length) {
+      els.batchSummary.textContent = `共 ${total} 人，已填 ${filled.length} 人，但分数都不合法 · 星光 ${MULT_LABEL[mult]}`;
+      return;
+    }
     const sum = nums.reduce((a, b) => a + b, 0);
-    const avg = nums.length ? sum / nums.length : 0;
-    els.batchSummary.textContent = `共 ${total} 人，已填 ${filled.length} 人 · 平均 ${fmtNum(avg)} · 最高 ${fmtNum(Math.max(...nums))} · 最低 ${fmtNum(Math.min(...nums))}`;
+    const avg = sum / nums.length;
+    const stars = filled.reduce((a, r) => a + starsFromScore(sanitizeScore(r.score), mult), 0);
+    els.batchSummary.textContent =
+      `共 ${total} 人，已填 ${filled.length} 人 · 平均 ${fmtNum(avg)} · 最高 ${fmtNum(Math.max(...nums))} · 最低 ${fmtNum(Math.min(...nums))}` +
+      ` · 星光合计 +${stars}（${MULT_LABEL[mult]}）`;
   }
 
   function applyImported(pairs, source) {
@@ -636,6 +725,21 @@
   async function onXlsxPicked(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    clearXlsxIssues();
+
+    // ① 文件格式：扩展名
+    const ext = ((String(file.name || '').match(/\.([A-Za-z0-9]+)$/) || [])[1] || '').toLowerCase();
+    if (!ext || ['xlsx', 'xls', 'csv'].indexOf(ext) < 0) {
+      setStatus(els.batchXlsxStatus, `不支持「${ext ? '.' + ext : '无扩展名'}」格式，只支持 .xlsx / .xls / .csv`);
+      e.target.value = '';
+      return;
+    }
+    // ② 文件大小：5 MB 上限（整班成绩单远小于此，超了基本是选错文件）
+    if (file.size > 5 * 1024 * 1024) {
+      setStatus(els.batchXlsxStatus, '文件超过 5 MB，请拆分后再导入');
+      e.target.value = '';
+      return;
+    }
     if (!window.XLSX) {
       const ok = await ensureXlsx();
       if (!ok || !window.XLSX) { xlsxMissingHint('status'); return; }
@@ -643,47 +747,116 @@
     setStatus(els.batchXlsxStatus, '正在读取表格…');
     const reader = new FileReader();
     reader.onload = () => {
+      let aoa;
       try {
         const wb = XLSX.read(reader.result, { type: 'array' });
+        if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('工作簿里没有任何工作表');
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        if (!sheet) throw new Error('表格为空');
-        const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
-        const pairs = parseSheetRows(aoa);
-        if (!pairs.length) {
-          setStatus(els.batchXlsxStatus, '无有效数据，需含「姓名」「分数」两列');
-          return;
-        }
-        const res = applyImported(pairs, 'excel');
-        setStatus(els.batchXlsxStatus,
-          `读取到 ${pairs.length} 行，成功填入 ${res.filled} 人` +
-          (res.unmatched.length ? `，${res.unmatched.length} 行姓名不在本班。请核对后保存。` : '。请核对后保存。'));
+        if (!sheet) throw new Error('第一个工作表是空的');
+        aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
       } catch (err) {
-        setStatus(els.batchXlsxStatus, 'Excel 解析失败：' + ((err && err.message) || '请检查文件格式'));
+        setStatus(els.batchXlsxStatus, '文件打不开：' + ((err && err.message) || '可能不是有效的 Excel 文件'));
+        return;
       }
+
+      if (!aoa || !aoa.length || !aoa.some(r => (r || []).some(v => String(v == null ? '' : v).trim() !== ''))) {
+        setStatus(els.batchXlsxStatus, '表格是空的，没有任何内容');
+        return;
+      }
+
+      const parsed = parseSheet(aoa);
+      if (parsed.fatal) {
+        setStatus(els.batchXlsxStatus, parsed.fatal);
+        showXlsxIssues(parsed.issues);
+        return;
+      }
+      if (!parsed.rows.length) {
+        setStatus(els.batchXlsxStatus, '没有可导入的分数：所有带分数的行都有问题，详见下方清单');
+        showXlsxIssues(parsed.issues);
+        return;
+      }
+
+      const res = applyImported(parsed.rows, 'excel');
+      showXlsxIssues(parsed.issues);
+      setStatus(els.batchXlsxStatus,
+        `读取到 ${parsed.rows.length} 行有分数，填入 ${res.filled} 人` +
+        (parsed.issues.length ? `，${parsed.issues.length} 处问题未导入（见下）。` : '。') +
+        '请逐行核对后保存。');
     };
     reader.onerror = () => setStatus(els.batchXlsxStatus, '文件读取失败，请重试');
     reader.readAsArrayBuffer(file);
   }
 
-  function parseSheetRows(aoa) {
-    const out = [];
-    let headerRow = -1, nameCol = 0, scoreCol = 1;
+  function clearXlsxIssues() {
+    if (!els.batchXlsxIssues) return;
+    els.batchXlsxIssues.hidden = true;
+    els.batchXlsxIssues.innerHTML = '';
+  }
+
+  function showXlsxIssues(issues) {
+    if (!els.batchXlsxIssues) return;
+    const list = issues || [];
+    if (!list.length) { clearXlsxIssues(); return; }
+    const MAX = 12;
+    const items = list.slice(0, MAX).map(x => `<li>${esc(x)}</li>`).join('');
+    const more = list.length > MAX ? `<li>另有 ${list.length - MAX} 处问题未列出</li>` : '';
+    els.batchXlsxIssues.innerHTML = `<b>发现 ${list.length} 处问题</b>，以下行已跳过，可手改或改表格重传：<ul>${items}${more}</ul>`;
+    els.batchXlsxIssues.hidden = false;
+  }
+
+  /**
+   * 解析并校验表格。返回 { rows, issues, fatal }
+   *   rows   可导入的 [{name, score}]（姓名在本班、分数合法、文件内不重复）
+   *   issues 逐条异常说明（含 Excel 行号），用于面板展示
+   *   fatal  整份文件不可用的原因（缺表头/缺列），此时不出行
+   */
+  function parseSheet(aoa) {
+    const issues = [];
+    let headerRow = -1, nameCol = -1, scoreCol = -1;
     for (let i = 0; i < Math.min(aoa.length, 10); i++) {
       const row = (aoa[i] || []).map(v => String(v == null ? '' : v).trim());
       const ni = row.findIndex(v => /姓名|名字|学生/.test(v));
       const si = row.findIndex(v => /分数|成绩|得分|分值/.test(v));
       if (ni >= 0 && si >= 0) { headerRow = i; nameCol = ni; scoreCol = si; break; }
     }
+    if (headerRow < 0) {
+      return { rows: [], issues, fatal: '没有找到表头：前 10 行需包含「姓名」和「分数」两列，请用下载的模板填写' };
+    }
+
+    const roster = new Set(rosterOf(els.batchClass ? els.batchClass.value : '').map(s => normalizeName(s.student_name)));
+    const seen = new Map();   // 规范化姓名 -> 首次出现的行号
+    const rows = [];
+
     for (let i = headerRow + 1; i < aoa.length; i++) {
       const row = aoa[i] || [];
       const name = String(row[nameCol] == null ? '' : row[nameCol]).trim();
       const raw = String(row[scoreCol] == null ? '' : row[scoreCol]).trim();
-      if (!name || !raw) continue;
-      const score = sanitizeScore(raw);
-      if (score === null) continue;
-      out.push({ name, score });
+      const line = i + 1;                       // Excel 里看到的行号
+      if (!name && !raw) continue;              // 整行空白：正常，静默跳过
+      if (!name) { issues.push(`第 ${line} 行：有分数「${raw}」但没有姓名，已跳过`); continue; }
+      if (!raw) continue;                       // 只有姓名没分数：缺考/未录入，静默跳过
+      if (!roster.has(normalizeName(name))) {
+        issues.push(`第 ${line} 行「${name}」：不在本班名单，已跳过`);
+        continue;
+      }
+      const key = normalizeName(name);
+      if (seen.has(key)) {
+        issues.push(`第 ${line} 行「${name}」：与本文件第 ${seen.get(key)} 行重复，已跳过`);
+        continue;
+      }
+      if (!/^-?\d+(?:\.\d+)?$/.test(raw)) {
+        issues.push(`第 ${line} 行「${name}」：分数「${raw}」不是数字，已跳过`);
+        continue;
+      }
+      const n = Number(raw);
+      if (!isFinite(n) || n < 0 || n > 150) {
+        issues.push(`第 ${line} 行「${name}」：分数「${raw}」超出 0~150，已跳过`);
+        continue;
+      }
+      seen.set(key, line);
+      rows.push({ name, score: String(Math.round(n * 10) / 10) });
     }
-    return out;
+    return { rows, issues, fatal: '' };
   }
 
   /* ---------- 保存批次 ---------- */
@@ -707,6 +880,8 @@
       student_name: r.student_name,
       score: Number(sanitizeScore(r.score))
     }));
+    const mult = batchMultiplier();
+    const visible = isParentVisible(els.batchHideParent);
 
     state.batchSaving = true;
     els.btnBatchSave.disabled = true;
@@ -722,10 +897,23 @@
         note: note || null,
         imageBlob,
         fileName,
+        multiplier: mult,
+        visible,
         rows: payloadRows
       } });
-      if (!wr.ok) throw new Error('保存失败');
-      toast(wr.queued ? '已离线保存，联网后自动同步' : `已保存「${examName}」，家长可在「成绩单」里看到`);
+      if (!wr.ok) throw new Error((wr.data && wr.data.message) || '保存失败');
+
+      const awarded = (wr.res && wr.res.awarded) || 0;
+      const people = (wr.res && wr.res.students) || rows.length;
+      if (wr.queued) {
+        toast('已离线保存，联网后自动同步');
+      } else if (wr.res && wr.res.fallback) {
+        toast('已保存，但未发放星光值：请先执行 116 号数据库脚本');
+      } else {
+        toast(`已保存「${examName}」` +
+          (visible ? '，家长可见' : '，不发送给家长') +
+          (awarded > 0 ? ` · ${people} 人共得星光 ${awarded}` : ''));
+      }
       resetBatchForm();
       await loadBatchList();
     } catch (err) {
@@ -733,7 +921,7 @@
     } finally {
       state.batchSaving = false;
       els.btnBatchSave.disabled = false;
-      els.btnBatchSave.textContent = '保存本次成绩并发送给家长';
+      syncSaveLabels();
     }
   }
 
@@ -749,6 +937,10 @@
     setStatus(els.batchXlsxStatus, '');
     els.batchUnmatched.hidden = true;
     els.batchUnmatched.innerHTML = '';
+    clearXlsxIssues();
+    if (els.batchMultiplier) els.batchMultiplier.value = '1';
+    if (els.batchHideParent) els.batchHideParent.checked = false;
+    syncSaveLabels();
     resetBatchTable();
   }
 
@@ -760,7 +952,7 @@
     try {
       const r = await supabase
         .from('exam_batch')
-        .select('id,class,exam_name,subject,exam_date,note,image_url,create_at,exam_score(student_name,score)')
+        .select('id,class,exam_name,subject,exam_date,note,image_url,create_at,star_multiplier,visible_parent,exam_score(student_name,score,star_awarded)')
         .order('exam_date', { ascending: false })
         .order('create_at', { ascending: false })
         .limit(100);
@@ -790,15 +982,22 @@
   function renderBatchList() {
     els.batchBox.innerHTML = state.batches.map(b => {
       const scores = (b.exam_score || []).map(s => Number(s.score)).filter(n => isFinite(n));
+      const stars = (b.exam_score || []).reduce((a, s) => a + (Number(s.star_awarded) || 0), 0);
       const avg = scores.length ? scores.reduce((a, c) => a + c, 0) / scores.length : 0;
       const open = !!state.batchDetailOpen[b.id];
+      const mult = Number(b.star_multiplier);
+      const multOk = STAR_MULTIPLIERS.indexOf(mult) >= 0;
+      const starTxt = (stars || (multOk && mult !== 1))
+        ? ` · 星光 ${stars}${multOk && mult !== 1 ? '（' + MULT_LABEL[mult] + '）' : ''}`
+        : '';
+      const hidden = b.visible_parent === false;
       const detail = open
-        ? `<div class="batch-item-note">${(b.exam_score || []).map(s => `${esc(s.student_name)} ${s.score == null ? '—' : fmtNum(s.score)}`).join('　｜　')}</div>`
+        ? `<div class="batch-item-note">${(b.exam_score || []).map(s => `${esc(s.student_name)} ${s.score == null ? '—' : fmtNum(s.score)}${Number(s.star_awarded) ? '(+' + Number(s.star_awarded) + ')' : ''}`).join('　｜　')}</div>`
         : '';
       return `<div class="batch-item" data-id="${esc(b.id)}">
         <div class="batch-item-info">
-          <div class="batch-item-title">${esc(b.exam_name)}<span>${esc(b.class)} · ${esc(b.exam_date || '')}${b.subject ? ' · ' + esc(b.subject) : ''}</span></div>
-          <div class="batch-item-sub">已录 ${scores.length} 人${scores.length ? ' · 平均 ' + fmtNum(avg) : ''}${b.image_url ? ' · <a href="' + esc(b.image_url) + '" target="_blank" rel="noopener">查看成绩单图</a>' : ''}</div>
+          <div class="batch-item-title">${esc(b.exam_name)}<span>${esc(b.class)} · ${esc(b.exam_date || '')}${b.subject ? ' · ' + esc(b.subject) : ''}</span>${hidden ? '<span class="badge-hidden">家长不可见</span>' : ''}</div>
+          <div class="batch-item-sub">已录 ${scores.length} 人${scores.length ? ' · 平均 ' + fmtNum(avg) : ''}${starTxt}${b.image_url ? ' · <a href="' + esc(b.image_url) + '" target="_blank" rel="noopener">查看成绩单图</a>' : ''}</div>
           ${b.note ? `<div class="batch-item-note">${esc(b.note)}</div>` : ''}
           ${detail}
         </div>
@@ -817,7 +1016,7 @@
   }
 
   async function onBatchDelete(id, url) {
-    if (!window.confirm('删除这次成绩单？所有分数一并删除')) return;
+    if (!window.confirm('删除这次成绩单？所有分数一并删除，已发的星光值会扣回')) return;
     let path = null;
     if (url) {
       const m = String(url).match(/exam-papers\/([^?#]+)/);
@@ -825,8 +1024,11 @@
     }
     try {
       const wr = await runWrite({ name: 'exam_batch_delete', params: { id, path } });
-      if (!wr.ok) throw new Error('删除失败');
-      toast(wr.queued ? '已离线删除，联网后同步' : '成绩单已删除');
+      if (!wr.ok) throw new Error((wr.data && wr.data.message) || '删除失败');
+      const refund = (wr.res && wr.res.refund) || 0;
+      toast(wr.queued
+        ? '已离线删除，联网后同步'
+        : (refund ? `成绩单已删除，扣回星光 ${refund}` : '成绩单已删除'));
       delete state.batchDetailOpen[id];
       await loadBatchList();
     } catch (err) {

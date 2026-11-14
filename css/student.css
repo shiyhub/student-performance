@@ -1721,6 +1721,40 @@ html[data-weather] .wall-view{background:transparent}
 @media (max-width: 719px)  { .shop-grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
 @media (max-width: 479px)  { .shop-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
+/* ---------- v116：任务区折叠 + 区内滚动 ----------
+   每块任务卡标题右侧一个折叠按钮（状态记在 localStorage）；
+   内容区默认显示约 5 行，超出在卡内滚动，整页不再被任务撑长。
+   行高由 JS 实测写入 --task-row-h，行数由 --task-rows 控制。 */
+.task-fold {
+  margin-left: auto; flex: 0 0 auto;
+  width: 30px; height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(210, 59, 59, .22); border-radius: 10px;
+  background: rgba(255, 255, 255, .78); color: #d23b3b; cursor: pointer;
+  transition: background .16s ease, transform .16s ease;
+}
+.task-fold:hover { background: #fff; }
+.task-fold:active { transform: scale(.94); }
+.task-fold .ico { width: 17px; height: 17px; }
+.task-scroll {
+  overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(210, 59, 59, .26) transparent;
+  max-height: calc(var(--task-rows, 5) * var(--task-row-h, 46px));
+}
+.task-scroll::-webkit-scrollbar { width: 8px; }
+.task-scroll::-webkit-scrollbar-track { background: transparent; }
+.task-scroll::-webkit-scrollbar-thumb {
+  background: rgba(210, 59, 59, .22); border-radius: 8px;
+}
+.task-scroll::-webkit-scrollbar-thumb:hover { background: rgba(210, 59, 59, .38); }
+.task-scroll > *:last-child { margin-bottom: 0 !important; }
+.task-folded .task-scroll { display: none; }
+.task-folded .card-title { margin-bottom: 0; }
+/* 滚动时标题与内容之间留一点余量，避免最后一行贴着边框 */
+.task-scroll.is-scrollable { padding-right: 4px; }
+
 /* ---------- 1080p 投影 / 一体机大屏 ---------- */
 @media (min-width: 1400px) {
   #shopView { max-width: 1380px; }

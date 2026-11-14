@@ -486,7 +486,7 @@ addEventListener('DOMContentLoaded', function () {
     <section id="tabExam" hidden>
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg> 上传试卷（拍照识别分数）</div>
-        <p class="text-muted" style="margin-bottom:10px;">可调起相机；自动识别分数，可手动改。<b>仅该生家长可见</b></p>
+        <p class="text-muted" style="margin-bottom:10px;">可调起相机；自动识别分数，可手动改。默认仅该生家长可见，勾选<b>不发送给家长</b>则仅教师端留存。</p>
         <div class="exam-form-grid">
           <div class="field">
             <label for="examClass">班级</label>
@@ -526,9 +526,27 @@ addEventListener('DOMContentLoaded', function () {
             <label for="examScoreText">分数原文（选填）</label>
             <input class="input" id="examScoreText" type="text" maxlength="20" placeholder="如：95分">
           </div>
+          <div class="field">
+            <label for="examMultiplier">星光加成倍数</label>
+            <select class="input" id="examMultiplier">
+              <option value="0.25">0.25 倍</option>
+              <option value="0.5">0.5 倍</option>
+              <option value="0.75">0.75 倍</option>
+              <option value="1" selected>1 倍</option>
+              <option value="1.5">1.5 倍</option>
+              <option value="2">2 倍</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>家长可见</label>
+            <label class="chk-line"><input type="checkbox" id="examHideParent"> 不发送给家长</label>
+          </div>
           <div class="field full">
             <label for="examNote">备注（选填）</label>
             <input class="input" id="examNote" type="text" maxlength="100" placeholder="如：第三单元测验">
+          </div>
+          <div class="field full">
+            <div class="exam-star-preview" id="examStarPreview">星光值 +0</div>
           </div>
         </div>
         <div id="examOcrStatus" class="text-muted exam-ocr-status"></div>
@@ -543,7 +561,7 @@ addEventListener('DOMContentLoaded', function () {
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 导入成绩单（整班批量）</div>
         <p class="text-muted" style="margin-bottom:10px;">
           输入考试名称（可附说明），再选一种导入方式：<b>上传成绩单（识别姓名和分数）</b>，或用
-          <b>Excel 模板</b>填写后导入，结果显示在下方<b>可逐行手动修改</b>；保存后该生家长可在「成绩单」里看到本次成绩。
+          <b>Excel 模板</b>填写后导入，结果显示在下方<b>可逐行手动修改</b>；保存后家长可在「成绩单」看到本次成绩，勾选<b>不发送给家长</b>则仅教师端留存。
         </p>
         <div class="exam-form-grid">
           <div class="field">
@@ -563,6 +581,21 @@ addEventListener('DOMContentLoaded', function () {
           <div class="field">
             <label for="ebDate">考试日期</label>
             <input class="input" id="ebDate" type="date">
+          </div>
+          <div class="field">
+            <label for="ebMultiplier">星光加成倍数</label>
+            <select class="input" id="ebMultiplier">
+              <option value="0.25">0.25 倍</option>
+              <option value="0.5">0.5 倍</option>
+              <option value="0.75">0.75 倍</option>
+              <option value="1" selected>1 倍</option>
+              <option value="1.5">1.5 倍</option>
+              <option value="2">2 倍</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>家长可见</label>
+            <label class="chk-line"><input type="checkbox" id="ebHideParent"> 不发送给家长</label>
           </div>
           <div class="field full">
             <label for="ebNote">说明（选填，家长可见）</label>
@@ -586,6 +619,7 @@ addEventListener('DOMContentLoaded', function () {
               <input class="input" id="ebXlsx" type="file" accept=".xlsx,.xls,.csv">
             </div>
             <div id="ebXlsxStatus" class="exam-ocr-status"></div>
+            <div id="ebXlsxIssues" class="batch-issues" hidden></div>
           </div>
         </div>
 
@@ -594,7 +628,7 @@ addEventListener('DOMContentLoaded', function () {
           <div class="batch-table-scroll">
             <table class="batch-table">
               <thead>
-                <tr><th>#</th><th>学生</th><th>分数</th><th>状态</th></tr>
+                <tr><th>#</th><th>学生</th><th>分数</th><th>星光值</th><th>状态</th></tr>
               </thead>
               <tbody id="ebTableBody"></tbody>
             </table>

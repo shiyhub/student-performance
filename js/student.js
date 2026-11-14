@@ -600,6 +600,111 @@ const state = {
   frameOwnedOnly: false
 };
 
+/* =====================================================================
+ * v116：任务区折叠 + 区内滚动
+ *   ① 每块任务卡标题右侧加折叠按钮，折叠状态记在 localStorage；
+ *   ② 内容区默认显示约 5 行（矮屏 4 行），超出在卡内滚动；
+ *   ③ 行高按实际渲染结果实测，字号/密度变化后自动重算。
+ * ===================================================================== */
+const TASK_FOLD_MAP = [
+  { card: 'pastTaskCard', body: 'pastTaskBody' },        // 往日任务
+  { card: 'taskCard', body: 'taskBody' },                // 今日任务（每日任务）
+  { card: 'reciteTaskCard', body: 'reciteTaskBody' },    // 背诵任务
+  { card: 'dictationTaskCard', body: 'dictationTaskBody' }, // 默写任务
+  { card: 'todayTaskCard', body: 'todayTaskBox' },       // 教师手动分配
+  { card: 'personalTaskCard', body: 'personalTaskBox' }, // 个人任务
+  { card: 'challengeTaskCard', body: 'challengeTaskBox' } // 挑战任务
+];
+const TASK_DEFAULT_ROWS = 5;
+
+function taskFoldStore() {
+  try { return JSON.parse(localStorage.getItem('spTaskFold') || '{}') || {}; } catch (e) { return {}; }
+}
+function saveTaskFold(id, folded) {
+  try {
+    const m = taskFoldStore();
+    m[id] = !!folded;
+    localStorage.setItem('spTaskFold', JSON.stringify(m));
+  } catch (e) {}
+}
+/** 显示行数：矮屏少一行，避免首屏被任务占满；卡片可用 data-rows 单独覆盖 */
+function visibleTaskRows() {
+  const h = window.innerHeight || 800;
+  return h < 720 ? 4 : TASK_DEFAULT_ROWS;
+}
+function measureTaskRowHeight(body) {
+  const kids = Array.from(body.children).filter(el => el.offsetHeight > 0);
+  if (!kids.length) return 0;
+  const hs = kids.slice(0, 6).map(el => {
+    const cs = window.getComputedStyle(el);
+    return el.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+  }).sort((a, b) => a - b);
+  return hs[Math.floor(hs.length / 2)] || 0;   // 中位数，避免首行是说明文字把高度带偏
+}
+function applyTaskFoldHeight(body) {
+  if (!body) return;
+  const rowH = measureTaskRowHeight(body);
+  if (!rowH) return;                            // 卡片还没显示，等可见后再量
+  const custom = parseInt(body.dataset.rows, 10);
+  const rows = custom > 0 ? custom : visibleTaskRows();
+  body.style.setProperty('--task-row-h', rowH + 'px');
+  body.style.setProperty('--task-rows', String(rows));
+  body.classList.toggle('is-scrollable', body.scrollHeight > rowH * rows + 2);
+}
+function initTaskFolds() {
+  const store = taskFoldStore();
+  TASK_FOLD_MAP.forEach(pair => {
+    const cardEl = document.getElementById(pair.card);
+    const bodyEl = document.getElementById(pair.body);
+    if (!cardEl || !bodyEl) return;
+    const title = cardEl.querySelector('.card-title');
+    if (!title || title.querySelector('.task-fold')) return;
+
+    bodyEl.classList.add('task-scroll');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'task-fold';
+    title.appendChild(btn);
+
+    function setFolded(folded) {
+      cardEl.classList.toggle('task-folded', folded);
+      btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+      btn.title = folded ? '展开' : '收起';
+      btn.innerHTML = folded ? I['chevron-down']() : I['chevron-up']();
+      if (!folded) applyTaskFoldHeight(bodyEl);
+    }
+    setFolded(!!store[pair.card]);
+
+    btn.addEventListener('click', () => {
+      const folded = !cardEl.classList.contains('task-folded');
+      setFolded(folded);
+      saveTaskFold(pair.card, folded);
+    });
+
+    applyTaskFoldHeight(bodyEl);
+
+    // 内容重渲染（任务条数变化）后重新量高度
+    if (window.MutationObserver) {
+      let timer = 0;
+      new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => applyTaskFoldHeight(bodyEl), 60);
+      }).observe(bodyEl, { childList: true });
+    }
+    // 卡片从隐藏变可见时补量一次（首屏本卡可能还在加载）
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => applyTaskFoldHeight(bodyEl)).observe(cardEl);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    TASK_FOLD_MAP.forEach(pair => {
+      const bodyEl = document.getElementById(pair.body);
+      if (bodyEl) applyTaskFoldHeight(bodyEl);
+    });
+  });
+}
+
 init();
 
 function init() {
@@ -608,6 +713,7 @@ function init() {
   renderStars();
   renderMoodPreview();
   bindEvents();
+  initTaskFolds();
   prefillIdentity();
   updateMood();
 
