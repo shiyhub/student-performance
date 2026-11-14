@@ -717,6 +717,7 @@ function renderDetailList(rows) {
     const merged = {
       id: g.rows[g.rows.length - 1].id,
       record_date: g.date,
+      self_evaluation: g.rows[g.rows.length - 1].self_evaluation,
       behavior: {
         mood: (g.rows[g.rows.length - 1].behavior || {}).mood,
         items: g.rows.flatMap(r => (r.behavior && Array.isArray(r.behavior.items)) ? r.behavior.items.filter(it => it && typeof it === 'object') : [])
@@ -817,7 +818,7 @@ function shortDate(ymd) {
 function renderRecordCard(r) {
   const starCount = Number(r.self_evaluation) || 0;
   const stars = starCount
-    ? ''.repeat(starCount) + ''.repeat(5 - starCount)
+    ? I.starRow(starCount)
     : '<span class="text-muted">本次未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 

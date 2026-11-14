@@ -19,6 +19,7 @@ addEventListener('DOMContentLoaded', function () {
 <link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/teacher.css">
 <script src="js/icons.js"></script>
+<script src="js/device.js"></script>
 </head>
 <body>
 
@@ -51,18 +52,20 @@ addEventListener('DOMContentLoaded', function () {
 
 <!-- ========== 后台主视图 ========== -->
 <div id="appView" hidden>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div>
-        <div class="topbar-title">在校表现 · 教师后台</div>
-        <div class="topbar-email" id="userEmail"></div>
+  <aside class="app-side" id="appSide">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="topbar-title">在校表现 · 教师后台</div>
+          <div class="topbar-email" id="userEmail"></div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm btn-compact" id="btnPrecache" title="下载全校数据到本机，断网可用"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg><span class="btn-label">预缓存数据</span></button>
+          <button class="btn btn-ghost btn-sm" id="btnLogout">退出登录</button>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="btnPrecache" title="下载全校数据到本机，断网可用"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 预缓存数据</button>
-      <button class="btn btn-ghost btn-sm" id="btnLogout">退出登录</button>
-    </div>
-  </header>
+    </header>
 
-  <main class="shell">
     <nav class="tabs">
       <button class="tab-btn active" data-tab="records"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-notebook"/></svg> 表现记录</button>
       <button class="tab-btn" data-tab="students"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-users"/></svg> 学生名单</button>
@@ -79,6 +82,16 @@ addEventListener('DOMContentLoaded', function () {
       <button class="tab-btn" data-tab="tools"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-beaker"/></svg> 测试工具</button>
       <button class="tab-btn" data-tab="seat"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排</button>
     </nav>
+
+    <div class="side-foot">
+      <button class="side-device" id="btnDevice" type="button" title="切换布局：自动 / 电脑 / 手机">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-monitor"/></svg>
+        <span id="deviceText">自动</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="shell">
 
     <!-- 今日概览 -->
     <div class="card overview-card" id="overviewCard">
@@ -657,6 +670,14 @@ addEventListener('DOMContentLoaded', function () {
       </div>
 
       <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ticket"/></svg> 今日免作业卡</div>
+        <div class="filter-actions" style="margin-bottom:10px;">
+          <button class="btn btn-ghost" id="btnCouponRefresh" type="button">刷新</button>
+        </div>
+        <div id="couponTodayBox"></div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-archive"/></svg> 数据封存与重置</div>
         <p class="text-muted" style="margin-bottom:10px;">把当前全部学生数据封存到归档表，随后统计归零。<b>保留名单与装扮，星光值归零。</b>不可撤销。</p>
         <div class="exam-form-grid">
@@ -720,6 +741,13 @@ addEventListener('DOMContentLoaded', function () {
 
     <!-- ===== 测试工具（不影响真实使用） ===== -->
     <section id="tabTools" hidden>
+      <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-monitor"/></svg> 当前设备</div>
+        <div class="device-row">
+          <span id="deviceInfo" class="text-muted">—</span>
+          <button class="btn btn-ghost btn-sm" id="btnDevice2" type="button">切换布局</button>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 星光值流水注入（星光记录功能）</div>
         <p class="text-muted" style="margin-bottom:10px;">把现有全部加分写入「星光记录」流水，可重复执行。</p>
@@ -959,6 +987,17 @@ addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="card" id="statsOut" style="margin-top:12px;"><div class="text-muted">选好条件后点「生成统计」</div></div>
     </section>
+    <section id="tabSeat" hidden>
+      <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排（6列×7排）</h2>
+      <p class="text-muted">拖动学生到座位，点座位可清空</p>
+      <div class="field-row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+        <label>班级</label><select class="input" id="seatClass" style="max-width:200px;"></select>
+        <button class="btn btn-primary" id="btnSeatSave" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-save"/></svg> 保存座位</button>
+      </div>
+      <div id="seatBoard" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:900px;"></div>
+      <h3 style="margin:16px 0 8px;">未安排学生（拖动到座位）</h3>
+      <div id="seatPool" style="display:flex;flex-wrap:wrap;gap:8px;max-width:900px;"></div>
+    </section>
   </main>
 </div>
 
@@ -1039,18 +1078,6 @@ addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
-
-<section id="tabSeat" hidden>
-  <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排（6列×7排）</h2>
-  <p class="text-muted">拖动学生到座位，点座位可清空</p>
-  <div class="field-row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-    <label>班级</label><select class="input" id="seatClass" style="max-width:200px;"></select>
-    <button class="btn btn-primary" id="btnSeatSave" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-save"/></svg> 保存座位</button>
-  </div>
-  <div id="seatBoard" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:900px;"></div>
-  <h3 style="margin:16px 0 8px;">未安排学生（拖动到座位）</h3>
-  <div id="seatPool" style="display:flex;flex-wrap:wrap;gap:8px;max-width:900px;"></div>
-</section>
 
 <div id="toast"></div>
 

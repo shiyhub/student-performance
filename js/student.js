@@ -591,6 +591,7 @@ const state = {
   owned: { avatar: new Set(), frame: new Set(['none']) },   // 已拥有（可佩戴）的装扮
   shopItems: [],          // 商店商品缓存
   shopTab: 'avatar',      // 商店当前分类
+  firstDiscount: false,   // 首次购买半价是否仍可用
   classProgress: null,    // 班级星光值/等级/抽奖机会
   wheelPrizes: [],        // 转盘奖项
   spinning: false,        // 转盘动画中
@@ -1210,7 +1211,7 @@ function renderRecordTimeline(rows) {
     g.rows.forEach(r => {
       const starCount = Number(r.self_evaluation) || 0;
       const stars = starCount
-        ? ''.repeat(starCount) + ''.repeat(5 - starCount)
+        ? I.starRow(starCount)
         : '<span class="text-muted" style="letter-spacing:0;">本次未打星</span>';
       const mood = MOOD_MAP[r.mood || (r.behavior && r.behavior.mood)];
 
@@ -1813,7 +1814,7 @@ function renderAvatarPicker() {
     const grid = document.createElement('div');
     grid.className = 'avatar-grid avatar-grid-img';
     items.forEach(it => grid.appendChild(
-      buildImgChoice(it.item_key, cur.key, it.owned || ownsItem('avatar', it.item_key), Number(it.price) || 0)));
+      buildImgChoice(it.item_key, cur.key, it.owned || ownsItem('avatar', it.item_key), shopPriceOf('avatar', it.item_key))));
     sec.appendChild(grid);
     els.avatarPicker.appendChild(sec);
   });
@@ -2301,7 +2302,9 @@ function ownsItem(type, key) {
 
 function shopPriceOf(type, key) {
   const it = (state.shopItems || []).find(x => x.item_type === type && x.item_key === key);
-  return it ? Number(it.price) || 0 : 0;
+  if (!it) return 0;
+  // 首次半价期间，选择器里显示的就是实际要扣的价，避免与商店不一致
+  return it.pay_price == null ? (Number(it.price) || 0) : Number(it.pay_price);
 }
 
 /* ---------------- 星光商店 ---------------- */
@@ -2341,29 +2344,51 @@ async function loadShopCatalog() {
     const r = await withTimeout(supabase.rpc('get_shop_catalog', { p_class: cls, p_student: name }), DATA_TIMEOUT);
     if (!r.error && r.data && r.data.ok !== false) {
       state.shopItems = r.data.items || [];
+      state.firstDiscount = !!r.data.first_discount;
       if (r.data.balance != null) state.wallet.balance = Number(r.data.balance) || 0;
     }
   } catch (e) { /* 保留旧缓存 */ }
+}
+
+/* 首次半价时，现价在前、原价划掉在后 */
+function priceHTML(price, pay) {
+  if (pay < price) return `<span class="shop-cut">${pay}<s>${price}</s></span>`;
+  return String(price);
 }
 
 function shopItemTile(it) {
   const owned = it.owned || ownsItem(it.item_type, it.item_key);
   const equipped = it.equipped;
   const price = Number(it.price) || 0;
-  const afford = state.wallet.balance >= price;
+  const pay = it.pay_price == null ? price : Number(it.pay_price);
+  const held = Number(it.held) || 0;
+  const afford = state.wallet.balance >= pay;
   let thumb;
   if (it.item_type === 'avatar') {
     thumb = `<span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(it.item_key)}" alt="" loading="lazy"></span>`;
+  } else if (it.item_type === 'daily') {
+    thumb = `<span class="shop-thumb daily-thumb">${I.ticket('ico-2x')}</span>`;
   } else {
     thumb = `<span class="shop-thumb frame-choice fc-${it.item_key}"><span class="fc-ring"></span></span>`;
   }
-  const btn = equipped
-    ? `<span class="shop-btn equipped">已佩戴</span>`
-    : owned
-      ? `<button type="button" class="shop-btn use" data-use="${it.item_type}:${it.item_key}">使用</button>`
-      : price === 0
+  let btn;
+  if (it.item_type === 'daily') {
+    // 日常卡可重复购买：持有中显示「使用」，下方始终保留购买按钮
+    btn = `<div class="shop-btn-row">` +
+      (held > 0 ? `<button type="button" class="shop-btn use" data-use-card="${it.item_key}">使用${held > 1 ? ` ${held}` : ''}</button>` : '') +
+      (price === 0
         ? `<button type="button" class="shop-btn use" data-buy="${it.item_key}">领取</button>`
-        : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">${I.star()} ${price}</button>`;
+        : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">${I.star()} ${priceHTML(price, pay)}</button>`) +
+      `</div>`;
+  } else {
+    btn = equipped
+      ? `<span class="shop-btn equipped">已佩戴</span>`
+      : owned
+        ? `<button type="button" class="shop-btn use" data-use="${it.item_type}:${it.item_key}">使用</button>`
+        : price === 0
+          ? `<button type="button" class="shop-btn use" data-buy="${it.item_key}">领取</button>`
+          : `<button type="button" class="shop-btn buy${afford ? '' : ' poor'}" data-buy="${it.item_key}">${I.star()} ${priceHTML(price, pay)}</button>`;
+  }
   return `<div class="shop-item${owned ? ' owned' : ''}">
       ${thumb}
       <div class="shop-name">${esc(it.name || it.item_key)}</div>
@@ -2391,7 +2416,7 @@ function renderShop() {
     box.items.push(it);
   });
 
-  let html = '';
+  let html = state.firstDiscount ? '<div class="shop-promo">首次兑换半价</div>' : '';
   // 免费头像区（小动物 24 款，默认拥有）
   if (state.shopTab === 'avatar') {
     html += `<section class="shop-group"><div class="shop-group-title">${I.paw()} 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
@@ -2414,6 +2439,7 @@ function renderShop() {
   els.shopGroups.innerHTML = html;
 
   $$('[data-buy]', els.shopGroups).forEach(b => b.addEventListener('click', () => buyShopItem(b.dataset.buy, b)));
+  $$('[data-use-card]', els.shopGroups).forEach(b => b.addEventListener('click', () => useDailyCard(b.dataset.useCard, b)));
   $$('[data-use]', els.shopGroups).forEach(b => b.addEventListener('click', () => {
     const [type, key] = b.dataset.use.split(':');
     if (type === 'avatar') doChooseAvatar(key);
@@ -2427,9 +2453,10 @@ async function buyShopItem(key, btn) {
   if (!cls || !name) return starHintNoIdentity();
   const it = (state.shopItems || []).find(x => x.item_key === key);
   if (!it) return;
-  if (state.wallet.balance < Number(it.price || 0)) {
+  const pay = it.pay_price == null ? Number(it.price || 0) : Number(it.pay_price);
+  if (state.wallet.balance < pay) {
     sfx.oops();
-    return toast(`还差 ${Number(it.price) - state.wallet.balance} 星光值`);
+    return toast(`还差 ${pay - state.wallet.balance} 星光值`);
   }
   if (btn) btn.disabled = true;
   try {
@@ -2453,6 +2480,36 @@ async function buyShopItem(key, btn) {
   } catch (e) {
     sfx.oops();
     toast('兑换失败，请检查网络后重试');
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* 日常卡（免作业卡等）：消耗 1 张，老师端当日可见 */
+async function useDailyCard(key, btn) {
+  const cls = (els.inpClass.value || '').trim();
+  const name = (els.inpName.value || '').trim();
+  if (!cls || !name) return starHintNoIdentity();
+  const it = (state.shopItems || []).find(x => x.item_key === key);
+  const label = it ? it.name : '这张卡';
+  if (!window.confirm(`使用 1 张${label}？`)) return;
+  if (btn) btn.disabled = true;
+  try {
+    const r = await supabase.rpc('use_coupon', { p_class: cls, p_student: name, p_item_key: key });
+    if (r.error) throw r.error;
+    const res = r.data || {};
+    if (!res.ok) {
+      sfx.oops();
+      toast(res.reason === 'not_owned' ? '没有可用的卡' : '使用失败，请稍后再试');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    sfx.success();
+    toast(`${label}已使用`);
+    await loadShopCatalog();
+    renderShop();
+  } catch (e) {
+    sfx.oops();
+    toast('使用失败，请检查网络后重试');
     if (btn) btn.disabled = false;
   }
 }

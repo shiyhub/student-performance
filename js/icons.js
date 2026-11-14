@@ -167,6 +167,7 @@
     volume: '<path d="M4.4 9.6h3.2L12 5.8v12.4l-4.4-3.8H4.4z"/><path d="M15.4 9.2a3.8 3.8 0 0 1 0 5.6"/><path d="M17.8 6.8a7 7 0 0 1 0 10.4"/>',
     'volume-off': '<path d="M4.4 9.6h3.2L12 5.8v12.4l-4.4-3.8H4.4z"/><path d="M15.6 9.8l4.8 4.8M20.4 9.8l-4.8 4.8"/>',
     phone: '<rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.6"/><path d="M10.4 18.4h3.2"/>',
+    monitor: '<rect x="2.6" y="3.6" width="18.8" height="12.8" rx="2.2"/><path d="M12 16.4v3.4"/><path d="M8.6 19.8h6.8"/>',
     'circle-dot': '<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/>',
     beaker: '<path d="M9.4 3.6h5.2"/><path d="M10.4 3.6v5.6L6.2 18a1.6 1.6 0 0 0 1.4 2.4h8.8a1.6 1.6 0 0 0 1.4-2.4l-4.2-8.8V3.6"/><path d="M7.8 14.6h8.4"/>',
     gamepad: '<rect x="2.8" y="7.6" width="18.4" height="9.6" rx="4.8"/><path d="M7.6 10.4v3.2M6 12h3.2"/><circle cx="16.2" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="18.2" cy="13" r="1.1" fill="currentColor" stroke="none"/>',
@@ -237,6 +238,16 @@
     var n = parseInt(i, 10) || 0;
     if (n >= 1 && n <= 3) return ico('medal', 'rk rk' + n);
     return '';
+  };
+  /* 自评星级：固定 5 颗，实心=已打，空心=未打。三端统一走这里，
+     不要再在模板里手拼 ★/☆ 或空字符串。 */
+  ico.starRow = function (n) {
+    var k = Math.min(5, Math.max(0, parseInt(n, 10) || 0));
+    var out = '';
+    for (var i = 1; i <= 5; i++) {
+      out += ico('star', i <= k ? 'sr sr-on' : 'sr sr-off');
+    }
+    return out;
   };
   ico.names = function () { return Object.keys(S); };
   ico.has = function (name) { return !!S[A[name] || name]; };

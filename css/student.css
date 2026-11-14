@@ -1592,6 +1592,18 @@ html[data-weather] .wall-view{background:transparent}
 .shop-btn.use { background: #e9f6f0; color: #2c7a4e; }
 .shop-tip { font-size: 12px; color: #93a29b; text-align: center; margin: 4px 0 8px; }
 
+/* v172：首次半价提示 / 划掉原价 / 日常卡 */
+.shop-promo {
+  background: linear-gradient(135deg, #fff1cf, #ffdca0);
+  border: 1px solid #f3cd7c; border-radius: 12px;
+  padding: 9px 12px; margin-bottom: 12px; text-align: center;
+  font-size: 13.5px; font-weight: 800; color: #8a5a10;
+}
+.shop-cut { display: inline-flex; align-items: baseline; gap: 6px; }
+.shop-cut s { font-size: 10px; font-weight: 600; opacity: .55; }
+.shop-btn-row { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.shop-thumb.daily-thumb { background: #fff6e4; color: #c98a1b; }
+
 /* 头像弹窗顶部提示 */
 .avatar-shop-tip {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

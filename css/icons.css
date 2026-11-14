@@ -41,6 +41,11 @@
 .ico-2x { --ico-size: 2.4em; }
 .ico-3x { --ico-size: 3.2em; }
 
+/* ---------- 自评星级：实心=已打，空心=未打 ---------- */
+.ico.sr { --ico-size: 1.05em; margin-right: 1.5px; }
+.ico.sr-on { fill: currentColor; }
+.ico.sr-off { opacity: .34; }
+
 /* ---------- 名次：同形不同色，保持造型语言统一 ---------- */
 .ico.rk { stroke-width: 1.6; }
 .ico.rk1 { color: var(--ico-gold); }

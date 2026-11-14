@@ -180,6 +180,8 @@ const els = {
   shopItemPrice: $('#shopItemPrice'),
   btnShopPriceSave: $('#btnShopPriceSave'),
   shopAdminMsg: $('#shopAdminMsg'),
+  couponTodayBox: $('#couponTodayBox'),
+  btnCouponRefresh: $('#btnCouponRefresh'),
   archiveLabel: $('#archiveLabel'),
   btnArchive: $('#btnArchive'),
   archiveResult: $('#archiveResult'),
@@ -1258,7 +1260,7 @@ function showRecError(msg) {
 function renderRecordCard(r) {
   const starCount = Number(r.self_evaluation) || 0;
   const stars = starCount
-    ? ''.repeat(starCount) + ''.repeat(5 - starCount)
+    ? I.starRow(starCount)
     : '<span style="color:#98a69f;font-weight:600;">未打星</span>';
   const mood = MOOD_MAP[r.behavior && r.behavior.mood];
 
@@ -3585,7 +3587,7 @@ async function loadAwardTasks(cls) {
     .order('task_type');
   sel.innerHTML = '<option value="">请选择任务</option>' +
     ((tasks && tasks.length)
-      ? tasks.map(t => `<option value="${t.id}">${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${esc(t.title)}</option>`).join('')
+      ? tasks.map(t => `<option value="${t.id}">${t.task_type==='homework'?'家庭作业':'课堂作业'} ${esc(t.title)}</option>`).join('')
       : '<option value="" disabled>当天没有任务</option>');
 }
 
@@ -3763,7 +3765,7 @@ async function activateStatsTab() {
   const stuSel = document.getElementById('statsStudent');
   stuSel.innerHTML = '<option value="">全班汇总</option>' + (stu||[]).map(s=>`<option value="${esc(s.student_name)}">${esc(s.class)} · ${esc(s.student_name)}</option>`).join('');
   const { data: tasks } = await supabase.from('daily_task').select('id,title,task_date,task_type').order('task_date',{ascending:false}).limit(200);
-  document.getElementById('statsTask').innerHTML = '<option value="">不按任务</option>' + (tasks||[]).map(t=>`<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'${I.home()}':'${I.school()}'} ${esc(t.title)}</option>`).join('');
+  document.getElementById('statsTask').innerHTML = '<option value="">不按任务</option>' + (tasks||[]).map(t=>`<option value="${t.id}">${(t.task_date||'').slice(0,10)} ${t.task_type==='homework'?'家庭作业':'课堂作业'} ${esc(t.title)}</option>`).join('');
   const { data: allTags } = await supabase.from('behavior_tags').select('id,label,options,category').eq('is_active',true);
   let opt = '<option value="">不按小项</option>';
   (allTags||[]).forEach(t => {
@@ -4074,7 +4076,7 @@ document.getElementById('btnChallengeDelBatch')?.addEventListener('click', async
    ============================================================ */
 async function activateStarTab() {
   await fillStarClasses();
-  await Promise.all([loadStarProgress(), loadShopAdmin(), loadArchiveBatches()]);
+  await Promise.all([loadStarProgress(), loadShopAdmin(), loadArchiveBatches(), loadTodayCoupons()]);
 }
 
 async function fillStarClasses() {
@@ -4149,9 +4151,27 @@ async function loadShopAdmin() {
     els.shopItemSel.innerHTML = '<option value="">暂无商品（请执行 110 号 SQL）</option>';
     return;
   }
+  const typeLabel = { avatar: '头像', frame: '头像框', daily: '日常' };
   els.shopItemSel.innerHTML = items.map(x =>
-    `<option value="${esc(x.item_key)}" data-price="${x.price}">${x.item_type === 'avatar' ? '${I.user()}' : '${I.image()}'} ${esc(x.name)} · ${x.price}</option>`).join('');
+    `<option value="${esc(x.item_key)}" data-price="${x.price}">${typeLabel[x.item_type] || '商品'} · ${esc(x.name)} · ${x.price}</option>`).join('');
   syncShopPriceInput();
+}
+
+/* v172：今日已使用的日常卡（免作业卡等），供老师核对 */
+async function loadTodayCoupons() {
+  if (!els.couponTodayBox) return;
+  const cls = els.starClass && els.starClass.value;
+  let rows = [];
+  try {
+    const r = await supabase.rpc('get_today_coupons', { p_class: cls || '' });
+    if (!r.error && r.data && Array.isArray(r.data.items)) rows = r.data.items;
+  } catch (e) {}
+  if (!rows.length) { els.couponTodayBox.innerHTML = '<div class="text-muted">今日暂无</div>'; return; }
+  els.couponTodayBox.innerHTML = `<table class="star-table"><thead><tr>
+      <th>时间</th><th>学生</th><th>卡片</th></tr></thead><tbody>` +
+    rows.map(x => `<tr><td>${fmtTime(x.used_at)}</td><td>${esc(x.student_name || '—')}</td>
+      <td>${esc(x.name || '')}</td></tr>`).join('') +
+    `</tbody></table>`;
 }
 
 function syncShopPriceInput() {
@@ -4263,4 +4283,5 @@ if (els.btnStarAddXp) els.btnStarAddXp.addEventListener('click', async () => {
 });
 if (els.shopItemSel) els.shopItemSel.addEventListener('change', syncShopPriceInput);
 if (els.btnShopPriceSave) els.btnShopPriceSave.addEventListener('click', saveShopPrice);
+if (els.btnCouponRefresh) els.btnCouponRefresh.addEventListener('click', () => loadTodayCoupons());
 if (els.btnArchive) els.btnArchive.addEventListener('click', doArchiveAll);
