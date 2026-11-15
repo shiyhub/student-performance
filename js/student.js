@@ -1035,7 +1035,8 @@ function applyReadonlyMode() {
     tip.className = 'text-muted';
     tip.style.cssText = 'margin-top:10px;text-align:center;';
     tip.textContent = '（预览模式不能提交）';
-    els.formView.appendChild(tip);
+    // v187：按钮已在「今天的小表现」卡片内，提示跟随按钮，不再挂到整个表单末尾
+    (els.btnSubmit.parentElement || els.formView).appendChild(tip);
   }
 }
 
