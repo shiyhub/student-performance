@@ -1180,6 +1180,19 @@ async function loadWall() {
 // 供保存成功等回调刷新班级墙，避免陈旧展示）
 window.loadWallData = () => { try { loadWall(); } catch (e) { console.warn('loadWallData', e); } };
 
+// v188：班级等级曲线（与 database/125-class-level-curve.sql 同口径）
+// 升到 2/3/4/5 级分别需 500 / 1000 / 1500 / 2000，5 级以后每级固定 2000，上限 99 级
+const CLASS_MAX_LV = 99;
+const CLASS_LV_COST = [500, 1000, 1500, 2000];
+function classLevelCost(lv) { return lv <= 4 ? CLASS_LV_COST[lv - 1] : 2000; }
+function classNeedXp(lv) { let s = 0; for (let i = 1; i < lv; i++) s += classLevelCost(i); return s; }
+function classLevelOf(xp) {
+  const x = Math.max(0, Number(xp) || 0);
+  let lv = 1, need = 0;
+  while (lv < CLASS_MAX_LV && x >= need + classLevelCost(lv)) { need += classLevelCost(lv); lv++; }
+  return lv;
+}
+
 function renderWall() {
   const recs = state.records;
   // v128(RSK-08)：今日判定以服务端日期为准（提交后校正），设备日期错误不导致错日
@@ -1195,9 +1208,12 @@ function renderWall() {
   // v167：班级星光值 = 学生星光值转化累计（服务端 class_progress，学生消费不影响班级星光值）
   const prog = state.classProgress || null;
   const classXp = prog ? (Number(prog.xp) || 0) : state.roster.reduce((s2, x) => s2 + (Number(x.xp) || 0), 0);
-  const CLASS_STEP = 3000;
-  const classLv = prog ? (Number(prog.level) || 1) : Math.max(1, Math.floor(classXp / CLASS_STEP) + 1);
-  const nextNeed = prog && prog.next_need != null ? Number(prog.next_need) : (classLv * CLASS_STEP);
+  // v188：曲线改为 500/1000/1500/2000，之后每级 2000（离线兜底与服务端同口径）
+  const classLv = prog ? (Number(prog.level) || 1) : classLevelOf(classXp);
+  const maxed = classLv >= CLASS_MAX_LV;
+  const nextNeed = prog && prog.next_need != null
+    ? Number(prog.next_need)
+    : (maxed ? 0 : classNeedXp(classLv + 1));
   const leftNeed = prog && prog.next_level_need != null ? Number(prog.next_level_need) : Math.max(0, nextNeed - classXp);
   const chances = prog ? (Number(prog.chances) || 0) : 0;
   const classLvText = nextNeed ? `Lv${classLv} · 再${leftNeed}升Lv${classLv + 1}` : `Lv${classLv} · 满级`;
@@ -1306,7 +1322,10 @@ function renderWall() {
   if (cp('cpXp')) {
     cp('cpXp').textContent = classXp;
     cp('cpNext').textContent = nextNeed ? `Lv${classLv}  再${leftNeed} 升 Lv${classLv + 1}${chances ? ` · 可抽奖 ${chances} 次` : ''}` : `Lv${classLv} 满级`;
-    const pct = prog ? (Number(prog.pct) || 0) : (nextNeed ? Math.min(100, classXp / nextNeed * 100) : 100);
+    const pct = prog ? (Number(prog.pct) || 0) : (maxed ? 100 : (() => {
+      const prev = classNeedXp(classLv), next = classNeedXp(classLv + 1);
+      return Math.min(100, Math.max(0, (classXp - prev) / Math.max(1, next - prev) * 100));
+    })());
     cp('cpFill').style.width = pct + '%';
   }
 
@@ -1315,7 +1334,8 @@ function renderWall() {
       sfx.tap();
       const key = btn.dataset.detail;
       if (key === '__all__') openClassDetail(classAvg, classToday);
-      else openStudentDetail(key);
+      // v188：点学生头像直接进该生主页，不再先弹详情卡再点「去填写」
+      else { Nav.push('form'); showForm(key); }
     });
   });
 
@@ -1329,6 +1349,7 @@ function renderWall() {
   }
 }
 
+// v188：星光墙点击头像已改为直接进主页，本函数暂无入口；保留供班级详情外的单人查看场景复用
 function openStudentDetail(name) {
   const rows = state.records
     .filter(r => r.student_name === name)
@@ -3062,7 +3083,7 @@ async function loadWheelPrizes() {
 }
 
 function renderLottery() {
-  const p = state.classProgress || { xp: 0, level: 1, chances: 0, next_need: 3000 };
+  const p = state.classProgress || { xp: 0, level: 1, chances: 0, next_need: 500 };
   if (els.lotteryClassLv) els.lotteryClassLv.textContent = 'Lv.' + (p.level || 1);
   if (els.lotteryChance) {
     const n = Number(p.chances) || 0;
@@ -3072,7 +3093,7 @@ function renderLottery() {
   if (els.lotteryTip) {
     els.lotteryTip.textContent = (Number(p.chances) || 0) > 0
       ? '点开始抽奖'
-      : `班级星光 ${p.xp || 0} · 再 ${p.next_need || 0} 升 Lv.${(p.level || 1) + 1}`;
+      : `班级星光 ${p.xp || 0} · 再 ${p.next_level_need != null ? p.next_level_need : (p.next_need || 0)} 升 Lv.${(p.level || 1) + 1}`;
   }
   if (els.btnSpinMain) els.btnSpinMain.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
   if (els.btnSpin) els.btnSpin.disabled = (Number(p.chances) || 0) <= 0 || state.spinning;
@@ -3995,59 +4016,81 @@ function escapeHtml(s) {
       ]
     },
     snow: {
-      areaPer: 5200, maxN: 340,
+      // v188：鹅毛大雪——雪团更大、下落更慢、横向飘移更明显，密度略降避免糊成一片
+      areaPer: 5500, maxN: 320,
       layers: [
-        { share: 0.50, rMin: 1.9, rMax: 3.0, spdMin: 22, spdMax: 38, sway: 9,  alpha: 0.62, spin: 0 },
-        { share: 0.34, rMin: 3.3, rMax: 5.2, spdMin: 40, spdMax: 62, sway: 16, alpha: 0.85, spin: 0.5 },
-        { share: 0.16, rMin: 6.2, rMax: 9.6, spdMin: 62, spdMax: 92, sway: 26, alpha: 1.0,  spin: 1.0 }
+        { share: 0.46, rMin: 6.5, rMax: 10,  spdMin: 15, spdMax: 25, sway: 16, alpha: 0.55, spin: 0.12 },
+        { share: 0.34, rMin: 11,  rMax: 16,  spdMin: 25, spdMax: 37, sway: 24, alpha: 0.74, spin: 0.10 },
+        { share: 0.20, rMin: 17,  rMax: 25,  spdMin: 37, spdMax: 52, sway: 34, alpha: 0.95, spin: 0.08 }
       ]
     }
   };
-  var WX_WIND = 26;           // 雪的横向漂移（px/s）
-  var WX_SNOW_R = [2.4, 4.6, 8.8];   // 三层雪花精灵的参考半径
+  var WX_WIND = 18;           // 雪的横向漂移（px/s）
+  var WX_SNOW_R = [9.5, 14.5, 21.5];   // 三层雪团精灵的参考半径
 
-  /* 雪花精灵：白色光晕 + 淡蓝六瓣枝晶，浅色底上也能看清 */
+  /* 雪团精灵：多个大小不一的偏移圆叠出不规则蓬松轮廓，外圈只留很淡的冷调柔影
+     （不做硬边），内部左上高光、右下微蓝，得到「鹅毛大雪」的棉絮块感。
+     每层生成 3 个形状变体，避免同形重复被一眼看穿。 */
+  var WX_SNOW_VAR = 3;        // 每层精灵变体数
   function wxBuildSnowSprites() {
     if (wxSnowSprites.length) return;
     try {
       if (!document.createElement('canvas').getContext) return;
     } catch (e) { return; }
     for (var k = 0; k < WX_SNOW_R.length; k++) {
-      var r = WX_SNOW_R[k];
-      var pad = Math.max(2.6, r * 0.5);
-      var size = Math.ceil((r + pad) * 2);
-      var cv = document.createElement('canvas');
-      cv.width = cv.height = Math.ceil(size * wxDPR);
-      var c = cv.getContext('2d');
-      c.scale(wxDPR, wxDPR);
-      var cx = size / 2, cy = size / 2;
-      var g = c.createRadialGradient(cx, cy, r * 0.1, cx, cy, r + pad);
-      g.addColorStop(0, 'rgba(255,255,255,.98)');
-      g.addColorStop(0.42, 'rgba(233,244,255,.60)');
-      g.addColorStop(1, 'rgba(198,220,244,0)');
-      c.fillStyle = g;
-      c.beginPath(); c.arc(cx, cy, r + pad, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = 'rgba(130,168,214,.94)';
-      c.lineWidth = Math.max(0.7, r * 0.16);
-      c.lineCap = 'round';
-      for (var i = 0; i < 6; i++) {
-        var a = i * Math.PI / 3;
-        c.beginPath();
-        c.moveTo(cx, cy);
-        c.lineTo(cx + Math.cos(a) * r * 0.84, cy + Math.sin(a) * r * 0.84);
-        c.stroke();
-        var bx = cx + Math.cos(a) * r * 0.5, by = cy + Math.sin(a) * r * 0.5;
-        c.beginPath();
-        c.moveTo(bx, by);
-        c.lineTo(bx + Math.cos(a + 0.85) * r * 0.3, by + Math.sin(a + 0.85) * r * 0.3);
-        c.moveTo(bx, by);
-        c.lineTo(bx + Math.cos(a - 0.85) * r * 0.3, by + Math.sin(a - 0.85) * r * 0.3);
-        c.stroke();
-      }
-      c.fillStyle = 'rgba(255,255,255,.9)';
-      c.beginPath(); c.arc(cx, cy, Math.max(0.6, r * 0.2), 0, Math.PI * 2); c.fill();
-      wxSnowSprites.push({ cv: cv, size: size, r0: r });
+      for (var v = 0; v < WX_SNOW_VAR; v++) wxBuildOneSnowSprite(WX_SNOW_R[k]);
     }
+  }
+
+  function wxBuildOneSnowSprite(r) {
+    var pad = r * 0.66;
+    var size = Math.ceil((r + pad) * 2);
+    var cv = document.createElement('canvas');
+    cv.width = cv.height = Math.ceil(size * wxDPR);
+    var c = cv.getContext('2d');
+    c.scale(wxDPR, wxDPR);
+    var cx = size / 2, cy = size / 2;
+
+    // ① 软边凸起：实心白心 + 边缘渐隐（极淡冷调收尾），叠起来是一整团而不是一堆小球
+    function puff(lx, ly, pr) {
+      var lg = c.createRadialGradient(lx, ly, pr * 0.05, lx, ly, pr);
+      lg.addColorStop(0, 'rgba(255,255,255,1)');
+      lg.addColorStop(0.66, 'rgba(255,255,255,.98)');
+      lg.addColorStop(0.86, 'rgba(248,253,255,.74)');
+      lg.addColorStop(0.95, 'rgba(214,232,249,.34)');
+      lg.addColorStop(1, 'rgba(200,222,244,0)');
+      c.fillStyle = lg;
+      c.beginPath(); c.arc(lx, ly, pr, 0, Math.PI * 2); c.fill();
+    }
+    c.save();
+    puff(cx, cy, r * 1.00);                       // 中心主团
+    var lobes = 5 + Math.round(Math.random() * 4);
+    for (var j = 0; j < lobes; j++) {
+      var a = (j / lobes) * Math.PI * 2 + Math.random() * 0.8;
+      var dist = r * (0.30 + Math.random() * 0.40);
+      var rr = r * (0.52 + Math.random() * 0.26);
+      puff(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, rr);
+    }
+    // 边缘碎絮：2~3 个小凸起，破掉圆感
+    var nub = 2 + Math.round(Math.random() * 1);
+    for (var m = 0; m < nub; m++) {
+      var na = Math.random() * Math.PI * 2;
+      puff(cx + Math.cos(na) * r * 0.86, cy + Math.sin(na) * r * 0.86,
+           r * (0.30 + Math.random() * 0.16));
+    }
+    c.restore();
+
+    // ② 左上受光、右下略沉，给整团一点体积
+    c.globalCompositeOperation = 'source-atop';
+    var g = c.createRadialGradient(cx - r * 0.34, cy - r * 0.38, r * 0.05, cx, cy, r * 1.05);
+    g.addColorStop(0, 'rgba(255,255,255,.60)');
+    g.addColorStop(0.55, 'rgba(255,255,255,.10)');
+    g.addColorStop(1, 'rgba(206,226,246,.22)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'source-over';
+
+    wxSnowSprites.push({ cv: cv, size: size, r0: r });
   }
 
   function wxResize() {
@@ -4081,7 +4124,7 @@ function escapeHtml(s) {
     var p = {
       l: li,
       x: Math.random() * (wxW + 80) - 40,
-      y: force ? Math.random() * wxH : -34 - Math.random() * 40,
+      y: force ? Math.random() * wxH : -40 - Math.random() * 50,
       phase: Math.random() * Math.PI * 2,
       alpha: L.alpha * (0.82 + Math.random() * 0.36)
     };
@@ -4095,8 +4138,9 @@ function escapeHtml(s) {
       p.vx = WX_WIND + (Math.random() - 0.5) * 16;
       p.sway = L.sway * (0.7 + Math.random() * 0.7);
       p.swayFreq = 0.4 + Math.random() * 0.7;
-      p.spin = L.spin ? (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 1.1) : 0;
+      p.spin = L.spin ? (Math.random() < 0.5 ? -1 : 1) * L.spin * (0.6 + Math.random() * 0.8) : 0;
       p.rot = Math.random() * Math.PI * 2;
+      p.spr = li * WX_SNOW_VAR + Math.floor(Math.random() * WX_SNOW_VAR);   // 该层随机取一个形状变体
     }
     wxParticles.push(p);
   }
@@ -4105,7 +4149,7 @@ function escapeHtml(s) {
   function wxRate() {
     var cfg = WX_CFG[wxMode];
     if (!cfg) return 0;
-    var life = Math.max(0.9, wxH / (wxMode === 'rain' ? 950 : 52));
+    var life = Math.max(0.9, wxH / (wxMode === 'rain' ? 950 : 32));
     return wxMax / life;
   }
 
@@ -4135,7 +4179,7 @@ function escapeHtml(s) {
     wxBuildSnowSprites();
     for (var i = 0; i < wxParticles.length; i++) {
       var p = wxParticles[i];
-      var sp = wxSnowSprites[p.l] || wxSnowSprites[0];
+      var sp = wxSnowSprites[p.spr] || wxSnowSprites[p.l * WX_SNOW_VAR] || wxSnowSprites[0];
       if (!sp) continue;
       var k = p.r / sp.r0;
       var sz = sp.size * k;
