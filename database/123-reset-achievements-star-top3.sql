@@ -6,14 +6,19 @@
 --       联调与试运行，直接清空后按新规则重新结算。
 --
 -- 新口径（班级前三 top3）：
---   1) 只有「星光值余额 > 20」的学生参与排名
---   2) 参与者在本班内按星光值余额降序排名（并列同名次）
+--   1) 只有「累计获得星光值 > 20」的学生参与排名
+--   2) 参与者在本班内按「累计获得总额」降序排名（并列同名次）
 --   3) 排名 ≤ 3 即解锁
---   4) 解锁后永久保留：后续掉出前三或余额下降都不撤销
+--   4) 解锁后永久保留：后续掉出前三也不撤销
+--
+-- 为什么用累计获得总额（student_wallet.total_earned）而不是当前余额：
+--   余额会被兑换消费扣减，拿它排名等于「越攒越不敢花」，奖励了囤积；
+--   总额只在获得时累加、消费不减（109 的触发器维护），反映真实获得量，
+--   与「荣誉」语义一致，也让「永久保留」在逻辑上自洽。
 --
 -- 与旧口径的差别：
 --   旧 = 按经验（xp）排名，没有星光值门槛
---   新 = 按星光值排名，且必须先过 20 星门槛
+--   新 = 按累计获得星光值排名，且必须先过 20 星门槛
 --
 -- 排名口径统一由 public.star_rank_in_class() 提供，
 -- 结算与人工验证查的是同一个函数，避免两边算法漂移。
@@ -29,8 +34,9 @@ delete from public.student_achievements where true;
 
 -- ------------------------------------------------------------
 -- 2. 星光排名（唯一口径来源）
---    返回：1..n = 本班星光榜名次；999 = 星光值不足 20 或查无此人
---    只把 balance > 20 的学生纳入排名，因此 999 等同于「无资格」
+--    口径：累计获得总额 > 20 的学生参与排名，按总额降序取名次
+--    返回：1..n = 本班星光榜名次；999 = 累计获得不足 20 或查无此人
+--    注意用的是 total_earned（累计获得），不是 balance（当前余额）
 -- ------------------------------------------------------------
 create or replace function public.star_rank_in_class(p_class text, p_student text)
 returns int
@@ -41,12 +47,12 @@ set search_path = public
 as $func$
   with ranked as (
     select si.id,
-           rank() over (order by coalesce(sw.balance, 0) desc) as rk
+           rank() over (order by coalesce(sw.total_earned, 0) desc) as rk
       from public.student_info si
       left join public.student_wallet sw
              on sw.class = si.class and sw.student_name = si.student_name
      where si.class = btrim(coalesce(p_class, ''))
-       and coalesce(sw.balance, 0) > 20
+       and coalesce(sw.total_earned, 0) > 20
   ), me as (
     select id
       from public.student_info
@@ -64,7 +70,7 @@ grant  execute on function public.star_rank_in_class(text, text) to anon, authen
 -- 3. 成就文案同步（学生端可见）
 -- ------------------------------------------------------------
 update public.achievement_def
-   set desc_text  = '星光值超过 20，且位列班级星光榜前三',
+   set desc_text  = '累计获得星光值超过 20，且位列班级星光榜前三',
        target     = 3,
        updated_at = now()
  where key = 'top3';
@@ -86,7 +92,6 @@ declare
   v_mei    int := 0;
   v_lao    int := 0;
   v_min    int := 0;
-  v_bal    int := 0;
   v_earned int := 0;
   m        jsonb;
   v_should text[] := '{}';
@@ -106,8 +111,8 @@ begin
   v_level := coalesce(v_level, 1);
   m := public.student_metrics(v_class, v_name);
 
-  select coalesce(balance, 0), coalesce(total_earned, 0)
-    into v_bal, v_earned
+  select coalesce(total_earned, 0)
+    into v_earned
     from public.student_wallet
    where class = v_class and student_name = v_name;
 
@@ -145,7 +150,7 @@ begin
   if coalesce(v_earned, 0) >= 100 then v_should := array_append(v_should, 'star100'); end if;
   if coalesce(v_earned, 0) >= 500 then v_should := array_append(v_should, 'star500'); end if;
 
-  -- 班级前三：星光值 > 20 且班级星光榜前三（与 star_rank_in_class 同源）
+  -- 班级前三：累计获得 > 20 且班级星光榜前三（与 star_rank_in_class 同源）
   if public.star_rank_in_class(v_class, v_name) <= 3 then
     v_should := array_append(v_should, 'top3');
   end if;
@@ -202,10 +207,12 @@ grant  execute on function public.recalc_class_achievements(text) to anon, authe
 -- select count(*) as remaining from public.student_achievements;
 
 -- ② 班级星光榜：谁有资格、排第几、是否已解锁
---    只列 balance > 20 的参与排名者，按名次排序
+--    只列累计获得 > 20 的参与排名者，按名次排序
+--    total_earned = 累计获得（排名依据）；balance = 当前余额（仅供参考）
 -- select si.class,
 --        si.student_name,
---        coalesce(sw.balance, 0) as star_balance,
+--        coalesce(sw.total_earned, 0) as total_earned,
+--        coalesce(sw.balance, 0) as balance,
 --        public.star_rank_in_class(si.class, si.student_name) as star_rank,
 --        (public.star_rank_in_class(si.class, si.student_name) <= 3) as in_top3,
 --        exists (select 1 from public.student_achievements a
@@ -213,7 +220,7 @@ grant  execute on function public.recalc_class_achievements(text) to anon, authe
 --   from public.student_info si
 --   left join public.student_wallet sw
 --          on sw.class = si.class and sw.student_name = si.student_name
---  where coalesce(sw.balance, 0) > 20
+--  where coalesce(sw.total_earned, 0) > 20
 --  order by si.class, star_rank;
 
 -- ③ 对一名学生手动结算（换成真实班级/姓名）
