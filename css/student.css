@@ -712,11 +712,6 @@ body {
 .cp-fill { height:100%; width:0; background:linear-gradient(90deg,#2ed4c0,#4f9dff 62%,#7c6cf0); border-radius:8px; transition:width .6s; box-shadow:0 0 10px rgba(79,157,255,.35); }
 .cp-bar.green { background:#e2f2ff; }
 .cp-fill.green { background:linear-gradient(90deg,#2ed4c0,#3f9dff); }
-.device-gate{position:fixed;inset:0;background:linear-gradient(160deg,#eaf6ec,#fdf3e3);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;}
-.gate-card{background:#fff;border-radius:20px;padding:26px;max-width:640px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.12);}
-.gate-students{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
-.gate-students button{border:2px solid #cfe6d2;background:#f6fbf6;border-radius:20px;padding:8px 14px;font-size:15px;cursor:pointer;}
-.gate-students button:hover{background:#dcefe0;border-color:#9cc7a4;}
 .past-row.stack{flex-direction:column;align-items:stretch;gap:10px;}
 .past-row.stack .past-line1{font-size:22px;}
 .past-row.stack .past-grade{display:flex;gap:10px;flex-wrap:wrap;}
@@ -1384,12 +1379,8 @@ html[data-weather="cloudy"] .wx-cloud{opacity:.85;animation:wxCloudFloat 26s eas
   .plant .wx-flower,.plant .wx-cloud{animation:none !important}
 }
 /* 前置页与日记页容器也随主题（仅背景氛围，布局不动） */
-html[data-weather] .device-gate{background:linear-gradient(160deg,var(--wx-bg1),var(--wx-bg2))}
 html[data-weather] .student-view,
 html[data-weather] .wall-view{background:transparent}
-/* 陌生设备登录页显示时隐藏两侧装饰与切换钮（背景已随主题），进墙后出现 */
-.device-gate:not([hidden]) ~ .plant,
-.device-gate:not([hidden]) ~ .weather-switch{display:none}
 
 /* ===== 座位编排模式：固定 6 列矩阵（与学生端 seat_row*6+col 槽位公式一致） ===== */
 .mates.seat-mode { grid-template-columns: repeat(6, 1fr) !important; gap: 10px 8px; }
@@ -1898,3 +1889,120 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 [data-ct="feather-violet"] .card-theme .ct-top { background-position: left top; }
 [data-ct="feather-violet"] .card-theme .ct-bot { background-position: right bottom; }
 [data-ct="feather-violet"] .card-theme i { height: 48%; opacity: 1; }
+
+/* ============ v178：五维成长（雷达 + 条形 + 本周维度勋章） ============
+   配色沿用教师端 DIM_META：德红 / 智蓝 / 体绿 / 美紫 / 劳橙 */
+#dimCard { padding: 12px 14px; }
+#dimCard .dim-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#dimCard .dim-head .card-title { margin-bottom: 0; font-size: 15px; }
+.dim-medal { margin-left: auto; font-size: 11.5px; line-height: 1.2; white-space: nowrap; }
+.dm-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px 3px 6px; border-radius: 999px;
+  background: #f7f9fd; border: 1px solid #dde5f3; color: var(--dim-c, #12b8a6); font-weight: 800;
+  background: color-mix(in srgb, var(--dim-c, #12b8a6) 10%, #fff);
+  border-color: color-mix(in srgb, var(--dim-c, #12b8a6) 38%, #fff);
+}
+.dm-badge .ico { width: 13px; height: 13px; }
+.dm-badge b { font-size: 11.5px; }
+.dm-badge em {
+  font-style: normal; font-size: 10.5px; font-weight: 800; color: #fff;
+  background: var(--dim-c, #12b8a6); border-radius: 999px; padding: 0 5px;
+}
+.dm-none { color: #93a0b8; font-weight: 700; }
+
+.dim-body { display: flex; align-items: center; gap: 10px; }
+.dim-radar { flex: 0 0 clamp(104px, 30%, 168px); min-width: 0; }
+.dim-radar svg { width: 100%; height: auto; display: block; overflow: visible; }
+.dr-ring { fill: none; stroke: #eef1f8; stroke-width: 1; }
+.dr-axis { stroke: #ebeff7; stroke-width: .8; }
+.dr-lab { font-size: 8.5px; font-weight: 800; text-anchor: middle; }
+.dr-shape { fill: rgba(18, 184, 166, .15); stroke: #12b8a6; stroke-width: 1.4; stroke-linejoin: round; }
+
+.dim-bars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.dim-row { display: flex; align-items: center; gap: 6px; }
+.dim-tag { flex: 0 0 auto; display: inline-flex; color: var(--dim-c, #12b8a6); }
+.dim-tag .ico { width: 14px; height: 14px; }
+.dim-track { flex: 1; height: 7px; border-radius: 999px; background: #f0f3fa; overflow: hidden; }
+.dim-track i { display: block; height: 100%; border-radius: 999px; background: var(--dim-c, #12b8a6); transition: width .35s ease; }
+.dim-val { flex: 0 0 26px; text-align: right; font-size: 11px; font-weight: 800; color: #5b6884; font-variant-numeric: tabular-nums; }
+@media (min-width: 1600px) {
+  .dim-track { height: 9px; }
+}
+
+/* 成就墙在窄栏（320px）里保持 4 列：≥700px 的 6 列规则会把卡片压成细条 */
+#achCard .ach-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#achCard .ach-item { padding: 7px 3px 6px; }
+#achCard .ach-n { font-size: 11.5px; }
+
+/* ============ v179：填写人一条 + 点名面板（去身份关卡） ============ */
+.id-who {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-top: 2px;
+  background: #f6fbfa; border: 1.5px dashed #bfe3dc; border-radius: 12px;
+  font: inherit; color: var(--ink, #1f2b46); cursor: pointer; text-align: left;
+  transition: border-color .18s, background .18s;
+}
+.id-who:hover { background: #eef9f6; border-color: #8fd3c6; }
+.id-who:active { transform: scale(.995); }
+.id-who-label { flex: 0 0 auto; font-size: 12px; font-weight: 700; color: #6b7a94; }
+.id-who-name {
+  flex: 1; min-width: 0; font-size: 15px; font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.id-who-class { flex: 0 0 auto; font-size: 11.5px; color: #8a97ae; }
+.id-who-arrow { flex: 0 0 auto; color: #9aa8c0; }
+.id-who.is-empty { border-style: solid; border-color: var(--primary, #12b8a6); background: #eafaf6; }
+.id-who.is-empty .id-who-name { color: var(--primary-d, #0d9488); }
+
+.np-mask {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: rgba(24, 38, 60, .38); backdrop-filter: blur(3px);
+}
+.np-card {
+  width: 100%; max-width: 760px; max-height: 88vh; overflow: auto;
+  background: #fff; border-radius: 20px; padding: 16px 18px 14px;
+  box-shadow: 0 18px 50px rgba(16, 32, 56, .22);
+}
+.np-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.np-head b { font-size: 17px; color: var(--ink, #1f2b46); }
+.np-close {
+  margin-left: auto; width: 32px; height: 32px; border: 0; border-radius: 50%;
+  background: #f1f4fa; color: #6b7a94; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.np-close:hover { background: #e6ebf5; }
+.np-tools { display: flex; gap: 8px; margin-bottom: 10px; }
+.np-tools .input { flex: 1; min-width: 0; }
+.np-tools #npClass { flex: 0 0 38%; }
+.np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.np-name {
+  padding: 11px 6px; border-radius: 12px; cursor: pointer; font: inherit;
+  background: #fff; border: 1.5px solid #e2e9f4; color: var(--ink, #1f2b46);
+  font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: border-color .15s, background .15s, transform .12s;
+}
+.np-name:hover { border-color: #9adcd0; background: #f4fdfa; }
+.np-name:active { transform: scale(.97); }
+.np-name.is-me { border-color: var(--primary, #12b8a6); background: #e9faf6; color: var(--primary-d, #0d9488); }
+.np-empty { padding: 14px 4px; font-size: 13px; color: #8a97ae; }
+.np-manual { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef2f9; }
+.np-manual .input { flex: 1; min-width: 0; }
+@media (max-width: 560px) {
+  .np-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+  .np-tools { flex-wrap: wrap; }
+  .np-tools #npClass { flex: 1 1 100%; }
+}
+
+/* 大屏（教室白板 / 投影）下身份条与点名磁贴同步放大，避免"名字看不清" */
+@media (min-width: 1400px) {
+  .id-who { padding: 13px 16px; gap: 10px; border-radius: 14px; }
+  .id-who-label { font-size: 14px; }
+  .id-who-name { font-size: 21px; }
+  .id-who-class { font-size: 13.5px; }
+  .np-card { max-width: 860px; }
+  .np-head b { font-size: 20px; }
+  .np-name { font-size: 17px; padding: 13px 8px; }
+  .np-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+}

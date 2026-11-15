@@ -418,19 +418,32 @@ async function cacheRead(key, fetcher) {
   }
 }
 // 写操作执行器：返回 { ok, data }
+// v178(F-02)：白名单改为映射表——新增接口只在这里登记一行；未登记的 op 显式报错，
+// 不再静默返回 { ok:false }（v173「点使用无反应」的根因）。签名与返回值结构不变。
+const WRITE_HANDLERS = {
+  submit_today: p => supabase.rpc('submit_today', p),
+  submit_task: p => supabase.rpc('submit_task', p),
+  set_student_avatar: p => supabase.rpc('set_student_avatar', p),
+  set_student_frame: p => supabase.rpc('set_student_frame', p),
+  set_student_card_theme: p => supabase.rpc('set_student_card_theme', p),   // v173 卡片主题佩戴
+  confirm_challenge_levels: p => supabase.rpc('confirm_challenge_levels', p) // v152 挑战任务多档位
+};
+// 个别接口“HTTP 成功但业务失败”，沿用原有判定（判据与改版前逐字一致）
+const WRITE_OK_CHECK = {
+  set_student_avatar: d => !!(d && d.ok !== false)
+};
 async function syncRunner(op) {
-  const p = op.params || {};
-  try {
-    if (op.name === 'submit_today') { const r = await supabase.rpc('submit_today', p); return { ok: !r.error, data: r.data, error: r.error }; }
-    if (op.name === 'submit_task') { const r = await supabase.rpc('submit_task', p); return { ok: !r.error, data: r.data, error: r.error }; }
-    if (op.name === 'set_student_avatar') { const r = await supabase.rpc('set_student_avatar', p); return { ok: !r.error && r.data && r.data.ok !== false, data: r.data, error: r.error }; }
-    if (op.name === 'set_student_frame') { const r = await supabase.rpc('set_student_frame', p); return { ok: !r.error, data: r.data, error: r.error }; }
-    /* v173：卡片主题佩戴 */
-    if (op.name === 'set_student_card_theme') { const r = await supabase.rpc('set_student_card_theme', p); return { ok: !r.error, data: r.data, error: r.error }; }
-    /* v152：挑战任务提交（82 号 SQL：confirm_challenge_levels，多档位数组） */
-    if (op.name === 'confirm_challenge_levels') { const r = await supabase.rpc('confirm_challenge_levels', p); return { ok: !r.error, data: r.data, error: r.error }; }
-  } catch (e) { throw e; }
-  return { ok: false };
+  const name = op && op.name;
+  const handler = WRITE_HANDLERS[name];
+  if (!handler) {
+    console.error('[syncRunner] 未登记的操作：' + name + '（请补到 WRITE_HANDLERS）');
+    const err = new Error('unregistered_op: ' + name);
+    err.unregistered = true;
+    throw err;
+  }
+  const r = await handler(op.params || {});
+  const check = WRITE_OK_CHECK[name];
+  return { ok: !r.error && (!check || check(r.data)), data: r.data, error: r.error };
 }
 // 写操作统一入口：在线直连（网络失败自动入队），离线直接入队；返回 { ok, queued, res }
 async function runWrite(op) {
@@ -446,6 +459,7 @@ async function runWrite(op) {
     return { ok: false, queued: false };
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
+    if (e && e.unregistered) return { ok: false, queued: false, reason: 'unregistered', error: e.message };
     return { ok: false, queued: false };
   }
 }
@@ -602,7 +616,9 @@ const els = {
   dictationTaskCard: $('#dictationTaskCard'), dictationTaskBody: $('#dictationTaskBody'),
   pastTaskCard: $('#pastTaskCard'),
   pastTaskBody: $('#pastTaskBody'),
-  achCard: $('#achCard'), achGrid: $('#achGrid'), achCount: $('#achCount')
+  achCard: $('#achCard'), achGrid: $('#achGrid'), achCount: $('#achCount'),
+  // v178：五维成长（雷达 + 条形 + 本周维度勋章）
+  dimCard: $('#dimCard'), dimRadar: $('#dimRadar'), dimBars: $('#dimBars'), dimMedal: $('#dimMedal')
 };
 
 const state = {
@@ -835,8 +851,8 @@ async function loadClasses() {
 
 // v127：班级列表就绪后进入班级墙（缓存先行与网络成功两条路径共用）
 function enterWallFlow() {
-  let saved = '', savedMe = '';
-  try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; savedMe = o.studentName || ''; } catch (e) {}
+  let saved = '';
+  try { const o = JSON.parse(localStorage.getItem('sp_identity') || '{}'); saved = o.class || ''; } catch (e) {}
   const params = new URLSearchParams(location.search);
   const fromUrl = (params.get('class') || '').trim();
   state.currentClass = state.classes.includes(fromUrl) ? fromUrl
@@ -853,76 +869,157 @@ function enterWallFlow() {
     .map(c => `<option value="${esc(c)}"${c === state.currentClass ? ' selected' : ''}>${esc(c)}</option>`)
     .join('');
 
-  // 设备信任门：没记住身份且非老师预览 → 先选名字
-  if (!savedMe && !state.readonly) {
-    showDeviceGate();
-    state._wallEntered = true;
-    return;
-  }
-
+  // v179：不再设身份关卡——40 人共用一台白板，先进墙，谁填谁点自己的卡片/点名换人。
+  //       错填由教师端「撤销 / 恢复」兜底。
   state._wallEntered = true;
   loadWall().then(() => {
     if (state.readonly && state.previewName) {
       showForm(state.previewName);
       applyReadonlyMode();
     }
+    // v179：本班全量预缓存原来挂在身份门确认之后，门去掉后挪到这里（每班每次进站一次）
+    prefetchClassOnce(state.currentClass);
   });
   flushPending();
 }
 
-function showDeviceGate() {
-  ensureMobileGate();
-  const gate = document.getElementById('deviceGate');
-  const clsSel = document.getElementById('gateClass');
-  const nameInput = document.getElementById('gateName');
-  const err = document.getElementById('gateError');
-  wallView.hidden = true;
-  gate.hidden = false;
-  clsSel.innerHTML = state.classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  let roster = [];
-  const loadRoster = async () => {
-    const cls = clsSel.value;
-    let data = null;
+// 后台预缓存本班全量（名单/任务/成就头像），断网体验与在线一致；每班每页只做一次
+function prefetchClassOnce(cls) {
+  if (!cls) return;
+  state._prefetched = state._prefetched || {};
+  if (state._prefetched[cls]) return;
+  state._prefetched[cls] = true;
+  if (!window.Precache || !window.Offline || !window.Offline.online) return;
+  setTimeout(() => {
+    try { window.Precache.runStudent(cls, () => {}); } catch (e) {}
+  }, 1500);
+}
+
+/* ---------------- v179：点名面板（替代原「设备信任门」） ----------------
+   40 人共用一台教室白板，效率优先：
+   · 不再要求手输姓名、不再拿名单做校验、不再拦截进墙
+   · 点名字即认人（一次点击），点错/填错由教师端「撤销 / 恢复」兜底
+   · 名单没加载出来时可就地手写名字（不做校验，直接提交，失败会有明确提示） */
+let pickerRoster = [];
+let pickerClass = '';
+
+function openNamePicker(opts) {
+  const box = document.getElementById('namePicker');
+  if (!box) return false;
+  state._pickerCb = (opts && typeof opts.onPick === 'function') ? opts.onPick : null;
+  const clsSel = document.getElementById('npClass');
+  const cur = state.currentClass || (state.classes && state.classes[0]) || '';
+  if (clsSel) {
+    // 当前班级可能不在已加载的班级列表里（手输/旧缓存），补进去，避免下拉显示与实际不一致
+    const list = (state.classes || []).slice();
+    if (cur && !list.includes(cur)) list.unshift(cur);
+    clsSel.innerHTML = (list.length ? list : [cur]).map(c =>
+      `<option value="${esc(c)}"${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    clsSel.value = cur;
+  }
+  pickerClass = cur;
+  const s = document.getElementById('npSearch');
+  if (s) s.value = '';
+  const m = document.getElementById('npManual');
+  if (m) m.value = '';
+  box.hidden = false;
+  loadPickerRoster(pickerClass);
+  if (s) setTimeout(() => { try { s.focus(); } catch (e) {} }, 30);
+  return true;
+}
+
+function closeNamePicker() {
+  const box = document.getElementById('namePicker');
+  if (box) box.hidden = true;
+  state._pickerCb = null;
+}
+
+async function loadPickerRoster(cls) {
+  pickerClass = cls || pickerClass;
+  let list = [];
+  // ① 同班直接用墙上已有名单（零请求）
+  if (pickerClass === state.currentClass && (state.roster || []).length) {
+    list = state.roster.map(s => s.student_name);
+  }
+  // ② 本地墙缓存
+  if (!list.length) {
     try {
-      const res = await supabase.rpc('get_class_roster', { p_class: cls });
-      data = (res && res.data) || null;
-    } catch (e) { data = null; }
-    if (!data) {
-      // 离线：用班级墙缓存里的名单做校验
-      try {
-        const wall = await window.Offline.get('wall_' + cls);
-        data = ((wall && wall.roster) || []).map(s => ({ student_name: s.student_name }));
-      } catch (e2) { data = null; }
-    }
-    roster = (data||[]).map(s => (s.student_name||'').trim());
-  };
-  clsSel.addEventListener('change', loadRoster);
-  loadRoster();
-  const go = async () => {
-    const cls = clsSel.value;
-    const name = (nameInput.value || '').trim();
-    if (!name) { err.textContent = '请输入姓名'; return; }
-    if (!roster.length) {
-      err.textContent = '离线无法校验姓名，请核对';
-    } else if (!roster.includes(name)) {
-      err.textContent = '名单里没有这个名字，请核对班级和姓名'; return;
-    }
-    localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name }));
+      const w = await window.Offline.get('wall_' + pickerClass);
+      list = ((w && w.roster) || []).map(s => s.student_name);
+    } catch (e) {}
+  }
+  // ③ 最后才走网络
+  if (!list.length) {
+    try {
+      const r = await supabase.rpc('get_class_roster', { p_class: pickerClass });
+      if (!r.error && Array.isArray(r.data)) list = r.data.map(x => x.student_name);
+    } catch (e) {}
+  }
+  pickerRoster = (list || []).map(x => String(x || '').trim()).filter(Boolean);
+  renderPickerGrid();
+}
+
+function renderPickerGrid() {
+  const grid = document.getElementById('npGrid');
+  const empty = document.getElementById('npEmpty');
+  if (!grid) return;
+  const kw = (document.getElementById('npSearch') || {}).value || '';
+  const me = (els.inpName && els.inpName.value || '').trim();
+  const names = pickerRoster.filter(n => !kw || n.includes(kw.trim()));
+  grid.innerHTML = names.map(n =>
+    `<button type="button" class="np-name${n === me ? ' is-me' : ''}" data-np="${esc(n)}">${esc(n)}</button>`).join('');
+  if (empty) empty.hidden = !!names.length;
+  $$('[data-np]', grid).forEach(b => b.addEventListener('click', () => pickName(b.dataset.np)));
+}
+
+// 选中填写人：写表单隐藏域 + 记住本机 + 刷新该生数据
+function pickName(name) {
+  const nm = String(name || '').trim();
+  if (!nm) return;
+  const cls = pickerClass || state.currentClass;
+  const clsChanged = !!cls && cls !== state.currentClass;
+  if (cls) {
     state.currentClass = cls;
-    gate.hidden = true; wallView.hidden = false;
-    Nav.push('wall');   // RSK-10：进入班级墙 = 打开子视图
-    loadWall();
-    // v111：联网时后台预缓存本班全量（名单/每人任务状态/成就头像），断网体验与在线一致
-    if (window.Precache && window.Offline && window.Offline.online) {
-      setTimeout(() => {
-        window.Precache.runStudent(cls, p => {
-          if (p && p.done === p.total) toast('已缓存到本机');
-        });
-      }, 600);
-    }
-  };
-  document.getElementById('gateGo').addEventListener('click', go);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    els.inpClass.value = cls;
+    if (els.wallClass) els.wallClass.value = cls;
+  }
+  els.inpName.value = nm;
+  try { localStorage.setItem('sp_identity', JSON.stringify({ class: els.inpClass.value, studentName: nm })); } catch (e) {}
+  const cb = state._pickerCb;
+  closeNamePicker();
+  renderIdentityName();
+  refreshForIdentity();
+  if (typeof cb === 'function') { try { cb(nm); } catch (e) {} }
+  if (clsChanged) loadWall();   // 换了班级：墙上的名单也要跟着换
+  sfx.tap();
+}
+
+// 表单身份条：当前填写人一目了然，点一下即可换人
+function renderIdentityName() {
+  const nm = (els.inpName && els.inpName.value || '').trim();
+  const cls = (els.inpClass && els.inpClass.value || '').trim();
+  const nEl = document.getElementById('idWhoName');
+  const cEl = document.getElementById('idWhoClass');
+  const btn = document.getElementById('btnPickMe');
+  if (nEl) nEl.textContent = nm || '点我选名字';
+  if (cEl) cEl.textContent = cls || '';
+  if (btn) btn.classList.toggle('is-empty', !nm);
+}
+
+// 换了填写人后，把依赖身份的卡片按新身份刷新一遍
+function refreshForIdentity() {
+  if (!els.inpName || !els.inpName.value.trim()) return;
+  if (els.formView && !els.formView.hidden) {
+    loadProfile(); loadWallet(); loadShopCatalog();
+    loadStudentTask(); loadPastTasks(); updateSubmitStatus();
+    loadTodayTasks(); loadPersonalTasks(); loadChallengeTasks();
+  }
+  if (els.shopView && !els.shopView.hidden) {
+    Promise.resolve(loadWallet())
+      .then(() => loadShopCatalog())
+      .then(() => renderShop())
+      .catch(() => {});
+  }
 }
 
 function applyReadonlyMode() {
@@ -1777,6 +1874,23 @@ function bindEvents() {
   // 墙 ↔ 表单
   if(els.btnGoWrite) els.btnGoWrite.addEventListener('click', () => { sfx.tap(); Nav.push('form'); showForm(); });
   els.btnBackWall.addEventListener('click', () => { sfx.back(); Nav.push('wall'); showWall(); });
+  // v179：点名面板（换填写人 / 首次认人 / 被拦截时补认人）
+  const pickMe = document.getElementById('btnPickMe');
+  if (pickMe) pickMe.addEventListener('click', () => { sfx.tap(); openNamePicker({}); });
+  const npBox = document.getElementById('namePicker');
+  if (npBox) {
+    document.getElementById('npClose').addEventListener('click', () => { sfx.back(); closeNamePicker(); });
+    npBox.addEventListener('click', e => { if (e.target === npBox) { sfx.back(); closeNamePicker(); } });
+    document.getElementById('npClass').addEventListener('change', e => loadPickerRoster(e.target.value));
+    document.getElementById('npSearch').addEventListener('input', renderPickerGrid);
+    const manualGo = () => {
+      const v = (document.getElementById('npManual').value || '').trim();
+      if (!v) return;
+      pickName(v);
+    };
+    document.getElementById('npManualGo').addEventListener('click', manualGo);
+    document.getElementById('npManual').addEventListener('keydown', e => { if (e.key === 'Enter') manualGo(); });
+  }
   els.wallClass.addEventListener('change', () => {
     state.currentClass = els.wallClass.value;
     try {
@@ -1879,7 +1993,7 @@ function updateSoundButton() {
 async function openAvatarPicker() {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!cls || !name) { toast('请先填写姓名'); return; }
+  if (!cls || !name) return needIdentity();   // v179：直接点名，不再拦
   if (ready) { els.avatarModal.classList.add('show'); }
   if (ready) await Promise.all([loadWallet(), loadShopCatalog()]);
   renderAvatarPicker();
@@ -2029,7 +2143,7 @@ async function onChooseAvatar(key, btn) {
     if (reason === 'not_owned') {
       toast('未拥有，请先兑换');
     } else if (reason === 'no_student') {
-      toast('请先填写姓名');
+      toast('这个名字不在名单里');
     } else if (reason === 'error') {
       toast('保存失败，请重试');
     } else {
@@ -2193,13 +2307,6 @@ function ownedFrameKeys() {
   return un;
 }
 
-// 兼容旧调用名：档案接口失败时也用本地已拥有集合兜底
-function ensureProfileUnlocked() {
-  state.profile = Object.assign({}, state.profile || {}, {
-    unlocked_frames: Array.from(ownedFrameKeys())
-  });
-}
-
 function frameNameOf(key) {
   const f = FRAMES.find(x => x.key === key);
   return f ? f.name : (key === 'none' ? '无框' : key);
@@ -2220,7 +2327,6 @@ function renderFramePage() {
   if (!grid) return;
   const row = currentRosterRow();
   const curFrame = state.myFrame || (row && row.frame) || 'none';
-  ensureProfileUnlocked();
   const ownedSet = ownedFrameKeys();
   updateFramePreview(curFrame);
   if (els.framePreviewName) {
@@ -2274,7 +2380,7 @@ function renderFramePage() {
 async function openFramePage() {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) { toast('请先回主页填好班级和姓名'); return; }
+  if (!cls || !name) return needIdentity(openFramePage);   // v179：就地点名后继续
   sfx.tap();
   if (els.wallView) els.wallView.hidden = true;
   if (els.formView) els.formView.hidden = true;
@@ -2282,7 +2388,6 @@ async function openFramePage() {
   window.scrollTo(0, 0);
   if (els.frameConfigBanner) els.frameConfigBanner.hidden = !!ready;
   await Promise.all([loadProfile(), loadWallet(), loadShopCatalog()]);  // 打开即刷新，含星光值/已拥有装扮
-  ensureProfileUnlocked();
   renderFramePage();
   if (typeof Nav !== 'undefined' && Nav.push) Nav.push('frames');
 }
@@ -2325,7 +2430,7 @@ async function onChooseFrame(key, btn) {
   sfx.pick();
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!cls || !name) { toast('请先填好班级和姓名'); return; }
+  if (!cls || !name) return needIdentity(() => onChooseFrame(key, btn));   // v179
   const wr = await runWrite({ name: 'set_student_frame', params: { p_class: cls, p_student: name, p_frame: key } });
   if (!wr.ok) { toast('保存失败，请重试'); return; }
   if (wr.queued) {
@@ -2359,7 +2464,7 @@ async function onChooseFrame(key, btn) {
 async function loadProfile() {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
-  if (!ready || !cls || !name) { if (els.achCard) els.achCard.hidden = true; return; }
+  if (!ready || !cls || !name) { hideProfileCards(); return; }
   let data;
   try {
     const r = await supabase.rpc('get_student_profile', { p_class: cls, p_student: name });
@@ -2369,36 +2474,32 @@ async function loadProfile() {
   } catch (e) {
     const v = await window.Offline.get('profile_' + cls + '_' + name);
     data = (v && v.data) || null;
-    if (!data) { if (els.achCard) els.achCard.hidden = true; return; }
+    if (!data) { hideProfileCards(); return; }
   }
-  if (!data || data.ok === false) { if (els.achCard) els.achCard.hidden = true; return; }
+  if (!data || data.ok === false) { hideProfileCards(); return; }
 
   state.profile = data;
   state.myFrame = data.frame || 'none';
-  // v173：卡片主题（独立轻量接口；失败时退回班级墙 roster 里的值）
-  let ctVal = null;
-  try {
-    const tr = await withTimeout(supabase.rpc('get_student_card_theme', { p_class: cls, p_student: name }), DATA_TIMEOUT);
-    if (!tr.error && tr.data && tr.data.ok !== false) ctVal = tr.data.card_theme || null;
-  } catch (e) { /* 忽略，走 roster 兜底 */ }
-  if (!ctVal) {
-    const r0 = currentRosterRow();
-    if (r0 && r0.card_theme) ctVal = r0.card_theme;
+  // v178：卡片主题随档案一起返回（省掉独立请求）；旧后端无该字段时才回退轻量接口
+  let ctVal;
+  if (data.card_theme !== undefined) {
+    ctVal = data.card_theme || null;
+  } else {
+    try {
+      const tr = await withTimeout(supabase.rpc('get_student_card_theme', { p_class: cls, p_student: name }), DATA_TIMEOUT);
+      if (!tr.error && tr.data && tr.data.ok !== false) ctVal = tr.data.card_theme || null;
+    } catch (e) { /* 忽略，走 roster 兜底 */ }
+    if (!ctVal) {
+      const r0 = currentRosterRow();
+      if (r0 && r0.card_theme) ctVal = r0.card_theme;
+    }
   }
   state.myCardTheme = (ctVal && CARD_THEMES.some(t => t.key === ctVal)) ? ctVal : null;
   applyCardTheme(document.getElementById('identityCard'), state.myCardTheme);
 
-  // 已解锁头像框集合（与服务端 set_student_frame 同口径，v135(RSK-12)：bronze/silver 改为累计天数）
   const achs = data.achievements || [];
-  const un = new Set(['none']);
-  const has = k => achs.some(a => a.key === k && a.unlocked);
-  /* v152.9：bronze/silver 按「累计记录天数」判定（与服务端 72 号同口径，周末不上课连续不可达） */
-  const totD = Number(data.metrics && data.metrics.total_days) || 0;
-  if (totD >= 10) un.add('bronze');
-  if (totD >= 30) un.add('silver');
-  data.unlocked_frames = Array.from(ownedFrameKeys());
-
   renderAchievements(achs);
+  renderDims(data.dims);
   applyFrameTo(els.identityAvatarEmoji, state.myFrame);
 
   // 新解锁成就：对比本机已见列表，逐个弹提示
@@ -2407,9 +2508,17 @@ async function loadProfile() {
   try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch (e) {}
   const seenSet = new Set(seen);
   const fresh = achs.filter(a => a.unlocked && !seenSet.has(a.key));
-  if (fresh.length) fresh.forEach(a => toast(`解锁成就「${a.name}」${a.icon}`));
+  // v178：新增维度成就后，老账号首次加载可能一次解锁多枚——超过 3 枚合并成一条，避免提示刷屏
+  if (fresh.length > 3) toast(`解锁 ${fresh.length} 个新成就`);
+  else if (fresh.length) fresh.forEach(a => toast(`解锁成就「${a.name}」${a.icon}`));
   if (fresh.length) sfx.success();
   try { localStorage.setItem(seenKey, JSON.stringify(achs.filter(a => a.unlocked).map(a => a.key))); } catch (e) {}
+}
+
+// 无身份 / 无档案时收起个人档案类卡片
+function hideProfileCards() {
+  if (els.achCard) els.achCard.hidden = true;
+  if (els.dimCard) els.dimCard.hidden = true;
 }
 
 function renderAchievements(achs) {
@@ -2425,11 +2534,87 @@ function renderAchievements(achs) {
     </div>`).join('');
 }
 
+/* ---------------- v178：五维成长（德智体美劳） ----------------
+   累计口径 = student_info.xp_de/xp_zhi/xp_ti/xp_mei/xp_lao
+   周口径   = 本周（周一起）表现记录的维度得分（服务端 student_dims 计算）
+   配色与教师端 DIM_META 同口径：德红 / 智蓝 / 体绿 / 美紫 / 劳橙 */
+const DIMS = [
+  { key: 'de',  name: '德', icon: 'hand-heart', color: '#e74c3c', medal: '德育之星' },
+  { key: 'zhi', name: '智', icon: 'book-open',  color: '#2e86de', medal: '智育之星' },
+  { key: 'ti',  name: '体', icon: 'dumbbell',   color: '#27ae60', medal: '体育之星' },
+  { key: 'mei', name: '美', icon: 'palette',    color: '#9b59b6', medal: '美育之星' },
+  { key: 'lao', name: '劳', icon: 'broom',      color: '#e67e22', medal: '劳动之星' }
+];
+
+function renderDims(dims) {
+  if (!els.dimCard || !els.dimBars) return;
+  if (!dims || dims.ok === false) { els.dimCard.hidden = true; return; }
+  const total = dims.total || {};
+  const vals = DIMS.map(d => Number(total[d.key]) || 0);
+  const maxV = Math.max.apply(null, vals.concat([50]));
+  const scale = Math.ceil(maxV / 50) * 50;          // 雷达与条形同一刻度，便于横向比较
+  const sum = vals.reduce((a, b) => a + b, 0);
+
+  // 雷达：五边形，外圈 = scale
+  const cx = 60, cy = 62, R = 42;
+  const pt = (i, r) => {
+    const a = (-90 + i * 72) * Math.PI / 180;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  };
+  const poly = k => DIMS.map((d, i) => pt(i, R * k).map(n => n.toFixed(1)).join(',')).join(' ');
+  const shape = DIMS.map((d, i) => pt(i, R * Math.min(1, (Number(total[d.key]) || 0) / scale)).map(n => n.toFixed(1)).join(',')).join(' ');
+  const axes = DIMS.map((d, i) => {
+    const [x, y] = pt(i, R), [lx, ly] = pt(i, R + 11);
+    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="dr-axis"/>` +
+           `<text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" class="dr-lab" style="fill:${d.color}">${d.name}</text>`;
+  }).join('');
+  els.dimRadar.innerHTML =
+    `<svg viewBox="0 0 120 126" role="img" aria-label="五维累计 ${sum} 星">` +
+    `<polygon points="${poly(1)}" class="dr-ring"/>` +
+    `<polygon points="${poly(0.66)}" class="dr-ring"/>` +
+    `<polygon points="${poly(0.33)}" class="dr-ring"/>` +
+    axes +
+    `<polygon points="${shape}" class="dr-shape"/>` +
+    `</svg>`;
+
+  // 条形：同刻度，末端显示真实数值
+  els.dimBars.innerHTML = DIMS.map(d => {
+    const v = Number(total[d.key]) || 0;
+    const pct = Math.min(100, v / scale * 100);
+    return `<div class="dim-row" style="--dim-c:${d.color}">
+      <span class="dim-tag">${I[d.icon]()}</span>
+      <span class="dim-track"><i style="width:${pct.toFixed(1)}%"></i></span>
+      <b class="dim-val">${v}</b>
+    </div>`;
+  }).join('');
+
+  // 本周维度勋章：本周得分最高的维度（低于门槛则显示还差多少）
+  const medalEl = els.dimMedal;
+  if (medalEl) {
+    const top = dims.top;
+    const topXp = Number(dims.top_xp) || 0;
+    const min = Number(dims.medal_min) || 5;
+    const meta = DIMS.find(d => d.key === top);
+    const weekSum = Number(dims.week_sum) || 0;
+    const prevMeta = DIMS.find(d => d.key === dims.prev_top);
+    const prevXp = Number(dims.prev_xp) || 0;
+    const tip = (prevMeta && prevXp >= min) ? `上周：${prevMeta.medal} +${prevXp}` : '上周没有维度勋章';
+    if (meta && topXp >= min) {
+      medalEl.innerHTML = `<span class="dm-badge" style="--dim-c:${meta.color}" title="${tip}">${I.medal()}<b>${meta.medal}</b><em>+${topXp}</em></span>`;
+    } else {
+      medalEl.innerHTML = `<span class="dm-none" title="${tip}">本周 +${weekSum} · 满 ${min} 得勋章</span>`;
+    }
+  }
+  els.dimCard.hidden = false;
+}
+
 /* ============================================================
    v167：星光值钱包 / 星光商店 / 班级转盘
    ============================================================ */
-function starHintNoIdentity() {
-  toast('请先在个人主页填好班级和姓名');
+// v179：没选填写人时不再"提示去填姓名"（那等于把人拦在门口），直接弹点名面板；
+//       选完名字自动继续刚才的动作（after 回调）
+function needIdentity(after) {
+  return openNamePicker({ onPick: typeof after === 'function' ? after : null });
 }
 
 // 拉取我的钱包（余额 / 累计 / 已拥有装扮）
@@ -2474,7 +2659,7 @@ function shopPriceOf(type, key) {
 async function openShop() {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) return starHintNoIdentity();
+  if (!cls || !name) return needIdentity(openShop);
   sfx.tap();
   if (els.wallView) els.wallView.hidden = true;
   if (els.formView) els.formView.hidden = true;
@@ -2632,9 +2817,9 @@ function renderShop() {
 async function buyShopItem(key, btn) {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) return starHintNoIdentity();
+  if (!cls || !name) return needIdentity(() => buyShopItem(key, btn));
   const it = (state.shopItems || []).find(x => x.item_key === key);
-  if (!it) return;
+  if (!it) return toast('商品已下架，请刷新商店');   // v178(F-04)：目录过期时给反馈，不再静默返回
   const pay = it.pay_price == null ? Number(it.price || 0) : Number(it.pay_price);
   if (state.wallet.balance < pay) {
     sfx.oops();
@@ -2656,8 +2841,7 @@ async function buyShopItem(key, btn) {
     sfx.success();
     toast(`已兑换 ${it.name}`);
     await Promise.all([loadWallet(), loadShopCatalog()]);
-    renderShop();
-    if (!els.shopView.hidden) renderShop();
+    renderShop();   // v178(F-06)：删除重复的第二次 renderShop
     await loadProfile();
   } catch (e) {
     sfx.oops();
@@ -2670,7 +2854,7 @@ async function buyShopItem(key, btn) {
 async function useDailyCard(key, btn) {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) return starHintNoIdentity();
+  if (!cls || !name) return needIdentity(() => useDailyCard(key, btn));
   const it = (state.shopItems || []).find(x => x.item_key === key);
   const label = it ? it.name : '这张卡';
   if (!window.confirm(`使用 1 张${label}？`)) return;
@@ -2703,7 +2887,7 @@ async function doChooseAvatar(key) {
   if (!res || res.ok === false) {
     sfx.oops();
     if (res && res.reason === 'not_owned') toast('这款还没拥有，先用星光值兑换吧～');
-    else if (res && res.reason === 'no_student') toast('请先填好班级和姓名');
+    else if (res && res.reason === 'no_student') { toast('这个名字不在名单里'); needIdentity(() => doChooseAvatar(key)); }
     else toast('保存失败，请重试');
     return;
   }
@@ -2720,7 +2904,7 @@ async function doChooseAvatar(key) {
 async function doChooseFrame(key) {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) return starHintNoIdentity();
+  if (!cls || !name) return needIdentity(() => doChooseFrame(key));
   const wr = await runWrite({ name: 'set_student_frame', params: { p_class: cls, p_student: name, p_frame: key } });
   if (!wr.ok || (wr.res && wr.res.ok === false)) {
     sfx.oops();
@@ -2742,7 +2926,7 @@ async function doChooseFrame(key) {
 async function doChooseCardTheme(key) {
   const cls = (els.inpClass.value || '').trim();
   const name = (els.inpName.value || '').trim();
-  if (!cls || !name) return starHintNoIdentity();
+  if (!cls || !name) return needIdentity(() => doChooseCardTheme(key));
   const val = key || null;
   const wr = await runWrite({ name: 'set_student_card_theme', params: { p_class: cls, p_student: name, p_card_theme: val } });
   if (!wr.ok || (wr.res && wr.res.ok === false)) {
@@ -2967,7 +3151,7 @@ function showForm(presetName) {
   loadShopCatalog();       // v167：商店目录（换头像时判定是否已拥有）
   window.scrollTo({ top: 0 });
   updateMood();
-  if (!els.inpName.value) els.inpName.focus();
+  renderIdentityName();    // v179：身份条显示当前填写人（空则显示「点我选名字」）
   resetSelections();
   loadTags();
   loadStudentTask();
@@ -3286,8 +3470,7 @@ async function onSubmit() {
   const norm = s => String(s || '').replace(/[\u3000\s]+/g, ' ').trim();
   const cls = norm(els.inpClass.value);
   const name = norm(els.inpName.value);
-  if (!cls) { sfx.oops(); return toast('请先填写班级'); }
-  if (!name) { sfx.oops(); return toast('请先填写姓名'); }
+  if (!cls || !name) { sfx.oops(); return needIdentity(); }   // v179：点名即认人，不校验名单
   updateMood();
 
   const items = [];
@@ -3347,17 +3530,6 @@ async function onSubmit() {
       } else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
       return;
     }
-    const { data: valid, error: rpcError } = await supabase.rpc('is_valid_student', {
-      p_class: cls,
-      p_student: name
-    });
-    if (rpcError) throw rpcError;
-    if (!valid) {
-      sfx.oops();
-      toast('未找到该姓名，请核对');
-      return;
-    }
-
     const { data: subRes, error: insertError } = await supabase.rpc('submit_today', {
       p_class: cls,
       p_student: name,
@@ -3371,7 +3543,8 @@ async function onSubmit() {
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
-        toast('未找到该姓名，请核对');
+        toast('这个名字不在名单里');
+        needIdentity();
       } else {
         throw insertError;
       }
@@ -3379,9 +3552,12 @@ async function onSubmit() {
     }
     if (!subRes || subRes.ok === false) {
       sfx.oops();
-      toast(subRes && subRes.reason === 'no_student'
-        ? '未找到该姓名，请核对'
-        : '提交失败，请重试');
+      if (subRes && subRes.reason === 'no_student') {
+        toast('这个名字不在名单里');
+        needIdentity();     // 保留已勾选的表现，换个名字就能提交
+      } else {
+        toast('提交失败，请重试');
+      }
       return;
     }
     // 合并模式下提示
@@ -3653,6 +3829,10 @@ async function onPickTaskGrade(grade, taskId, btn) {
   const cls = els.inpClass.value.trim();
   const name = els.inpName.value.trim();
   if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
+  // v178(C2)：评分档位白名单——非法值不发请求（原先直接落到服务端 check 约束）
+  if (['none', 'done', 'good', 'perfect'].indexOf(grade) < 0) { sfx.oops(); toast('评分无效'); return; }
+  // v178(F-01)：与购买链路一致——无身份不发请求；v179 改为点名后自动续做
+  if (!cls || !name) { sfx.oops(); return needIdentity(() => onPickTaskGrade(grade, taskId, btn)); }
   // "还没做"也提交：用于撤销之前的评分、回退星光值
   const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
   if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }

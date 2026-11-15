@@ -23,20 +23,23 @@ addEventListener('DOMContentLoaded', function () {
 <body>
 
 <!-- 陌生设备：先选名字才能进墙 -->
-<div id="deviceGate" class="device-gate" hidden>
-  <div class="gate-card">
-    <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-wave"/></svg> 你好呀，你是哪位同学？</h2>
-    <p class="text-muted">选你的名字，这台设备会记住你</p>
-    <div class="field">
-      <label>班级</label>
-      <select class="input" id="gateClass"></select>
+<!-- ================= 点名面板（40 人共用白板：点名字即认人，无输入校验） ================= -->
+<div id="namePicker" class="np-mask" hidden>
+  <div class="np-card" role="dialog" aria-modal="true" aria-label="选择你的名字">
+    <div class="np-head">
+      <b>点你的名字</b>
+      <button type="button" class="np-close" id="npClose" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </div>
-    <div class="field">
-      <label>你的姓名</label>
-      <input class="input" id="gateName" type="text" maxlength="20" placeholder="与名单上完全一致">
+    <div class="np-tools">
+      <select class="input" id="npClass" aria-label="班级"></select>
+      <input class="input" id="npSearch" type="text" placeholder="输入一个字快速找" maxlength="10" autocomplete="off">
     </div>
-    <button class="btn btn-primary" id="gateGo" style="margin-top:10px;">进班级墙</button>
-    <div id="gateError" class="text-muted" style="color:#c0392b;margin-top:8px;"></div>
+    <div class="np-grid" id="npGrid"></div>
+    <div class="np-empty" id="npEmpty" hidden>名单还没加载出来，直接在下面写名字</div>
+    <div class="np-manual">
+      <input class="input" id="npManual" type="text" placeholder="直接写名字（须与名单一致）" maxlength="20" autocomplete="off">
+      <button type="button" class="btn btn-primary btn-sm" id="npManualGo">用这个名字</button>
+    </div>
   </div>
 </div>
 
@@ -129,22 +132,33 @@ addEventListener('DOMContentLoaded', function () {
       <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
       <div class="identity-xp-text" id="identityXpText">累计 0 · Lv.1</div>
     </div>
-    <div class="field">
-      <label for="inpClass">我的班级</label>
-      <input class="input" id="inpClass" type="text" placeholder="例如：三年级2班"
-             autocomplete="off" maxlength="30">
-    </div>
-    <div class="field">
-      <label for="inpName">我的姓名</label>
-      <input class="input" id="inpName" type="text" placeholder="与名单上完全一致"
-             autocomplete="off" maxlength="20">
-    </div>
+    <!-- 填写人：一键点名切换，不再手输+校验 -->
+    <button type="button" class="id-who" id="btnPickMe">
+      <span class="id-who-label">填写人</span>
+      <b class="id-who-name" id="idWhoName">点我选名字</b>
+      <span class="id-who-class" id="idWhoClass"></span>
+      <svg class="ico id-who-arrow" aria-hidden="true" focusable="false"><use href="#i-chevron-down"/></svg>
+    </button>
+    <input type="hidden" id="inpClass" autocomplete="off">
+    <input type="hidden" id="inpName" autocomplete="off">
   </section>
 
   <!-- 我的成就（徽章墙） -->
   <section class="card red-card" id="achCard" hidden>
     <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-medal"/></svg> 我的成就 <span id="achCount" class="ach-count"></span></div>
     <div class="ach-grid" id="achGrid"></div>
+  </section>
+
+  <!-- 五维成长（德智体美劳 + 本周维度勋章） -->
+  <section class="card red-card dim-card" id="dimCard" hidden>
+    <div class="dim-head">
+      <div class="card-title red-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-pie"/></svg> 五维成长</div>
+      <div class="dim-medal" id="dimMedal"></div>
+    </div>
+    <div class="dim-body">
+      <div class="dim-radar" id="dimRadar"></div>
+      <div class="dim-bars" id="dimBars"></div>
+    </div>
   </section>
 
   <!-- 今日心情（由勾选项自动算出，5 档）——填写页不显示，只在班级墙头像预览 -->

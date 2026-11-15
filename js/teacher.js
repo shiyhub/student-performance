@@ -356,7 +356,9 @@ async function syncRunner(op) {
       return { ok: true };
     }
   } catch (e) { throw e; }
-  return { ok: false };
+  // v178(F-02)：白名单未命中不再静默成功返回；显式报错，便于开发期发现漏登记
+  console.error('[syncRunner] 未登记的操作：' + op.name);
+  throw new Error('unregistered_op: ' + op.name);
 }
 async function runWrite(op) {
   if (!window.Offline || !window.Offline.online) {
@@ -718,6 +720,8 @@ async function loadRecords() {
   const date = els.filterDate.value;
   const kw = els.filterKeyword.value.trim();
 
+  loadUndoPanel();   // v179：撤销栈与记录列表同步刷新（失败静默，不影响列表）
+
   // v145(RSK-15)：教师端 SWR——缓存秒开 + 60s 新鲜期复用 + 后台静默刷新
   // （数据库在海外，弱网 RTT 高；教师频繁切换筛选，不再每次直连白等）
   const cacheKey = 't_recs_' + (cls || '?') + '_' + (date || '?') + '_' + (kw || '?');
@@ -914,16 +918,102 @@ function renderHomeNotes(notes) {
   return html;
 }
 
-async function deleteRecord(id) {
-  if (!confirm('删除这条记录？不可恢复')) return;
-  const { error } = await supabase.from('daily_record').delete().eq('id', id);
-  if (error) { toast('删除失败：' + error.message); return; }
-  toast('已删除');
-  loadRecords();
-  invalidateRecCache();
+/* ---------------- v179：撤销 / 恢复 ----------------
+   学生端不再校验身份（40 人共用白板，效率优先），误填/错人/重复提交由这里兜底：
+   撤销 = 快照入库 + 删除（经验/五维/星光由触发器照原逻辑回退）
+   恢复 = 按快照插回（触发器重新加分），窗口期内的误操作可原样还原          */
+async function undoRecord(id, reason) {
+  if (!window.Offline || !window.Offline.online) { toast('撤销需要联网'); return false; }
+  const r = await supabase.rpc('teacher_undo_record', { p_record_id: id, p_reason: reason || null });
+  if (r.error) { toast('撤销失败：' + r.error.message); return false; }
+  const d = r.data || {};
+  if (d.ok !== true) {
+    toast(d.reason === 'not_found' ? '这条记录已不存在，刷新看看' : '撤销失败，请重试');
+    return false;
+  }
+  toast(`已撤销${d.student_name ? ' ' + d.student_name : ''}${d.xp_refunded ? '，回退 ' + d.xp_refunded + ' 星光值' : ''}`);
+  return true;
 }
 
-// 批量删除所选记录
+async function deleteRecord(id) {
+  if (!confirm('撤销这条记录？\n星光值会一并回退，之后可在「最近撤销」里恢复。')) return;
+  if (!(await undoRecord(id))) return;
+  invalidateRecCache();
+  await loadRecords();
+  loadUndoPanel(true);
+}
+
+async function undoRecords(ids) {
+  if (!ids.length) return;
+  let ok = 0, fail = 0;
+  for (const id of ids) { (await undoRecord(id)) ? ok++ : fail++; }
+  invalidateRecCache();
+  await loadRecords();
+  loadUndoPanel(true);
+  if (ok) toast(`已撤销 ${ok} 条${fail ? `，${fail} 条失败` : ''}，可在「最近撤销」恢复`);
+}
+
+async function restoreRecord(undoId) {
+  if (!window.Offline || !window.Offline.online) { toast('恢复需要联网'); return; }
+  const r = await supabase.rpc('teacher_restore_record', { p_undo_id: undoId });
+  if (r.error) { toast('恢复失败：' + r.error.message); return; }
+  const d = r.data || {};
+  if (d.ok !== true) {
+    toast(d.reason === 'already_restored' ? '这条已经恢复过了'
+      : d.reason === 'no_student' ? '该学生已不在名单里，无法恢复'
+      : d.reason === 'duplicate_day' ? '该生当天已有记录，先撤销新的再恢复这条'
+      : '恢复失败，请重试');
+    loadUndoPanel(true);
+    return;
+  }
+  toast(`已恢复${d.student_name ? ' ' + d.student_name : ''}${d.xp_restored ? '，加回 ' + d.xp_restored + ' 星光值' : ''}`);
+  invalidateRecCache();
+  await loadRecords();
+  loadUndoPanel(true);
+}
+
+let undoTs = 0;
+async function loadUndoPanel(force) {
+  const card = document.getElementById('undoCard');
+  if (!card) return;
+  // 与记录列表同步刷新，但 10s 内不重复请求（撤销/恢复后强制刷新）
+  if (!force && Date.now() - undoTs < 10000) return;
+  undoTs = Date.now();
+  let list = [];
+  try {
+    const r = await supabase.rpc('teacher_list_record_undo', { p_class: els.filterClass.value || null, p_limit: 20 });
+    if (!r.error && Array.isArray(r.data)) list = r.data;
+  } catch (e) {}
+  const pending = list.filter(x => !x.restored_at);
+  if (!pending.length) { card.hidden = true; return; }
+  card.hidden = false;
+  document.getElementById('undoCount').textContent = `${pending.length}`;
+  document.getElementById('undoBox').innerHTML = pending.map(x => {
+    const items = (x.items || []).map(i => i.value ? `${esc(i.label || '')}：${esc(i.value)}` : esc(i.label || '')).join(' · ');
+    return `<div class="undo-row">
+      <div class="undo-info">
+        <b>${esc(x.student_name)}</b>
+        <span class="class-pill">${esc(x.class)}</span>
+        <span class="undo-when">${formatDate(x.record_date)}</span>
+        <span class="undo-xp">${x.xp_delta ? '−' + x.xp_delta + ' 星光值' : '无星光值'}</span>
+        ${x.reason ? `<span class="undo-reason">${esc(x.reason)}</span>` : ''}
+      </div>
+      <div class="undo-items">${items || '（无表现项）'}</div>
+      <button class="btn btn-ghost btn-sm" data-restore="${x.undo_id}">${I.undo('ico-sm')} 恢复</button>
+    </div>`;
+  }).join('');
+  $$('[data-restore]', document.getElementById('undoBox')).forEach(btn => {
+    btn.addEventListener('click', () => restoreRecord(btn.dataset.restore));
+  });
+}
+document.getElementById('btnUndoToggle')?.addEventListener('click', e => {
+  const box = document.getElementById('undoBox');
+  const willHide = !box.hidden;
+  box.hidden = willHide;
+  e.currentTarget.textContent = willHide ? '展开' : '收起';
+});
+
+// 批量撤销所选记录（可恢复）
 document.getElementById('btnRecCheckAll')?.addEventListener('click', () => {
   const boxes = document.querySelectorAll('.rec-check');
   const anyUnchecked = [...boxes].some(b => !b.checked);
@@ -931,13 +1021,9 @@ document.getElementById('btnRecCheckAll')?.addEventListener('click', () => {
 });
 document.getElementById('btnBatchDelRec')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.rec-check:checked')].map(b => b.value);
-  if (!ids.length) return toast('请先勾选要删除的记录');
-  if (!confirm(`确定删除选中的 ${ids.length} 条记录吗？删除后不可恢复，星光值也会相应扣回。`)) return;
-  const { error } = await supabase.from('daily_record').delete().in('id', ids);
-  if (error) { toast('批量删除失败：' + error.message); return; }
-  toast('已删除 ' + ids.length + ' 条');
-  loadRecords();
-  invalidateRecCache();
+  if (!ids.length) return toast('请先勾选要撤销的记录');
+  if (!confirm(`撤销选中的 ${ids.length} 条记录？\n星光值会一并回退，之后可在「最近撤销」里恢复。`)) return;
+  await undoRecords(ids);
 });
 
 async function deleteHomeNote(id) {
@@ -1377,7 +1463,7 @@ function renderRecordCard(r) {
               <span class="rec-when">${formatDate(r.record_date)} ${formatTime(r.create_at)}</span>
               <span class="rec-tools">
                 <button class="btn btn-ghost btn-sm" data-edit-rec="${r.id}">${I.edit('ico-sm')} 修改</button>
-                <button class="btn btn-ghost btn-sm danger-text" data-del-rec="${r.id}">${I.trash('ico-sm')} 删除</button>
+                <button class="btn btn-ghost btn-sm danger-text" data-del-rec="${r.id}">${I.undo('ico-sm')} 撤销</button>
               </span>
             </div>
             <div class="rec-body">

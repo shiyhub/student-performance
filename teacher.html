@@ -128,9 +128,19 @@ addEventListener('DOMContentLoaded', function () {
           <button class="btn btn-ghost" id="btnClearFilter">清空条件</button>
           <button class="btn btn-warn" id="btnAddRecord" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> 帮学生记录一条</button>
           <button class="btn btn-ghost" id="btnRecCheckAll" type="button">全选</button>
-          <button class="btn btn-danger" id="btnBatchDelRec" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg> 批量删除所选</button>
+          <button class="btn btn-danger" id="btnBatchDelRec" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg> 批量撤销所选</button>
         </div>
       </div>
+
+      <!-- 最近撤销：学生端不再校验身份，误填/错人提交在这里恢复 -->
+      <div class="card undo-card" id="undoCard" hidden>
+        <div class="undo-head">
+          <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg> 最近撤销 <span id="undoCount" class="undo-count"></span></div>
+          <button class="btn btn-ghost btn-sm" id="btnUndoToggle" type="button">收起</button>
+        </div>
+        <div id="undoBox"></div>
+      </div>
+
       <div id="recordBox"></div>
     </section>
 

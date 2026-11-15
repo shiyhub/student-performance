@@ -34,6 +34,7 @@
     download: '<path d="M12 4.6v10.6"/><path d="M7.8 11.2L12 15.4l4.2-4.2"/><path d="M4.8 19.4h14.4"/>',
     upload: '<path d="M12 15.4V4.8"/><path d="M7.8 9L12 4.8 16.2 9"/><path d="M4.8 19.4h14.4"/>',
     refresh: '<path d="M19.4 12a7.4 7.4 0 1 1-2.2-5.3"/><path d="M19.6 4.9v3.6h-3.6"/>',
+    undo: '<path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.3"/><path d="M4.4 4.9v3.6h3.6"/>',
     search: '<circle cx="11" cy="11" r="6.4"/><path d="M15.7 15.7L20 20"/>',
     filter: '<path d="M4.4 6.8h15.2M7.4 12h9.2M10.2 17.2h3.6"/>',
     sort: '<path d="M7 4.8v14.4"/><path d="M4.4 16.4L7 19l2.6-2.6"/><path d="M13.6 5.4h6M13.6 10.4h4.6M13.6 15.4h3.2"/>',
