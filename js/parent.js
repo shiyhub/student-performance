@@ -151,7 +151,9 @@ async function syncRunner(op) {
     if (op.name === 'add_home_note') { const r = await supabase.rpc('add_home_note', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
     if (op.name === 'add_home_note_reply') { const r = await supabase.rpc('add_home_note_reply', p); return { ok: !r.error && r.data === true, data: r.data, error: r.error }; }
   } catch (e) { throw e; }
-  return { ok: false };
+  // v178(F-02)：白名单未命中不再静默返回；显式报错，便于开发期发现漏登记
+  console.error('[syncRunner] 未登记的操作：' + op.name);
+  throw new Error('unregistered_op: ' + op.name);
 }
 async function runWrite(op) {
   if (!window.Offline) return { ok: false, queued: false };   // 离线层未加载：明确失败，不抛异常

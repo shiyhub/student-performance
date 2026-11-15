@@ -1,8 +1,75 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-device="pc" data-layout="auto">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* v180 · 设备判定兜底（不依赖任何外部脚本）
+ * 背景：桌面端布局此前完全依赖 js/device.js 给 <html> 打 data-device="pc"。
+ *       该文件一旦缺失/加载失败，属性写不上，全部 html[data-device="pc"] 规则失效，
+ *       电脑上就会退化成手机版；而「切换布局」按钮又只在桌面版显示，等于无法自救。
+ * 兜底：<html> 静态写死 data-device="pc"（见上一行），此处在首屏渲染前再判一次，
+ *       判定为手机才改成 mobile。device.js 正常加载时由它接管（含手动切换）。 */
+(function () {
+  var h = document.documentElement;
+  var ORDER = ['auto', 'pc', 'mobile'], NAME = { auto: '自动', pc: '电脑', mobile: '手机' };
+  var manual = null;
+
+  function auto() {
+    var w = window.innerWidth || 0;
+    var ua = navigator.userAgent || '';
+    var android = /Android/i.test(ua);
+    var phone = /iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini/i.test(ua) ||
+                (android && /Mobile/i.test(ua));
+    var pad = /iPad/i.test(ua) || (android && !/Mobile/i.test(ua)) ||
+              /Tablet|PlayBook|Silk/i.test(ua);
+    if (w > 0 && w < 860) return 'mobile';
+    if (phone) return 'mobile';
+    if (pad) return w < 1180 ? 'mobile' : 'pc';
+    return 'pc';
+  }
+
+  function paint(dev, isManual) {
+    h.setAttribute('data-device', dev);
+    h.setAttribute('data-layout', isManual ? 'manual' : 'auto');
+    h.setAttribute('data-device-src', 'inline');   // 排障用：F12 看到 inline 说明 device.js 没生效
+    var text = isManual ? NAME[dev] + ' · 手动' : '自动 · ' + NAME[dev];
+    var t = document.getElementById('deviceText');
+    if (t) t.textContent = text;
+    var btn = document.getElementById('btnDevice');
+    if (btn) {
+      var u = btn.querySelector('use');
+      if (u) u.setAttribute('href', dev === 'pc' ? '#i-monitor' : '#i-phone');
+    }
+    var info = document.getElementById('deviceInfo');
+    if (info) info.textContent = text + ' · ' + (window.innerWidth || 0) + '×' + (window.innerHeight || 0);
+  }
+
+  paint(auto(), false);
+
+  // 仅在 device.js 未生效时兜底接管切换按钮，正常路径不干预
+  window.addEventListener('load', function () {
+    if (window.SPDevice) return;
+    console.warn('[device] js/device.js 未加载，已用内联兜底判定；请确认该文件已上传到 js/ 目录。');
+    paint(manual || auto(), !!manual);
+    var cycle = function () {
+      var i = ORDER.indexOf(manual || 'auto');
+      var next = ORDER[(i + 1) % ORDER.length];
+      manual = next === 'auto' ? null : next;
+      paint(manual || auto(), !!manual);
+    };
+    ['btnDevice', 'btnDevice2'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('click', cycle);
+    });
+    var tm = 0;
+    window.addEventListener('resize', function () {
+      clearTimeout(tm);
+      tm = setTimeout(function () { if (!manual) paint(auto(), false); }, 160);
+    }, { passive: true });
+  });
+})();
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>教师后台 · 在校表现记录</title>
 <script src="js/config.js"></script>

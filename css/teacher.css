@@ -644,6 +644,32 @@ html[data-device="pc"] .shell {
 /* 座位页已并入内容区，电脑端跟随内容宽度，不再单独收窄 */
 html[data-device="pc"] #tabSeat { max-width: none; }
 
+/* --- v180 兜底：窄屏不套用桌面三栏 ---
+ * <html> 静态默认 data-device="pc"，若判定脚本缺失/失效，手机会误判成桌面版。
+ * 这里用媒体查询把它按回移动排版；data-layout="manual" 表示用户手动指定，豁免。 */
+@media (max-width: 859px) {
+  html[data-device="pc"]:not([data-layout="manual"]) #appView { display: block; min-height: 0; }
+  html[data-device="pc"]:not([data-layout="manual"]) .app-side {
+    position: static; height: auto; padding: 0;
+    background: transparent; border-right: none; overflow: visible;
+  }
+  html[data-device="pc"]:not([data-layout="manual"]) .topbar-inner {
+    flex-direction: row; align-items: center; gap: 8px; padding: 10px 12px;
+  }
+  html[data-device="pc"]:not([data-layout="manual"]) .topbar-title { font-size: 15px; }
+  html[data-device="pc"]:not([data-layout="manual"]) .topbar-actions { flex-direction: row; margin-left: auto; }
+  html[data-device="pc"]:not([data-layout="manual"]) .tabs {
+    flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    max-width: 1000px; margin: 0 auto; padding: 14px 16px;
+  }
+  html[data-device="pc"]:not([data-layout="manual"]) .tab-btn {
+    display: inline-block; width: auto; flex: 0 0 auto;
+    padding: 10px 14px; text-align: center; border: 1.5px solid var(--line);
+  }
+  html[data-device="pc"]:not([data-layout="manual"]) .side-foot { display: none; }
+  html[data-device="pc"]:not([data-layout="manual"]) .shell { max-width: 1000px; padding: 0 16px 60px; }
+}
+
 /* ============ v179：最近撤销（可恢复） ============ */
 .undo-card { border-left: 3px solid var(--warn, #ffab3d); }
 .undo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
