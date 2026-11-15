@@ -211,13 +211,13 @@ const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2300, 2800, 3
 // 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
 const FRAMES = [
   { key: 'none',    name: '无框',   icon: I['circle-dot'](), need: '默认佩戴' },
-  { key: 'bronze',  name: '铜环',   icon: I.medal('rk rk3'), need: '星光商店兑换' },
-  { key: 'silver',  name: '银环',   icon: I.medal('rk rk2'), need: '星光商店兑换' },
-  { key: 'gold',    name: '金环',   icon: I.medal('rk rk1'), need: '星光商店兑换' },
+  { key: 'bronze',  name: '暖阳环', icon: I.medal('rk rk3'), need: '星光商店兑换' },
+  { key: 'silver',  name: '月光环', icon: I.medal('rk rk2'), need: '星光商店兑换' },
+  { key: 'gold',    name: '阳光环', icon: I.medal('rk rk1'), need: '星光商店兑换' },
   { key: 'rainbow', name: '彩虹环', icon: I.rainbow(), need: '星光商店兑换' },
   { key: 'star',    name: '星光环', icon: I.star(), need: '星光商店兑换' },
   { key: 'heart',   name: '爱心环', icon: I.heart(), need: '星光商店兑换' },
-  { key: 'crown',   name: '皇冠环', icon: '', need: '星光商店兑换' },
+  { key: 'crown',   name: '冠军环', icon: '', need: '星光商店兑换' },
   /* v130(RSK-11)：12 款游戏风头像框，按等级开放 */
   { key: 'tac',     name: '军事战术', icon: I.award(), need: '星光商店兑换' },
   { key: 'sakura',  name: '樱花甜心', icon: '', need: '星光商店兑换' },
@@ -2307,7 +2307,16 @@ function ownedFrameKeys() {
   return un;
 }
 
+// 商品显示名以服务端 shop_item.name 为准（改名只需动数据库，前端不用跟着发版）；
+// 未加载到目录时退回本地常量
+function shopNameOf(type, key) {
+  const it = (state.shopItems || []).find(x => x.item_type === type && x.item_key === key);
+  return (it && it.name) ? it.name : '';
+}
+
 function frameNameOf(key) {
+  const dyn = shopNameOf('frame', key);
+  if (dyn) return dyn;
   const f = FRAMES.find(x => x.key === key);
   return f ? f.name : (key === 'none' ? '无框' : key);
 }
@@ -2359,7 +2368,7 @@ function renderFramePage() {
     const price = f.key === 'none' ? 0 : shopPriceOf('frame', f.key);
     b.innerHTML = `<span class="fc-ring"></span>` +
       (owned ? `<span class="fc-owned"></span>` : `<span class="fc-lock">${I.lock()}<em>${I.star()}${price}</em></span>`);
-    b.title = f.name + (owned ? '（已拥有）' : `（${price} 星光值兑换）`);
+    b.title = frameNameOf(f.key) + (owned ? '（已拥有）' : `（${price} 星光值兑换）`);
     b.addEventListener('click', () => {
       if (!owned) {
         sfx.oops();
@@ -2521,17 +2530,69 @@ function hideProfileCards() {
   if (els.dimCard) els.dimCard.hidden = true;
 }
 
+/* ---------------- 成就墙（v181：分组 + 奖励位） ----------------
+   后端 achievement_def 提供 group_key / group_name / reward_avatar / reward_frame；
+   未执行 121 号补丁时这些字段缺失 → 自动退化为单组、空奖励位。 */
+const ACH_GROUPS = [
+  { key: 'start',  name: '启程' },
+  { key: 'study',  name: '学习' },
+  { key: 'five',   name: '五育' },
+  { key: 'growth', name: '成长' },
+  { key: 'honor',  name: '荣誉' }
+];
+
+// 奖励位：空 key = 占位（虚线），有 key = 点亮该头像 / 头像框
+function achRewardSlot(kind, key) {
+  if (!key) {
+    return `<span class="rw-slot rw-empty" title="${kind === 'avatar' ? '成就奖励头像位' : '成就奖励头像框位'}">` +
+      (kind === 'avatar' ? I.user() : I['circle-dot']()) + `</span>`;
+  }
+  if (kind === 'avatar') {
+    const av = avatarForName(key, key, true);
+    return `<span class="rw-slot rw-on rw-av-on" title="成就奖励头像">${avatarInner(av)}</span>`;
+  }
+  return `<span class="rw-slot rw-on rw-fr-on" title="成就奖励头像框">` +
+    `<img src="assets/frames/frame-${esc(key)}.webp" alt="" loading="lazy" ` +
+    `onerror="this.style.display='none'"></span>`;
+}
+
 function renderAchievements(achs) {
   if (!els.achGrid) return;
   els.achCard.hidden = false;
-  const done = achs.filter(a => a.unlocked).length;
-  els.achCount.textContent = `${done}/${achs.length}`;
-  els.achGrid.innerHTML = achs.map(a => `
-    <div class="ach-item ${a.unlocked ? 'unlocked' : 'locked'}">
-      <div class="ach-ic">${a.unlocked ? a.icon : '' + I.lock() + ''}</div>
-      <div class="ach-n">${esc(a.name)}</div>
-      <div class="ach-p">${a.unlocked ? esc(a.desc) : `${a.cur}/${a.target}`}</div>
-    </div>`).join('');
+  const list = achs || [];
+  const done = list.filter(a => a.unlocked).length;
+  els.achCount.textContent = `${done}/${list.length}`;
+
+  // 分组（保持 ACH_GROUPS 顺序；未知分组追加在最后）
+  const groups = ACH_GROUPS.map(g => ({ key: g.key, name: g.name, items: [] }));
+  const byKey = new Map(groups.map(g => [g.key, g]));
+  const other = { key: '_other', name: '更多', items: [] };
+  list.forEach(a => (byKey.get(a.group_key) || other).items.push(a));
+  const shown = groups.filter(g => g.items.length);
+  if (other.items.length) shown.push(other);
+
+  els.achGrid.innerHTML = shown.map(g => {
+    const gd = g.items.filter(a => a.unlocked).length;
+    const items = g.items.map(a => {
+      const unlocked = !!a.unlocked;
+      const target = Number(a.target) || 1;
+      const cur = Math.min(Number(a.cur) || 0, target);
+      // 已解锁：显示达成说明；未解锁：可量化目标显示进度，其余显示说明
+      const sub = unlocked ? (a.desc || '')
+        : (a.show_progress !== false && target > 1) ? `${cur}/${target}`
+        : (a.desc || '');
+      return `<div class="ach-item ${unlocked ? 'unlocked' : 'locked'}" title="${esc(a.desc || '')}">
+        <div class="ach-rw">${achRewardSlot('avatar', a.reward_avatar)}${achRewardSlot('frame', a.reward_frame)}</div>
+        <div class="ach-ic">${unlocked ? (a.icon || '') : '' + I.lock() + ''}</div>
+        <div class="ach-n">${esc(a.name)}</div>
+        <div class="ach-p">${esc(sub)}</div>
+      </div>`;
+    }).join('');
+    return `<div class="ach-group" data-g="${esc(g.key)}">
+      <div class="ach-group-head"><span>${esc(g.name)}</span><b>${gd}/${g.items.length}</b></div>
+      <div class="ach-grid">${items}</div>
+    </div>`;
+  }).join('');
 }
 
 /* ---------------- v178：五维成长（德智体美劳） ----------------

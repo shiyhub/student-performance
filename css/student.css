@@ -2006,3 +2006,47 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   .np-name { font-size: 17px; padding: 13px 8px; }
   .np-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 }
+
+/* ============ v181：成就墙分组 + 奖励位预留 ============
+   #achGrid 自身带 .ach-grid 类（display:grid 4 列），现在它的子元素是「组」
+   而不是「成就卡」——必须退回块级，否则每组被塞进一列格子 */
+#achGrid { display: block; }
+#achGrid .ach-group { display: block; }
+#achGrid .ach-group + .ach-group { margin-top: 9px; }
+.ach-group-head {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 5px 2px; font-size: 11.5px; font-weight: 800; color: #6b7a94;
+}
+.ach-group-head::after {
+  content: ''; order: 1; flex: 1; height: 1px;
+  background: linear-gradient(90deg, #eef2f9, rgba(238,242,249,0));
+}
+.ach-group-head b { order: 2; font-size: 10.5px; font-weight: 800; color: #b6c0d2; }
+
+#achCard .ach-item { position: relative; padding: 6px 3px 5px; }
+#achCard .ach-ic { font-size: 22px; }
+#achCard .ach-n { font-size: 11px; line-height: 1.2; }
+#achCard .ach-p {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.22; font-size: 10px;
+}
+
+/* 奖励位：结构先留着（虚线 = 未绑定），后端挂了 reward_avatar/frame 即点亮 */
+.ach-rw { position: absolute; top: 3px; right: 3px; display: flex; gap: 2px; }
+.rw-slot {
+  width: 15px; height: 15px; border-radius: 50%; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.rw-slot .ico { width: 9px; height: 9px; }
+.rw-empty { border: 1px dashed #dde4f0; color: #ccd5e4; background: #fff; }
+.ach-item.unlocked .rw-empty { border-color: #f2dcaa; color: #e6c98f; }
+.rw-on { background: #fff; box-shadow: 0 1px 3px rgba(20, 35, 60, .18); }
+.rw-av-on .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rw-fr-on img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* 窄栏（1366 笔记本左栏约 300px）：4 列时每格内容宽约 54px，
+   11px 的 5 字名称会逐字换行，只在窄屏收一号字，仍保持 4 列对齐 */
+@media (max-width: 1400px) {
+  #achCard .ach-n { font-size: 10px; letter-spacing: -.2px; }
+  #achCard .ach-p { font-size: 9.5px; }
+}
