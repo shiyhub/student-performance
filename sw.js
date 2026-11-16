@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v93';
+const CACHE = 'sp-cache-v94';
 const ASSETS = [
   './',
   './index.html',
@@ -295,6 +295,27 @@ const ASSETS = [
   './assets/frames/frame-diamondhelm.webp',
   './assets/avatars/game18.webp',
   './assets/avatars/game18-s.webp',
+  /* v194：10 张海报头像（主图 + 缩略图） */
+  './assets/avatars/poster1.webp',
+  './assets/avatars/poster1-s.webp',
+  './assets/avatars/poster2.webp',
+  './assets/avatars/poster2-s.webp',
+  './assets/avatars/poster3.webp',
+  './assets/avatars/poster3-s.webp',
+  './assets/avatars/poster4.webp',
+  './assets/avatars/poster4-s.webp',
+  './assets/avatars/poster5.webp',
+  './assets/avatars/poster5-s.webp',
+  './assets/avatars/poster6.webp',
+  './assets/avatars/poster6-s.webp',
+  './assets/avatars/poster7.webp',
+  './assets/avatars/poster7-s.webp',
+  './assets/avatars/poster8.webp',
+  './assets/avatars/poster8-s.webp',
+  './assets/avatars/poster9.webp',
+  './assets/avatars/poster9-s.webp',
+  './assets/avatars/poster10.webp',
+  './assets/avatars/poster10-s.webp',
   './assets/themes/feather-moon.webp',
   './assets/themes/feather-violet.webp',
   './assets/themes/feather-night.webp',

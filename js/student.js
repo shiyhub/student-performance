@@ -139,7 +139,10 @@ const AVATAR_SM_KEYS = new Set([
   'xian1','xian2','xian3','xian4','xian5',
   'chibi1','chibi2','chibi3','chibi4',
   'moe1','moe2','moe3','moe4','moe5','moe6','moe7','moe8','moe9','moe10',
-  'bunny','doll','flower','gothic','horn','lotus','twin'
+  'bunny','doll','flower','gothic','horn','lotus','twin',
+  /* v194：10 张海报头像，512 主图 + 256 缩略图成对 */
+  'poster1','poster2','poster3','poster4','poster5',
+  'poster6','poster7','poster8','poster9','poster10'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
