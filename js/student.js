@@ -762,6 +762,40 @@ function initTaskFolds() {
   });
 }
 
+/* v190：成就卡与五维卡折叠。默认折叠，不记忆状态（每次进入主页都是收起） */
+function initCardFolds() {
+  const pairs = [
+    { card: els.achCard, host: '.card-title' },
+    { card: els.dimCard, host: '.dim-head' }
+  ];
+  pairs.forEach(p => {
+    const cardEl = p.card;
+    if (!cardEl) return;
+    const host = cardEl.querySelector(p.host);
+    if (!host || host.querySelector('.card-fold')) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'task-fold card-fold';
+    btn.title = '展开';
+    btn.setAttribute('aria-expanded', 'false');
+    host.appendChild(btn);
+
+    function setFolded(folded) {
+      cardEl.classList.toggle('card-folded', folded);
+      btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+      btn.title = folded ? '展开' : '收起';
+      btn.innerHTML = folded ? I['chevron-down']() : I['chevron-up']();
+    }
+    setFolded(true);
+
+    btn.addEventListener('click', () => {
+      sfx.tap();
+      setFolded(!cardEl.classList.contains('card-folded'));
+    });
+  });
+}
+
 init();
 
 function init() {
@@ -771,6 +805,7 @@ function init() {
   renderMoodPreview();
   bindEvents();
   initTaskFolds();
+  initCardFolds();
   prefillIdentity();
   updateMood();
 
@@ -3109,9 +3144,11 @@ function renderLottery() {
     els.lotteryWheel.style.background = `conic-gradient(${stops})`;
     els.lotteryWheel.innerHTML = prizes.map((x, i) => {
       const ang = ((i + 0.5) * sector - 90) * Math.PI / 180;
-      const left = 50 + 37 * Math.cos(ang);
-      const top = 50 + 37 * Math.sin(ang);
-      const short = String(x.name || '').replace(/星光值|全班星光|头像框|头像/g, '').trim();
+      // 容器宽度百分比：50% 即环边，37% ≈ 环半径的 0.74，贴近环内但不压线
+      const rad = 37;
+      const left = 50 + rad * Math.cos(ang);
+      const top = 50 + rad * Math.sin(ang);
+      const short = String(x.name || '').replace(/星光值|全班星光|头像框|头像/g, '').replace(/一节$/, '').trim();
       return `<span class="wheel-label" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%">` +
         `<i>${x.icon}<em>${esc(short)}</em></i></span>`;
     }).join('');
@@ -3193,7 +3230,7 @@ async function spinLottery() {
 }
 
 /* v168：奖品图标按 prize_type 映射到自制图标集，不再依赖库里存的 emoji */
-const PRIZE_ICONS = { star: 'star', class_star: 'heart', avatar: 'image', frame: 'ribbon', none: 'leaf' };
+const PRIZE_ICONS = { star: 'star', class_star: 'heart', avatar: 'image', frame: 'ribbon', none: 'leaf', course: 'book-open' };
 function prizeIcon(p, cls) {
   const key = PRIZE_ICONS[(p && p.prize_type) || 'none'] || 'gift';
   return I[key](cls);
@@ -3207,6 +3244,7 @@ function showPrize(res) {
   if (res.prize_type === 'star') desc += ` · 已存入你的星光值`;
   else if (res.prize_type === 'class_star') desc += ` · 全班每人 +${res.prize_value}`;
   else if (res.prize_type === 'avatar' || res.prize_type === 'frame') desc += ' · 已放入衣柜';
+  else if (res.prize_type === 'course') desc += ' · 找老师约上课时间';
   else desc += ' · 下次一定中大奖';
   els.prizeDesc.textContent = desc;
   els.prizeModal.classList.add('show');

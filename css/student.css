@@ -2058,3 +2058,17 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   #achCard .ach-n { font-size: 10px; letter-spacing: -.2px; }
   #achCard .ach-p { font-size: 9.5px; }
 }
+
+/* ============ v190：成就卡 / 五维卡折叠 ============
+   按钮复用任务卡的 .task-fold 外观，只调位置与尺寸；
+   两条卡默认折叠，展开状态不落盘（每次进主页都是收起）。 */
+#achCard .card-title .card-fold { margin-left: auto; }
+#dimCard .dim-head .card-fold {
+  margin-left: 2px; width: 26px; height: 26px; border-radius: 8px;
+}
+#dimCard .dim-head .card-fold .ico { width: 15px; height: 15px; }
+
+#achCard.card-folded .ach-grid { display: none; }
+#dimCard.card-folded .dim-body { display: none; }
+#achCard.card-folded .card-title,
+#dimCard.card-folded .dim-head { margin-bottom: 0; }

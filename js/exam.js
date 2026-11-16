@@ -112,12 +112,12 @@
     const n = Number(v);
     return STAR_MULTIPLIERS.indexOf(n) >= 0 ? n : 1;
   }
-  /** 星光值口径：分数 ÷ 10 × 倍数，四舍五入取整（与 116 号脚本 star_from_score 一致） */
+  /** 星光值口径：分数 × 倍数，四舍五入取整（与 126 号脚本 star_from_score 一致） */
   function starsFromScore(score, mult) {
     if (score == null || String(score).trim() === '') return 0;
     const n = Number(score);
     if (!isFinite(n)) return 0;
-    return Math.max(0, Math.round((n / 10) * normMultiplier(mult)));
+    return Math.max(0, Math.round(n * normMultiplier(mult)));
   }
   function batchMultiplier() { return normMultiplier(els.batchMultiplier ? els.batchMultiplier.value : 1); }
   function isParentVisible(hideEl) { return !(hideEl && hideEl.checked); }
@@ -132,7 +132,7 @@
     const stars = starsFromScore(sc, mult);
     els.examStarPreview.innerHTML = sc === null
       ? `星光值 +0 · ${MULT_LABEL[mult]}（填写分数后显示）`
-      : `星光值 <b>+${stars}</b> · ${sc} 分 ÷ 10 × ${MULT_LABEL[mult]}`;
+      : `星光值 <b>+${stars}</b> · ${sc} 分 × ${MULT_LABEL[mult]}`;
   }
 
   /* ------------ 标签页激活（首次加载名单） ------------ */
