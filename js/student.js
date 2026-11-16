@@ -132,7 +132,7 @@ const AVATAR_SM_KEYS = new Set([
   'game1','game2','game3','game4','game5','game6','game7','game8',
   'mecha1','mecha2','mecha4','mecha5','nature1','nature2','nature3',
   'sweet1','sweet2','sweet5','sweet6','sweet7','sweet8','sweet9','sweet10',
-  'game16','game17','nature5','nature6','nature7','nature8',
+  'game16','game17','game18','nature5','nature6','nature7','nature8',
   'sweet19','sweet20','sweet21','sweet22',
   'warrior1','warrior2','warrior3','warrior4','warrior5','warrior6',
   'fantasy8','fantasy9','fantasy10','fantasy11',
@@ -263,7 +263,10 @@ const FRAMES = [
   { key: 'unicorn', name: '彩虹独角兽', icon: '', need: '星光商店兑换' },
   { key: 'onyx',    name: '黑金曜石', icon: '', need: '星光商店兑换' },
   /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
-  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '', need: '星光商店兑换' }
+  { key: 'rosefeather', name: '白玫瑰黑羽', icon: '', need: '星光商店兑换' },
+  /* v193：像素头盔两套（用户定制素材，方形覆盖式，与其余环形框不同口径） */
+  { key: 'goldhelm',   name: '黄金头盔', icon: '', need: '星光商店兑换' },
+  { key: 'diamondhelm', name: '钻石头盔', icon: '', need: '星光商店兑换' }
 ];
 /* ---------- v173：个人卡片主题（三套水彩羽毛角饰） ----------
    与数据库 shop_item(item_type='theme') 的 item_key 一一对应；

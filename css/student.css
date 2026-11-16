@@ -1096,6 +1096,27 @@ html,body{background:linear-gradient(172deg,#f2f7ff 0%,#f6f3ff 46%,#eefcf8 100%)
 .frame-rosefeather.framed::after { background-image: url("../assets/frames/frame-rosefeather.webp"); }
 .frame-choice.fc-rosefeather .fc-ring { background: url("../assets/frames/frame-rosefeather.webp") center / contain no-repeat; }
 
+/* ============================================================
+   v193：像素头盔头像框（方形覆盖式，非环形）
+   素材 384px 透明底，只覆盖头顶到下颌；inset -21% 与其余方框同口径，
+   border-radius:0 保住方形四角；头盔外沿超出圆形头像，需放开容器裁切。
+   ============================================================ */
+.frame-diamondhelm.framed::after,
+.frame-goldhelm.framed::after {
+  content: ''; position: absolute; inset: -21%; border-radius: 0;
+  pointer-events: none; z-index: 1;
+  background-position: center; background-repeat: no-repeat; background-size: 100% 100%;
+}
+.frame-diamondhelm.framed::after { background-image: url("../assets/frames/frame-diamondhelm.webp"); }
+.frame-goldhelm.framed::after    { background-image: url("../assets/frames/frame-goldhelm.webp"); }
+.mp-avatar.framed { overflow: visible; }
+.frame-choice.fc-diamondhelm .fc-ring,
+.frame-choice.fc-goldhelm .fc-ring {
+  border-radius: 0; background-position: center; background-repeat: no-repeat; background-size: contain;
+}
+.frame-choice.fc-diamondhelm .fc-ring { background-image: url("../assets/frames/frame-diamondhelm.webp"); }
+.frame-choice.fc-goldhelm .fc-ring    { background-image: url("../assets/frames/frame-goldhelm.webp"); }
+
 /* v191：已移除 v155 的左上角魔法星空排名装饰（TOP3 专属 PNG 角花，适配差已废弃） */
 
 

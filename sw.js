@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v92';
+const CACHE = 'sp-cache-v93';
 const ASSETS = [
   './',
   './index.html',
@@ -274,6 +274,27 @@ const ASSETS = [
   './assets/avatars/bunny-s.webp',
   './assets/avatars/gothic.webp',
   './assets/avatars/gothic-s.webp',
+  /* v193：补齐 v155/v161 漏登记的 16 个头像框（断网时不显示）+ 本次新增素材 */
+  './assets/frames/frame-angelcat.webp',
+  './assets/frames/frame-broken.webp',
+  './assets/frames/frame-clover.webp',
+  './assets/frames/frame-crystal.webp',
+  './assets/frames/frame-devilcat.webp',
+  './assets/frames/frame-goldwing.webp',
+  './assets/frames/frame-goth.webp',
+  './assets/frames/frame-ice.webp',
+  './assets/frames/frame-kitty.webp',
+  './assets/frames/frame-mono.webp',
+  './assets/frames/frame-moon.webp',
+  './assets/frames/frame-neko.webp',
+  './assets/frames/frame-ribbon.webp',
+  './assets/frames/frame-silk.webp',
+  './assets/frames/frame-sweets.webp',
+  './assets/frames/frame-tech.webp',
+  './assets/frames/frame-goldhelm.webp',
+  './assets/frames/frame-diamondhelm.webp',
+  './assets/avatars/game18.webp',
+  './assets/avatars/game18-s.webp',
   './assets/themes/feather-moon.webp',
   './assets/themes/feather-violet.webp',
   './assets/themes/feather-night.webp',
