@@ -1096,11 +1096,7 @@ html,body{background:linear-gradient(172deg,#f2f7ff 0%,#f6f3ff 46%,#eefcf8 100%)
 .frame-rosefeather.framed::after { background-image: url("../assets/frames/frame-rosefeather.webp"); }
 .frame-choice.fc-rosefeather .fc-ring { background: url("../assets/frames/frame-rosefeather.webp") center / contain no-repeat; }
 
-/* v155：魔法星空排名装饰（TOP3 专属，保留原金色角标） */
-.mate .rank-deco { position:absolute; right:-14px; top:-14px; width:96px; height:96px; pointer-events:none; z-index:4; background-repeat:no-repeat; background-position:center; background-size:contain; }
-.mate .rank-deco.deco-1 { background-image:url('../assets/corners/corner-magic1.png'); filter: drop-shadow(0 2px 4px rgba(120,80,200,.35)); }
-.mate .rank-deco.deco-2 { background-image:url('../assets/corners/corner-magic2.png'); filter: drop-shadow(0 2px 4px rgba(120,80,200,.3)); }
-.mate .rank-deco.deco-3 { background-image:url('../assets/corners/corner-magic3.png'); filter: drop-shadow(0 2px 4px rgba(120,80,200,.3)); }
+/* v191：已移除 v155 的左上角魔法星空排名装饰（TOP3 专属 PNG 角花，适配差已废弃） */
 
 
 
@@ -1585,6 +1581,15 @@ html[data-weather] .wall-view{background:transparent}
 .shop-group { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px; }
 .shop-group-title { font-size: 14px; font-weight: 800; color: #2f4a3f; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 .shop-group-tip { font-size: 12px; font-weight: 500; color: #93a29b; }
+/* v191：分组折叠（仅头像 / 头像框两类）——沿用 task-fold 的形状与交互，配色换成商店主色 */
+.shop-group-title .shop-fold {
+  width: 28px; height: 28px; border-radius: 9px;
+  border-color: rgba(18,184,166,.30); background: #f4fbfa; color: var(--primary-d);
+}
+.shop-group-title .shop-fold:hover { background: #e9f8f5; border-color: rgba(18,184,166,.55); }
+.shop-group-title .shop-fold .ico { width: 15px; height: 15px; }
+.shop-group.shop-folded .shop-grid { display: none; }
+.shop-group.shop-folded .shop-group-title { margin-bottom: 0; }
 .shop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .shop-item { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 6px 2px; border-radius: 12px; }
 .shop-item.owned { background: #f7fbf9; }
@@ -1783,6 +1788,8 @@ html[data-weather] .wall-view{background:transparent}
   .shop-btn { font-size: 15px; min-height: 46px; padding: 8px 6px; }
   .of-btn { font-size: 15px; min-height: 44px; padding: 9px 18px; }
   .own-empty { font-size: 16px; padding: 28px 12px; }
+  .shop-group-title .shop-fold { width: 30px; height: 30px; }
+  .shop-group-title .shop-fold .ico { width: 17px; height: 17px; }
 }
 
 /* ---------- 4K 教学大屏（3840×2160 / 2560p） ---------- */
@@ -1801,6 +1808,8 @@ html[data-weather] .wall-view{background:transparent}
   .own-filter { gap: 14px; margin-bottom: 20px; }
   .own-empty { font-size: 24px; padding: 40px 16px; border-radius: 22px; }
   .own-empty span { font-size: 19px; }
+  .shop-group-title .shop-fold { width: 44px; height: 44px; border-radius: 14px; }
+  .shop-group-title .shop-fold .ico { width: 25px; height: 25px; }
   .frame-page-head { margin-bottom: 18px; }
   .avatar-shop-tip { font-size: 22px; padding: 14px 20px; border-radius: 18px; }
   .avatar-shop-go { font-size: 22px; }
@@ -1860,8 +1869,7 @@ html[data-weather] .wall-view{background:transparent}
 .mate[data-ct] .mate-avatar { z-index: 2; }
 .mate[data-ct] .mate-name { position: relative; z-index: 2; }
 .mate[data-ct] .mate-badge { z-index: 3; }
-.mate[data-ct] .rank-corner,
-.mate[data-ct] .rank-deco { z-index: 3; }
+.mate[data-ct] .rank-corner { z-index: 3; }
 html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 
 /* 商店里的主题缩略图 */

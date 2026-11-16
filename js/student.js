@@ -646,6 +646,7 @@ const state = {
   owned: { avatar: new Set(), frame: new Set(['none']) },   // 已拥有（可佩戴）的装扮
   shopItems: [],          // 商店商品缓存
   shopTab: 'avatar',      // 商店当前分类
+  shopFolded: {},         // v191：商店内分组折叠状态（键为 分类:分组名，缺省=展开）
   firstDiscount: false,   // 首次购买半价是否仍可用
   classProgress: null,    // 班级星光值/等级/抽奖机会
   wheelPrizes: [],        // 转盘奖项
@@ -1333,15 +1334,13 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${I.mood(todayMood.lv)}</span>` : '';
 
     const rank = rankMap[s.student_name] || 0;   // v150：星光值榜名次（1-5）
-    // v155：魔法星空排名装饰——TOP3 额外挂专属装饰（保留原金色角标）
-    const rankDeco = (rank >= 1 && rank <= 3) ? `<span class="rank-deco deco-${rank}"></span>` : '';
+    // v191：移除 v155 的右上角魔法星空装饰（自适配差，卡角被裁切），只保留左上/右下金色角标
     // v173：个人卡片主题（未购买则不渲染角饰层）
     const ct = (s.card_theme && CARD_THEMES.some(t => t.key === s.card_theme)) ? s.card_theme : '';
     const ctAttr = ct ? ` data-ct="${ct}"` : '';
     html += `<button class="mate${rank ? ` rank-${rank}` : ''}"${ctAttr} data-detail="${esc(s.student_name)}">
         ${ct ? cardThemeHTML(ct) : ''}
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
-        ${rankDeco}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
         <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
@@ -2867,6 +2866,19 @@ function shopItemTile(it) {
     </div>`;
 }
 
+/* v191：商店分组折叠（仅「头像」「头像框」两个分类）。默认展开，状态只在本次会话内记忆 */
+const SHOP_FOLDABLE = { avatar: 1, frame: 1 };
+function shopGroupHTML(key, title, gridHTML) {
+  const foldable = !!SHOP_FOLDABLE[state.shopTab];
+  const folded = foldable && !!state.shopFolded[key];
+  const btn = foldable
+    ? `<button type="button" class="task-fold shop-fold" data-fold="${esc(key)}" title="${folded ? '展开' : '收起'}" aria-expanded="${folded ? 'false' : 'true'}">${folded ? I['chevron-down']() : I['chevron-up']()}</button>`
+    : '';
+  return `<section class="shop-group${folded ? ' shop-folded' : ''}">` +
+    `<div class="shop-group-title">${title}${btn}</div>` +
+    `<div class="shop-grid">${gridHTML}</div></section>`;
+}
+
 function renderShop() {
   if (!els.shopGroups) return;
   if (els.shopLoading) els.shopLoading.hidden = true;
@@ -2890,37 +2902,49 @@ function renderShop() {
   let html = state.firstDiscount ? '<div class="shop-promo">首次兑换半价</div>' : '';
   // v173：主题分类置顶「不使用主题」，方便随时取下
   if (state.shopTab === 'theme') {
-    html += `<section class="shop-group"><div class="shop-group-title">${I.sparkle()} 我的卡片主题</div>
-      <div class="shop-grid">
-        <div class="shop-item${state.myCardTheme ? '' : ' owned'}">
+    html += shopGroupHTML('theme:__head__', `${I.sparkle()} 我的卡片主题`,
+      `<div class="shop-item${state.myCardTheme ? '' : ' owned'}">
           <span class="shop-thumb theme-thumb theme-none">${I['circle-dot']('ico-2x')}</span>
           <div class="shop-name">不使用主题</div>
           ${state.myCardTheme
             ? `<button type="button" class="shop-btn use" data-use="theme:">取下</button>`
             : `<span class="shop-btn equipped">当前</span>`}
-        </div>
-      </div></section>`;
+        </div>`);
   }
   // 免费头像区（小动物 24 款，默认拥有）
   if (state.shopTab === 'avatar') {
-    html += `<section class="shop-group"><div class="shop-group-title">${I.paw()} 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span></div>
-      <div class="shop-grid">` +
-      AVATARS.map(k => `<div class="shop-item owned${ownsItem('avatar', k) ? '' : ''}">
+    html += shopGroupHTML('avatar:__free__',
+      `${I.paw()} 免费头像<span class="shop-group-tip">默认拥有，可随意更换</span>`,
+      AVATARS.map(k => `<div class="shop-item owned">
         <span class="shop-thumb is-img"><img src="${AVATAR_BASE}${avatarFile(k)}" alt="" loading="lazy"></span>
         <div class="shop-name">小动物</div>
         <button type="button" class="shop-btn use" data-use="avatar:${k}">使用</button>
-      </div>`).join('') + `</div></section>`;
+      </div>`).join(''));
   }
 
   groups.forEach(g => {
-    html += `<section class="shop-group"><div class="shop-group-title">${esc(g.name)}<span class="shop-group-tip">${g.items.length} 件</span></div>
-      <div class="shop-grid">${g.items.map(shopItemTile).join('')}</div></section>`;
+    html += shopGroupHTML(`${state.shopTab}:${g.name}`,
+      `${esc(g.name)}<span class="shop-group-tip">${g.items.length} 件</span>`,
+      g.items.map(shopItemTile).join(''));
   });
 
   if (!groups.length && state.shopTab !== 'avatar') {
     html += `<div class="empty">暂无商品，请联系老师</div>`;
   }
   els.shopGroups.innerHTML = html;
+
+  // v191：分组折叠开关（头像 / 头像框两类的每个分组各一个，默认展开）
+  $$('[data-fold]', els.shopGroups).forEach(b => b.addEventListener('click', () => {
+    const key = b.dataset.fold;
+    const sec = b.closest('.shop-group');
+    const folded = !state.shopFolded[key];
+    state.shopFolded[key] = folded;
+    if (sec) sec.classList.toggle('shop-folded', folded);
+    b.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    b.title = folded ? '展开' : '收起';
+    b.innerHTML = folded ? I['chevron-down']() : I['chevron-up']();
+    sfx.tap();
+  }));
 
   $$('[data-buy]', els.shopGroups).forEach(b => b.addEventListener('click', () => buyShopItem(b.dataset.buy, b)));
   $$('[data-use-card]', els.shopGroups).forEach(b => b.addEventListener('click', () => useDailyCard(b.dataset.useCard, b)));
