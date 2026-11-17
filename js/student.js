@@ -118,7 +118,7 @@ const PRAISE = {
 };
 const AVATARS = Array.from({ length: 24 }, (_, i) => 'animal' + (i + 1));
 
-/* ---------- 校园头像（24 款，星光商店兑换）与星光等级 ---------- */
+/* ---------- 校园头像（24 款，星光商店兑换） ---------- */
 const AVATAR_BASE = 'assets/avatars/';
 /* v46：新增 sweet11~18 / game9~15 头像以 SVG(内嵌 webp) 形式提供，旧头像仍为 webp */
 const SVG_AVATAR_KEYS = new Set([
@@ -148,70 +148,13 @@ function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
   return key + (SVG_AVATAR_KEYS.has(key) ? '.svg' : '.webp');
 }
-const CAMPUS_GROUPS = [
-  { name: '女生款', prefix: 'girl',    count: 8 },
-  { name: '男生款', prefix: 'boy',     count: 8 },
-  { name: '中性款', prefix: 'neutral', count: 8 }
-];
-const CAMPUS_KEYS = CAMPUS_GROUPS.reduce((arr, g) => {
-  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
-  return arr;
-}, []);
-const CAMPUS_UNLOCK_LEVEL = 3;
-/* v2.1：新头像四档（按图片质量 Lv4/5/6/7 解锁；sweet 最亲民 → fantasy 最华丽）
-   v2.1 追加：game1~8 硬核游戏风并入 Lv4（与甜美少女并存） */
-const NEW_GROUPS = [
-  { name: '甜美少女', prefix: 'sweet',   count: 22, level: 4 },
-  { name: '游戏风',   prefix: 'game',    count: 17, level: 4 },
-  { name: '森系田园', prefix: 'nature',  count: 8,  level: 5 },
-  { name: '机甲战士', prefix: 'mecha',   count: 4,  level: 6 },
-  { name: '次元武士', prefix: 'warrior', count: 4,  level: 6 },
-  { name: '奇幻神域', prefix: 'fantasy', count: 11, level: 7 },
-  { name: '国风仙韵', prefix: 'xian',    count: 5,  level: 8 }
-];
-const NEW_KEYS = NEW_GROUPS.reduce((arr, g) => {
-  for (let i = 1; i <= g.count; i++) arr.push(g.prefix + i);
-  return arr;
-}, []);
-const NEW_LEVEL_MAP = Object.fromEntries(NEW_KEYS.map(k => [k, NEW_GROUPS.find(g => k.startsWith(g.prefix)).level]));
-// v160：传说神将——Lv.9 专属新头像（mecha5 / warrior5 / warrior6，从 6 级组拆出单独投放）
-const LEGEND_AVATARS = [
-  { key: 'mecha5',   level: 9 },
-  { key: 'warrior5', level: 9 },
-  { key: 'warrior6', level: 9 }
-];
-LEGEND_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
-const LEGEND_LEVEL = 9;
-// v165：萌趣Q版——独立分区，chibi1 需 Lv.5，chibi2/3/4 需 Lv.6
-const CHIBI_AVATARS = [
-  { key: 'chibi1', level: 5 },
-  { key: 'chibi2', level: 6 },
-  { key: 'chibi3', level: 6 },
-  { key: 'chibi4', level: 6 }
-];
-CHIBI_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
-// v166：萌系日常——独立分区，moe1/moe2 需 Lv.5，moe3-10 需 Lv.6
-const MOE_AVATARS = [
-  { key: 'moe1', level: 5 },
-  { key: 'moe2', level: 5 },
-  { key: 'moe3', level: 6 },
-  { key: 'moe4', level: 6 },
-  { key: 'moe5', level: 6 },
-  { key: 'moe6', level: 6 },
-  { key: 'moe7', level: 6 },
-  { key: 'moe8', level: 6 },
-  { key: 'moe9', level: 6 },
-  { key: 'moe10', level: 6 }
-];
-MOE_AVATARS.forEach(x => { NEW_LEVEL_MAP[x.key] = x.level; });
+/* v196：学生等级体系停用——头像、头像框一律「已兑换即可佩戴」，
+   原 CAMPUS_UNLOCK_LEVEL / NEW_LEVEL_MAP / LEGEND / CHIBI / MOE 等级档位常量已移除。 */
 
 const EMOJI_CHANGE_LIMIT = 2;
-// 星光等级门槛（按累计星光值）：L1=0 / L2=20 / L3=60 / L4=120 / L5=200 / L6=400 / L7=600
-// v164(RSK-22)：等级上限提升至 Lv.99 —— 前 9 级保留原节奏，Lv.10 起每级固定 500（与数据库 104 号迁移同口径）
-const XP_LEVELS = [0, 20, 60, 120, 200, 400, 600, 900, 1300, 1800, 2300, 2800, 3300, 3800, 4300, 4800, 5300, 5800, 6300, 6800, 7300, 7800, 8300, 8800, 9300, 9800, 10300, 10800, 11300, 11800, 12300, 12800, 13300, 13800, 14300, 14800, 15300, 15800, 16300, 16800, 17300, 17800, 18300, 18800, 19300, 19800, 20300, 20800, 21300, 21800, 22300, 22800, 23300, 23800, 24300, 24800, 25300, 25800, 26300, 26800, 27300, 27800, 28300, 28800, 29300, 29800, 30300, 30800, 31300, 31800, 32300, 32800, 33300, 33800, 34300, 34800, 35300, 35800, 36300, 36800, 37300, 37800, 38300, 38800, 39300, 39800, 40300, 40800, 41300, 41800, 42300, 42800, 43300, 43800, 44300, 44800, 45300, 45800, 46300];
 
 /* ---------- v105：头像框（CSS 光环）与成就 ---------- */
-// 头像框目录：解锁条件由服务端 set_student_frame 校验，这里只负责展示
+// 头像框目录：服务端只校验「已兑换」，佩戴不设等级门槛
 const FRAMES = [
   { key: 'none',    name: '无框',   icon: I['circle-dot'](), need: '默认佩戴' },
   { key: 'bronze',  name: '暖阳环', icon: I.medal('rk rk3'), need: '星光商店兑换' },
@@ -221,7 +164,7 @@ const FRAMES = [
   { key: 'star',    name: '星光环', icon: I.star(), need: '星光商店兑换' },
   { key: 'heart',   name: '爱心环', icon: I.heart(), need: '星光商店兑换' },
   { key: 'crown',   name: '冠军环', icon: '', need: '星光商店兑换' },
-  /* v130(RSK-11)：12 款游戏风头像框，按等级开放 */
+  /* v130(RSK-11)：12 款游戏风头像框 */
   { key: 'tac',     name: '军事战术', icon: I.award(), need: '星光商店兑换' },
   { key: 'sakura',  name: '樱花甜心', icon: '', need: '星光商店兑换' },
   { key: 'gun',     name: '射击战士', icon: I.target(), need: '星光商店兑换' },
@@ -234,7 +177,7 @@ const FRAMES = [
   { key: 'dragon',  name: '龙魂战甲', icon: '', need: '星光商店兑换' },
   { key: 'queen',   name: '星光女王', icon: I.moon(), need: '星光商店兑换' },
   { key: 'princess', name: '梦幻公主', icon: '', need: '星光商店兑换' },
-  /* v142：七风格进阶头像框（Lv.7-10 开放） */
+  /* v142：七风格进阶头像框 */
   { key: 'huadian',  name: '鎏金蝶舞', icon: '', need: '星光商店兑换' },
   { key: 'blossom',  name: '樱吹雪',   icon: '', need: '星光商店兑换' },
   { key: 'ink',      name: '水墨国韵', icon: '', need: '星光商店兑换' },
@@ -258,14 +201,14 @@ const FRAMES = [
   { key: 'broken',   name: '破碎之心', icon: '', need: '星光商店兑换' },
   { key: 'mono',     name: '黑白猫耳', icon: '', need: '星光商店兑换' },
   { key: 'tech',     name: '机能兽耳', icon: '', need: '星光商店兑换' },
-  /* v161：紫晶蝶梦（新增款式，Lv.8 开放） */
+  /* v161：紫晶蝶梦（新增款式） */
   { key: 'ribbon',   name: '紫晶蝶梦', icon: '', need: '星光商店兑换' },
-  /* v162：Lv.8 四款新头像框（用户定制素材：赛博幻梦/霓虹脉冲/彩虹独角兽/黑金曜石） */
+  /* v162：四款新头像框（用户定制素材：赛博幻梦/霓虹脉冲/彩虹独角兽/黑金曜石） */
   { key: 'cyber',   name: '赛博幻梦', icon: I.robot(), need: '星光商店兑换' },
   { key: 'pulse',   name: '霓虹脉冲', icon: '', need: '星光商店兑换' },
   { key: 'unicorn', name: '彩虹独角兽', icon: '', need: '星光商店兑换' },
   { key: 'onyx',    name: '黑金曜石', icon: '', need: '星光商店兑换' },
-  /* v164：白玫瑰黑羽（用户定制素材，Lv.7 开放） */
+  /* v164：白玫瑰黑羽（用户定制素材） */
   { key: 'rosefeather', name: '白玫瑰黑羽', icon: '', need: '星光商店兑换' },
   /* v193：像素头盔两套（用户定制素材，方形覆盖式，与其余环形框不同口径） */
   { key: 'goldhelm',   name: '黄金头盔', icon: '', need: '星光商店兑换' },
@@ -311,7 +254,7 @@ function applyCardTheme(el, key) {
 const XP_PER_POSITIVE = 2;
 
 /* ---------- v167：星光值体系（原「经验值」整体改为「星光值」） ---------- */
-// 说明：数据库 student_info.xp 保留为「累计获得星光值」（只增不减，用于星光等级与排行）；
+// 说明：数据库 student_info.xp 保留为「累计获得星光值」（只增不减，用于累计与排行）；
 //      student_wallet.balance 为可消费余额（货币），兑换只扣余额。
 const STAR_LABEL = '星光值';
 const STAR_ICON = I.star();
@@ -380,16 +323,6 @@ function migrateLegacyAvatar(key) {
   if (isImgKey(k)) return k;
   const h = hashCode(k);
   return 'animal' + (((h % 24) + 24) % 24 + 1);
-}
-function levelFromXp(xp) {
-  let lv = 1;
-  for (let i = 0; i < XP_LEVELS.length; i++) if ((xp || 0) >= XP_LEVELS[i]) lv = i + 1;
-  return lv;
-}
-function xpProgress(xp, level) {
-  if (level >= XP_LEVELS.length) return { pct: 100, left: 0, maxed: true };
-  const lo = XP_LEVELS[level - 1], hi = XP_LEVELS[level];
-  return { pct: Math.min(100, Math.max(0, ((xp - lo) / (hi - lo)) * 100)), left: hi - (xp || 0), maxed: false };
 }
 const sfx = window.SFX || {
   tap(){}, back(){}, star(){}, tagOn(){}, tagOff(){}, sub(){}, moodUp(){}, moodDown(){}, pick(){}, success(){}, oops(){}
@@ -525,9 +458,7 @@ const els = {
   // 头像选择
   btnPickAvatar: $('#btnPickAvatar'),
   identityAvatarEmoji: $('#identityAvatarEmoji'),
-  identityLevel: $('#identityLevel'),
   identityStar: $('#identityStar'),
-  identityXpFill: $('#identityXpFill'),
   identityXpText: $('#identityXpText'),
   btnOpenShop: $('#btnOpenShop'),
   // v167：星光商店
@@ -569,7 +500,6 @@ const els = {
   frameConfigBanner: $('#frameConfigBanner'),
   framePreviewCard: $('#framePreviewCard'),
   framePreviewAvatar: $('#framePreviewAvatar'),
-  framePreviewLevel: $('#framePreviewLevel'),
   framePreviewName: $('#framePreviewName'),
   framePreviewTip: $('#framePreviewTip'),
   framePageGrid: $('#framePageGrid'),
@@ -1353,9 +1283,6 @@ function renderWall() {
     const av = avatarForName(s.student_name, s.avatar, true);   // v146：墙上用 256 小图（加载快，详情/预览仍用原图）
     const ringCls = todayLevel ? ` mood-l${todayLevel}` : '';
     const frameCls = s.frame ? ` framed frame-${s.frame}` : '';
-    const lvBadge = (Number(s.level) || 1) > 1
-      ? `<span class="mate-lv">Lv${Number(s.level)}</span>` : '';
-    // v134(RSK-11)：表情移到姓名前、等级移到姓名后，头像框不再被遮挡
     const moodInline = todayMood
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${I.mood(todayMood.lv)}</span>` : '';
 
@@ -1370,7 +1297,7 @@ function renderWall() {
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}${esc(s.student_name)}${testTag}${lvBadge}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
       </button>`;
   });
 
@@ -1628,7 +1555,7 @@ function currentAvatar() {
   return avatarForName(name || '我', row && row.avatar);
 }
 
-// 当前学生的等级/星光值（名单行）
+// 当前学生的累计星光值（名单行）
 // v152：老缓存/旧 RPC 名单可能没有 class 字段——先按"班级+姓名"匹配，匹配不到再退化为"仅姓名"匹配
 function currentRosterRow() {
   const name = (els.inpName && els.inpName.value || '').trim();
@@ -1683,22 +1610,14 @@ function renderMoodPreview() {
   }
 }
 
-// 身份卡：星光值余额 + 累计星光值（决定星光等级）
-// v167：经验值体系整体改为星光值体系——余额可消费，累计值只增不减
+// 身份卡：星光值余额 + 累计星光值
+// v196：等级体系停用，不再显示 Lv 与升级进度，只保留累计星光值
 function renderIdentityLevel() {
   const row = currentRosterRow();
-  const lv = row ? (Number(row.level) || 1) : 1;
   const cum = row ? (Number(row.xp) || 0) : 0;            // 累计获得星光值
   const bal = Number(state.wallet && state.wallet.balance) || 0;  // 可消费余额
-  const p = xpProgress(cum, lv);
-  if (els.identityLevel) els.identityLevel.textContent = 'Lv.' + lv;
   if (els.identityStar) els.identityStar.textContent = bal;
-  if (els.identityXpFill) els.identityXpFill.style.width = p.pct + '%';
-  if (els.identityXpText) {
-    els.identityXpText.textContent = p.maxed
-      ? `累计 ${cum} · Lv.${lv}（满级）`
-      : `累计 ${cum} · 再 ${p.left} 升 Lv.${lv + 1}`;
-  }
+  if (els.identityXpText) els.identityXpText.textContent = `累计 ${cum}`;
   const wrap = document.querySelector('.identity-avatar');
   if (wrap) wrap.classList.remove('frame-l3', 'frame-l4', 'frame-l5');
   applyFrameTo(els.identityAvatarEmoji, row && row.frame);
@@ -2290,7 +2209,7 @@ const FRAME_CLASS = {
   devilcat:'frame-devilcat', angelcat:'frame-angelcat', clover:'frame-clover', neko:'frame-neko',
   sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech',
   ribbon:'frame-ribbon',
-  /* v162：Lv.8 四款新头像框 */
+  /* v162：四款新头像框 */
   cyber:'frame-cyber', pulse:'frame-pulse', unicorn:'frame-unicorn', onyx:'frame-onyx',
   rosefeather:'frame-rosefeather'
 };
@@ -2409,9 +2328,6 @@ function updateFramePreview(frameKey) {
   const av = currentAvatar();
   paintAvatar(els.framePreviewAvatar, av);
   applyFrameTo(els.framePreviewAvatar, frameKey || state.myFrame || 'none');
-  if (els.framePreviewLevel) {
-    els.framePreviewLevel.textContent = '' + (Number(state.wallet && state.wallet.balance) || 0);
-  }
 }
 
 function renderFramePage() {
@@ -2772,10 +2688,10 @@ async function loadWallet() {
     const d = r.data;
     if (!d || d.ok === false) { renderIdentityLevel(); return null; }
     state.wallet = { balance: Number(d.balance) || 0, total_earned: Number(d.total_earned) || 0, total_spent: Number(d.total_spent) || 0 };
-    state.owned = { avatar: new Set(), frame: new Set(['none']) };
+    state.owned = { avatar: new Set(), frame: new Set(['none']), theme: new Set() };
     (d.inventory || []).forEach(x => { if (state.owned[x.item_type]) state.owned[x.item_type].add(x.item_key); });
     const row = currentRosterRow();
-    if (row) { row.xp = d.xp; row.level = d.level; row.star = Number(d.balance) || 0; }
+    if (row) { row.xp = d.xp; row.star = Number(d.balance) || 0; }
     if (d.class && d.class.ok !== false) state.classProgress = d.class;
     renderIdentityLevel();
     return d;
@@ -3449,7 +3365,7 @@ async function loadPersonalTasks() {
       const d = r.data || {};
       if (d.ok === false) { toast('确认失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
-      toast(`完成啦！星光值+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      toast(`完成啦！星光值+${d.xp_delta}`);
       loadPersonalTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
@@ -3523,7 +3439,7 @@ async function loadChallengeTasks() {
       if (d.ok === false) { toast('提交失败：' + (d.reason || '')); btn.disabled = false; return; }
       sfx.success();
       const newN = (Array.isArray(d.new_levels) ? d.new_levels.length : (lvList.length || 0));
-      toast(`已达成 ${newN} 档，星光值+${d.xp_delta}${d.level ? '，升到 Lv.' + d.level : ''}`);
+      toast(`已达成 ${newN} 档，星光值+${d.xp_delta}`);
       loadChallengeTasks();
       updateSubmitStatus();
       if (window.loadWallData) loadWallData();
@@ -3617,7 +3533,7 @@ async function loadPastTasks() {
           } catch (e) {}
         }
         const row = state.roster.find(s => s.class === cls && s.student_name === name);
-        if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+        if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; }
         renderIdentityLevel();
         loadPastTasks();
         loadWall();
@@ -3698,7 +3614,7 @@ async function onSubmit() {
         resetSelections();
         renderMoodPreview();
         updateSubmitStatus();   // v114：本地立即标记"今天已提交"（合并后记录已包含本次）
-        celebrate(0, false);    // v114：离线提交也显示成功浮层，学生明确知道已填报
+        celebrate(0);    // v114：离线提交也显示成功浮层，学生明确知道已填报
       } else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
       return;
     }
@@ -3711,7 +3627,7 @@ async function onSubmit() {
     if (insertError) {
       if (isNetErr(insertError)) {
         const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-        if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); return; }
+        if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0); return; }
       }
       sfx.oops();
       if (/row-level security|policy|is_valid_student/i.test(insertError.message)) {
@@ -3739,15 +3655,11 @@ async function onSubmit() {
 
     // 以服务端返回的差额星光值为准（合并场景只加新增部分）
     const gainedXp = Number(subRes.xp_delta || 0);
-    let leveledUp = false;
     if (gainedXp > 0) {
       const row = state.roster.find(s => s.class === cls && s.student_name === name);
       if (row) {
-        const beforeLv = Number(row.level) || 1;
         row.xp = Number(subRes.xp != null ? subRes.xp : (Number(row.xp) || 0) + gainedXp);
-        row.level = subRes.level || levelFromXp(row.xp);
         row.star = (Number(row.star) || 0) + Math.max(0, gainedXp);
-        leveledUp = row.level > beforeLv;
       }
       state.wallet.balance = (Number(state.wallet.balance) || 0) + Math.max(0, gainedXp);
       state.wallet.total_earned = (Number(state.wallet.total_earned) || 0) + Math.max(0, gainedXp);
@@ -3756,7 +3668,7 @@ async function onSubmit() {
 
     try { localStorage.setItem('sp_identity', JSON.stringify({ class: cls, studentName: name })); } catch (e) {}
     sfx.success();
-    celebrate(gainedXp, leveledUp);
+    celebrate(gainedXp);
     resetSelections();
     renderMoodPreview();
     // 方案A：本地增量更新，不再全量重拉（提交秒级完成）
@@ -3791,7 +3703,7 @@ async function onSubmit() {
     const offline = isNetErr(e);
     if (offline) {
       const q = await window.Offline.enqueue({ name: 'submit_today', params: { p_class: cls, p_student: name, p_mood: MOOD_BY_LEVEL(state.moodLevel).key, p_items: items } });
-      if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0, false); }
+      if (q) { sfx.success(); toast('已离线保存，联网后同步'); applyLocalSubmitFeedback(cls, name, items); resetSelections(); renderMoodPreview(); updateSubmitStatus(); celebrate(0); }
       else { sfx.oops(); toast('本机存储失败，请换设备试试'); }
     } else {
       sfx.oops();
@@ -3837,7 +3749,7 @@ function prefillIdentity() {
 
 /* ---------- 鼓励动画 ---------- */
 
-function celebrate(gainedXp, leveledUp) {
+function celebrate(gainedXp) {
   const emojis = ['' + I.star() + '', '' + I['star-fill']() + '', '' + I.sparkle() + '', '' + I.sparkle() + '', '' + I.heart() + '', '' + I.rainbow() + '', '' + I.thumb() + '', '' + I.school() + '', '' + I.book() + ''];
   els.confettiBox.innerHTML = '';
   for (let i = 0; i < 42; i++) {
@@ -3851,10 +3763,7 @@ function celebrate(gainedXp, leveledUp) {
     els.confettiBox.appendChild(piece);
   }
   let msg;
-  if (leveledUp) {
-    const row = currentRosterRow();
-    msg = `星光等级提升，现在是 Lv.${row ? row.level : ''}`;
-  } else if (gainedXp > 0) {
+  if (gainedXp > 0) {
     msg = `本次获得 ${gainedXp} 星光值 · 现有 ${state.wallet.balance}`;
   } else {
     const pool = PRAISE[MOOD_BY_LEVEL(state.moodLevel).key] || PRAISE.good;
@@ -4038,7 +3947,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
     }
   }
   const row = state.roster.find(s => s.class === cls && s.student_name === name);
-  if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; row.level = d.level; }
+  if (!wr.queued && row && typeof d.xp === 'number') { row.xp = d.xp; }
   renderIdentityLevel();
   loadProfile();
   loadStudentTask();
@@ -4496,7 +4405,6 @@ async function loadLeaderboardXp(cls) {
     <div class="lb-row ${s.student_name === lbCurrentStudent ? 'me' : ''}">
       <span class="lb-rank ${topCls}">${rankTxt}</span>
       <span class="lb-name">${esc(s.student_name)}</span>
-      <span class="lb-val">Lv.${s.level}</span>
       <span class="lb-val">${I.star()}${xp}</span>
     </div>`;
   }).join('');

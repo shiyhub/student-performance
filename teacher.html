@@ -869,7 +869,7 @@ addEventListener('DOMContentLoaded', function () {
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sync"/></svg> 星光值重算</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          修改了「表现标签」里的星光值后，点这里按历史记录重新累加全班的星光值和等级。
+          修改了「表现标签」里的星光值后，点这里按历史记录重新累加全班的星光值。
           <b>只重算，不删记录</b>
         </p>
         <button class="btn btn-primary" id="btnRecalcXp" type="button">一键重算全班星光值</button>
@@ -948,7 +948,6 @@ addEventListener('DOMContentLoaded', function () {
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> 星光值规则说明</div>
         <p class="text-muted" style="margin-bottom:6px;">· 勾选「积极表现」加该标签设定值（默认 +2）；消极默认 +0。<br>
           · 删除记录会扣回该记录带来的星光值。<br>
-          · 等级：Lv1=0 / Lv2=20 / Lv3=60 / Lv4=120 / Lv5=200 / Lv6=400。校园头像 Lv3、典藏头像 Lv6 解锁。<br>
           · 调整单个学生星光值：学生名单里点该行的 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg>。</p>
       </div>
     </section>
@@ -1080,7 +1079,7 @@ addEventListener('DOMContentLoaded', function () {
 
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 任务批量评分</div>
-        <p class="text-muted">选任务与等级，批量打分</p>
+        <p class="text-muted">选任务与评分档位，批量打分</p>
         <div class="grid">
           <div class="field">
             <label for="awardTaskDate">任务日期</label>
@@ -1091,7 +1090,7 @@ addEventListener('DOMContentLoaded', function () {
             <select class="input" id="awardTask"><option value="">选日期后加载</option></select>
           </div>
           <div class="field">
-            <label for="awardGrade">统一等级</label>
+            <label for="awardGrade">统一评分档位</label>
             <select class="input" id="awardGrade">
               <option value="done"> 完成（星光值+2）</option>
               <option value="good"> 优秀 A（星光值+4）</option>
@@ -1100,7 +1099,7 @@ addEventListener('DOMContentLoaded', function () {
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" type="button" id="btnTaskGradeGo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rocket"/></svg> 批量给所选学生评等级</button>
+        <button class="btn btn-primary" type="button" id="btnTaskGradeGo"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-rocket"/></svg> 批量给所选学生评分</button>
         <span id="taskGradeResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
     </section>

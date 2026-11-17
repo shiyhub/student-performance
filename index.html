@@ -117,7 +117,6 @@ addEventListener('DOMContentLoaded', function () {
   <section class="card red-card" id="identityCard">
     <button type="button" class="identity-avatar" id="btnPickAvatar" aria-label="更换头像">
       <span class="identity-avatar-emoji" id="identityAvatarEmoji"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></span>
-      <span class="identity-lv-badge" id="identityLevel">Lv.1</span>
     </button>
     <div class="identity-actions">
       <button type="button" class="identity-hint-btn" id="btnPickAvatarHint">点我换头像 <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sparkle"/></svg></button>
@@ -131,8 +130,7 @@ addEventListener('DOMContentLoaded', function () {
         <span class="is-unit">星光值</span>
         <button type="button" class="is-shop-btn" id="btnOpenShop"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shop"/></svg> 星光商店</button>
       </div>
-      <div class="identity-xp-bar"><i id="identityXpFill" style="width:0%"></i></div>
-      <div class="identity-xp-text" id="identityXpText">累计 0 · Lv.1</div>
+      <div class="identity-xp-text" id="identityXpText">累计 0</div>
     </div>
     <!-- 填写人：一键点名切换，不再手输+校验 -->
     <button type="button" class="id-who" id="btnPickMe">
@@ -262,7 +260,6 @@ addEventListener('DOMContentLoaded', function () {
     <div class="frame-preview">
       <div class="frame-preview-avatar-wrap">
         <div class="frame-preview-avatar" id="framePreviewAvatar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-user"/></svg></div>
-        <span class="identity-lv-badge" id="framePreviewLevel">Lv.1</span>
       </div>
     </div>
     <div class="frame-preview-meta">

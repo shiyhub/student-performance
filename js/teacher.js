@@ -1573,12 +1573,11 @@ async function loadStudents() {
                    data-student="${esc(s.student_name)}" title="移除该家长">×</button>
          </span>`
       ).join('');
-      const lv = Number(s.level) || 1;
       const xp = Number(s.xp) || 0;
       html += `<div class="roster-row">
                  <div class="roster-who">
                    <div class="sname">${esc(s.student_name)}${s.is_test ? '<span class="stu-test-tag">测试</span>' : ''}
-                     <span class="xp-badge" title="累计星光值 ${xp}">Lv${lv} · ${I.star('ico-xs')}${xp}</span>
+                     <span class="xp-badge" title="累计星光值 ${xp}">${I.star('ico-xs')}${xp}</span>
                      <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
                              data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
                              data-xp-cur="${xp}" title="手动调整该学生星光值">${I.edit('ico-sm')} 调星光值</button>
@@ -1624,7 +1623,7 @@ async function loadStudents() {
   $$('[data-xp-id]', els.studentBox).forEach(btn => {
     btn.addEventListener('click', async () => {
       const cur = Number(btn.dataset.xpCur) || 0;
-      const input = prompt(`给「${btn.dataset.xpName}」设置星光值：\n（当前 ${cur} 点；等级会自动重算，Lv3=60 星光值）`, String(cur));
+      const input = prompt(`给「${btn.dataset.xpName}」设置星光值：\n（当前 ${cur} 点）`, String(cur));
       if (input == null) return;
       const newXp = parseInt(input, 10);
       if (isNaN(newXp) || newXp < 0) { toast('请输入 0 以上的数字'); return; }
@@ -1635,7 +1634,7 @@ async function loadStudents() {
       });
       if (error) { toast('调整失败：' + error.message); return; }
       if (data && data.ok === false) { toast('没找到这个学生'); return; }
-      toast(`已设为 ${data.xp} 星光值（Lv${data.level}）`);
+      toast(`已设为 ${data.xp} 星光值`);
       invalidateRecCache();
       loadStudents();
     });
@@ -2586,7 +2585,7 @@ async function loadPersonalTasks() {
     if (!wr.ok) { toast('代填失败，请重试'); return; }
     const d = wr.res || {};
     if (d.ok === false) { toast('代填失败：' + (d.reason || '')); return; }
-    toast(`已代填，星光值+${d.xp_delta}${d.level ? '，升至 Lv.' + d.level : ''}`);
+    toast(`已代填，星光值+${d.xp_delta}`);
     loadPersonalTasks();
   }));
   box.querySelectorAll('[data-del-ptask]').forEach(btn => btn.addEventListener('click', async () => {
@@ -2912,7 +2911,7 @@ if (els.autoRuleForm) {
 /* ---------------- 测试工具 ---------------- */
 
 async function onRecalcXp() {
-  if (!confirm('按历史记录重算全班星光值与等级，不删记录。继续？')) return;
+  if (!confirm('按历史记录重算全班星光值，不删记录。继续？')) return;
   const btn = els.btnRecalcXp;
   if (btn.disabled) return;   // v128(RSK-06)：重入保护（含 RPC 异常路径）
   btn.disabled = true;
@@ -2967,7 +2966,6 @@ async function scanXpAnomaly() {
       const color = d > 0 ? '#b84c3a' : '#a93b36';
       return `<tr>
         <td><b>${esc(r.student)}</b></td>
-        <td style="text-align:center;">Lv${r.level}</td>
         <td style="text-align:right;">${r.cur_xp}</td>
         <td style="text-align:right;">${r.log_total}</td>
         <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
@@ -2980,7 +2978,6 @@ async function scanXpAnomaly() {
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead><tr style="background:#f4f4f5;">
             <th style="padding:8px 10px;text-align:left;">学生</th>
-            <th style="padding:8px 10px;text-align:center;">等级</th>
             <th style="padding:8px 10px;text-align:right;">当前星光值</th>
             <th style="padding:8px 10px;text-align:right;">流水应得</th>
             <th style="padding:8px 10px;text-align:right;">差额</th>
@@ -3017,7 +3014,6 @@ async function loadAllStudentLogs() {
       const color = d === 0 ? 'inherit' : (d > 0 ? '#b84c3a' : '#a93b36');
       return `<tr class="xp-log-row" data-stu="${esc(r.student)}" style="cursor:pointer;">
         <td><b>${esc(r.student)}</b></td>
-        <td style="text-align:center;">Lv${r.level}</td>
         <td style="text-align:right;">${r.cur_xp}</td>
         <td style="text-align:right;">${r.log_total}</td>
         <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
@@ -3031,7 +3027,6 @@ async function loadAllStudentLogs() {
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead><tr style="background:#f4f4f5;">
             <th style="padding:8px 10px;text-align:left;">学生</th>
-            <th style="padding:8px 10px;text-align:center;">等级</th>
             <th style="padding:8px 10px;text-align:right;">当前星光值</th>
             <th style="padding:8px 10px;text-align:right;">流水应得</th>
             <th style="padding:8px 10px;text-align:right;">差额</th>
@@ -3906,7 +3901,7 @@ async function runBatchTaskGrade() {
   } catch (e) {
     result.textContent = '' + (e.message || '失败');
   } finally {
-    btn.disabled = false; btn.textContent = '批量给所选学生评等级';
+    btn.disabled = false; btn.textContent = '批量评分';
   }
 }
 
