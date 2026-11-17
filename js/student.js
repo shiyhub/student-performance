@@ -2194,25 +2194,13 @@ function applyFrameTo(el, frameKey) {
   attachParticles(el, k);
 }
 
-const FRAME_CLASS = {
-  none:'', bronze:'frame-bronze', silver:'frame-silver', gold:'frame-gold',
-  rainbow:'frame-rainbow', star:'frame-star', heart:'frame-heart', crown:'frame-crown',
-  tac:'frame-tac', gun:'frame-gun', dragon:'frame-dragon', mecha:'frame-mecha', wolf:'frame-wolf',
-  sakura:'frame-sakura', magic:'frame-magic', princess:'frame-princess', queen:'frame-queen',
-  rose:'frame-rose', fairy:'frame-fairy', pixie:'frame-pixie',
-  /* v152：补齐 v142 七款进阶头像框（CSS 与图片早已就位，缺此映射导致佩戴后身份卡/详情不显示框） */
-  huadian:'frame-huadian', blossom:'frame-blossom', ink:'frame-ink', spring:'frame-spring',
-  redlily:'frame-redlily', mask:'frame-mask', neonwolf:'frame-neonwolf',
-  /* v160：补齐新 15 款头像框（魔法星空 6 + 兽耳小铺 9，缺此映射佩戴后身份卡/详情不显示框） */
-  ice:'frame-ice', moon:'frame-moon', crystal:'frame-crystal', silk:'frame-silk',
-  goldwing:'frame-goldwing', kitty:'frame-kitty',
-  devilcat:'frame-devilcat', angelcat:'frame-angelcat', clover:'frame-clover', neko:'frame-neko',
-  sweets:'frame-sweets', goth:'frame-goth', broken:'frame-broken', mono:'frame-mono', tech:'frame-tech',
-  ribbon:'frame-ribbon',
-  /* v162：四款新头像框 */
-  cyber:'frame-cyber', pulse:'frame-pulse', unicorn:'frame-unicorn', onyx:'frame-onyx',
-  rosefeather:'frame-rosefeather'
-};
+/* v197：类名映射改为从 FRAMES 自动派生。
+   v152（七款进阶）、v160（十五款星空/兽耳）都因手写映射漏项，出现「已佩戴但身份卡/详情不显示」；
+   v193 的 goldhelm / diamondhelm 第三次踩到同一处——只要新增框就必须记得往这里补一行。
+   改为按 FRAMES 生成后，新增框只改上面一处即可。 */
+const FRAME_CLASS = Object.fromEntries(
+  FRAMES.map(f => [f.key, f.key === 'none' ? '' : 'frame-' + f.key])
+);
 
 /* ---------------- v137(RSK-13)：头像框粒子注入 ----------------
    配置见文件顶部 FRAME_PARTICLES/FP_SHAPE_CLS/FP_ANIM_CLS */
