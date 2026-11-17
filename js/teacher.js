@@ -169,6 +169,23 @@ const els = {
   xpAnomalyZoneList: $('#xpAnomalyZoneList'),
   previewStudent: $('#previewStudent'),
   btnPreviewStudent: $('#btnPreviewStudent'),
+  // v195：虚拟测试学生
+  tsClass: $('#tsClass'),
+  tsName: $('#tsName'),
+  tsEnabled: $('#tsEnabled'),
+  tsShowWall: $('#tsShowWall'),
+  tsStatus: $('#tsStatus'),
+  tsDays: $('#tsDays'),
+  tsPerDay: $('#tsPerDay'),
+  tsMin: $('#tsMin'),
+  tsMax: $('#tsMax'),
+  tsData: $('#tsData'),
+  btnTsSave: $('#btnTsSave'),
+  btnTsGenerate: $('#btnTsGenerate'),
+  btnTsView: $('#btnTsView'),
+  btnTsOpen: $('#btnTsOpen'),
+  btnTsClear: $('#btnTsClear'),
+  btnTsDelete: $('#btnTsDelete'),
   // v167：星光管理
   starClass: $('#starClass'),
   btnStarRefresh: $('#btnStarRefresh'),
@@ -466,6 +483,14 @@ function init() {
   if (els.btnAllXpLogs) els.btnAllXpLogs.addEventListener('click', loadAllStudentLogs);
   if (els.btnXpAnomalyZone) els.btnXpAnomalyZone.addEventListener('click', loadXpAnomalyZone);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
+  // v195：虚拟测试学生
+  if (els.btnTsSave) els.btnTsSave.addEventListener('click', saveTestStudent);
+  if (els.btnTsGenerate) els.btnTsGenerate.addEventListener('click', generateTestData);
+  if (els.btnTsView) els.btnTsView.addEventListener('click', viewTestData);
+  if (els.btnTsOpen) els.btnTsOpen.addEventListener('click', openTestEntry);
+  if (els.btnTsClear) els.btnTsClear.addEventListener('click', () => clearTestData(true));
+  if (els.btnTsDelete) els.btnTsDelete.addEventListener('click', () => clearTestData(false));
+  if (els.tsClass) els.tsClass.addEventListener('change', loadTestStudent);
   // 班级家长查询二维码弹窗
   els.btnClassQrClose.addEventListener('click', closeClassQr);
   els.classQrModal.addEventListener('click', e => { if (e.target === els.classQrModal) closeClassQr(); });
@@ -659,7 +684,7 @@ function switchTab(name) {
     else { loadChallengeStudents(); loadChallengeTasks(); }
   }
   if (name === 'exam' && window.TeacherExam) window.TeacherExam.activate();
-  if (name === 'tools') fillPreviewClasses();
+  if (name === 'tools') { fillPreviewClasses(); initTestStudent(); }
   if (name === 'task') activateTaskTab();
   if (name === 'batch') activateBatchTab();
   if (name === 'stats') activateStatsTab();
@@ -1552,7 +1577,7 @@ async function loadStudents() {
       const xp = Number(s.xp) || 0;
       html += `<div class="roster-row">
                  <div class="roster-who">
-                   <div class="sname">${esc(s.student_name)}
+                   <div class="sname">${esc(s.student_name)}${s.is_test ? '<span class="stu-test-tag">测试</span>' : ''}
                      <span class="xp-badge" title="累计星光值 ${xp}">Lv${lv} · ${I.star('ico-xs')}${xp}</span>
                      <button type="button" class="btn btn-ghost btn-sm xp-edit" data-xp-id="${s.id}"
                              data-xp-class="${esc(s.class)}" data-xp-name="${esc(s.student_name)}"
@@ -3192,6 +3217,134 @@ async function queryXpLog() {
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>`;
+}
+
+/* ---------------- v195：虚拟测试学生 ---------------- */
+let tsCurrent = null;
+
+async function initTestStudent() {
+  if (!els.tsClass) return;
+  if (!els.tsClass.options.length) {
+    let classes = [];
+    try {
+      const { data } = await supabase.from('student_info').select('class').order('class');
+      classes = Array.from(new Set((data || []).map(x => x.class))).sort();
+    } catch (e) { classes = []; }
+    els.tsClass.innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  }
+  if (els.tsClass.value) loadTestStudent();
+  else if (els.tsStatus) els.tsStatus.textContent = '暂无班级';
+}
+
+async function loadTestStudent() {
+  if (!els.tsClass || !els.tsStatus) return;
+  const cls = els.tsClass.value;
+  if (!cls) { els.tsStatus.textContent = '先选班级'; return; }
+  const { data, error } = await supabase.rpc('test_student_get', { p_class: cls });
+  if (error) { els.tsStatus.textContent = '读取失败：' + error.message; return; }
+
+  if (!data || !data.exists) {
+    tsCurrent = null;
+    els.tsStatus.textContent = '未创建';
+    els.tsName.value = '测试学生';
+    els.tsEnabled.checked = true;
+    els.tsShowWall.checked = false;
+    if (els.tsData) els.tsData.textContent = '';
+    return;
+  }
+
+  tsCurrent = data;
+  const st = data.student || {}, stats = data.stats || {}, wallet = data.wallet || {}, cfg = st.config || {};
+  els.tsName.value = st.name || '测试学生';
+  els.tsEnabled.checked = !!st.enabled;
+  els.tsShowWall.checked = !!st.show_on_wall;
+  if (cfg.days) els.tsDays.value = cfg.days;
+  if (cfg.per_day) els.tsPerDay.value = cfg.per_day;
+  if (cfg.star_min) els.tsMin.value = cfg.star_min;
+  if (cfg.star_max) els.tsMax.value = cfg.star_max;
+  els.tsStatus.textContent =
+    `${st.enabled ? '已启用' : '已停用'} · 记录 ${stats.records || 0} 条 · 星光值 ${st.xp || 0} · 余额 ${wallet.balance || 0}` +
+    (stats.last_record ? ` · 最近 ${stats.last_record}` : '');
+}
+
+async function saveTestStudent() {
+  if (!els.tsClass) return;
+  const cls = els.tsClass.value;
+  const name = (els.tsName.value || '').trim();
+  if (!cls || !name) return toast('请填写班级和姓名');
+  els.btnTsSave.disabled = true;
+  const { data, error } = await supabase.rpc('test_student_save', {
+    p_class: cls, p_name: name,
+    p_enabled: !!els.tsEnabled.checked,
+    p_show_on_wall: !!els.tsShowWall.checked,
+    p_note: null
+  });
+  els.btnTsSave.disabled = false;
+  if (error) return toast('保存失败：' + error.message);
+  if (!data || data.ok === false) {
+    const reason = data && data.reason;
+    if (reason === 'name_conflict') toast('该班已有同名学生，换个名字');
+    else if (reason === 'rename_blocked') toast('已有测试数据，不能改名');
+    else toast('保存失败');
+    return;
+  }
+  toast('已保存');
+  loadTestStudent();
+}
+
+async function generateTestData() {
+  const cls = els.tsClass && els.tsClass.value;
+  if (!cls) return toast('先选班级');
+  els.btnTsGenerate.disabled = true;
+  const { data, error } = await supabase.rpc('test_student_generate', {
+    p_class: cls,
+    p_days: Number(els.tsDays.value) || 7,
+    p_per_day: Number(els.tsPerDay.value) || 1,
+    p_star_min: Number(els.tsMin.value) || 3,
+    p_star_max: Number(els.tsMax.value) || 5,
+    p_mood: null
+  });
+  els.btnTsGenerate.disabled = false;
+  if (error) return toast('生成失败：' + error.message);
+  if (!data || data.ok === false) {
+    return toast(data && data.reason === 'disabled' ? '测试学生已停用' : '先生成账号');
+  }
+  toast(`已生成 ${data.generated || 0} 条`);
+  loadTestStudent();
+}
+
+async function viewTestData() {
+  const cls = els.tsClass && els.tsClass.value;
+  if (!cls) return toast('先选班级');
+  const { data, error } = await supabase.rpc('test_student_data', { p_class: cls, p_limit: 20 });
+  if (error) { els.tsData.textContent = '读取失败：' + error.message; return; }
+  if (!data || data.ok === false) { els.tsData.textContent = '暂无数据'; return; }
+  const rows = data.records || [];
+  if (!rows.length) { els.tsData.textContent = '暂无数据'; return; }
+  els.tsData.textContent = rows.map(r =>
+    `${r.date}  ${r.star == null ? '-' : r.star}星  ${r.mood || '-'}  标签 ${r.items || 0} 个  ${r.comment || ''}`
+  ).join('\n');
+}
+
+async function clearTestData(keepAccount) {
+  const cls = els.tsClass && els.tsClass.value;
+  if (!cls) return toast('先选班级');
+  const tip = keepAccount ? '清空该测试学生的全部数据（保留账号）？' : '删除测试账号及其全部数据？';
+  if (!confirm(tip)) return;
+  const { data, error } = await supabase.rpc('test_student_clear', { p_class: cls, p_keep_account: keepAccount });
+  if (error) return toast('操作失败：' + error.message);
+  if (!data || data.ok === false) return toast('操作失败');
+  toast(keepAccount ? '已清空' : '已删除');
+  if (els.tsData) els.tsData.textContent = '';
+  loadTestStudent();
+}
+
+function openTestEntry() {
+  const cls = els.tsClass && els.tsClass.value;
+  const name = ((els.tsName && els.tsName.value) || '').trim() || '测试学生';
+  if (!cls) return toast('先选班级');
+  const url = `./index.html?test=1&class=${encodeURIComponent(cls)}&student=${encodeURIComponent(name)}`;
+  window.open(url, '_blank');
 }
 
 async function fillPreviewClasses() {

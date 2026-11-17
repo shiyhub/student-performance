@@ -352,6 +352,13 @@ body { background: linear-gradient(172deg, #f2f7ff 0%, #f6f3ff 46%, #eefcf8 100%
 .batch-table tr.unmatched { background: #fffdf6; }
 
 /* v116：星光加成倍数 / 家长可见 / Excel 异常清单 */
+/* v195：测试学生标记 */
+.stu-test-tag {
+  display: inline-block; margin-left: 6px; padding: 0 6px;
+  border-radius: 6px; background: #eef3ff; color: #2b5cab;
+  border: 1px solid #b9cdf5; font-size: 11px; font-weight: 700; line-height: 16px;
+}
+
 .chk-line {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13.5px; color: #3f5749; padding: 9px 0; cursor: pointer;

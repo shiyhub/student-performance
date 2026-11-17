@@ -505,6 +505,19 @@ body {
 }
 
 /* 老师预览模式提示条 */
+/* v195：测试模式横幅与测试学生标记 */
+.test-mode-banner {
+  background: #eef3ff; color: #2b5cab; border: 1.5px solid #b9cdf5;
+  padding: 9px 14px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  margin-bottom: 10px; text-align: center;
+}
+.mate-test-tag {
+  display: inline-block; margin-left: 4px; padding: 0 5px;
+  border-radius: 6px; background: #eef3ff; color: #2b5cab;
+  border: 1px solid #b9cdf5; font-size: 11px; font-weight: 700;
+  line-height: 15px; vertical-align: 1px;
+}
+
 .preview-banner {
   background: linear-gradient(90deg,#fff3d6,#ffe9b8);
   color: #8a5a00; border: 1.5px solid #f0c66a;

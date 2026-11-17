@@ -896,6 +896,55 @@ addEventListener('DOMContentLoaded', function () {
       </div>
 
       <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-robot"/></svg> 虚拟测试学生</div>
+        <p class="text-muted" style="margin-bottom:10px;">仅用于测试：默认不进学生墙，不计入班级星光值。学生端加 ?test=1 才可见。</p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="tsClass">班级</label>
+            <select class="input" id="tsClass"></select>
+          </div>
+          <div class="field">
+            <label for="tsName">姓名</label>
+            <input class="input" id="tsName" type="text" maxlength="20" value="测试学生" autocomplete="off">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:4px;">
+          <label class="chk-line"><input type="checkbox" id="tsEnabled" checked> 启用</label>
+          <label class="chk-line"><input type="checkbox" id="tsShowWall"> 在学生墙显示</label>
+          <button class="btn btn-primary" id="btnTsSave" type="button">保存</button>
+        </div>
+        <div id="tsStatus" class="text-muted" style="margin-top:8px;">—</div>
+
+        <div class="exam-form-grid" style="margin-top:12px;">
+          <div class="field">
+            <label for="tsDays">生成天数</label>
+            <input class="input" id="tsDays" type="number" min="1" max="60" value="7">
+          </div>
+          <div class="field">
+            <label for="tsPerDay">每天条数</label>
+            <input class="input" id="tsPerDay" type="number" min="1" max="5" value="1">
+          </div>
+          <div class="field">
+            <label for="tsMin">星级下限</label>
+            <input class="input" id="tsMin" type="number" min="1" max="5" value="3">
+          </div>
+          <div class="field">
+            <label for="tsMax">星级上限</label>
+            <input class="input" id="tsMax" type="number" min="1" max="5" value="5">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-primary" id="btnTsGenerate" type="button">生成测试数据</button>
+          <button class="btn btn-ghost" id="btnTsView" type="button">查看数据</button>
+          <button class="btn btn-ghost" id="btnTsOpen" type="button">打开测试入口</button>
+          <button class="btn btn-ghost" id="btnTsClear" type="button">清空数据</button>
+          <button class="btn btn-ghost" id="btnTsDelete" type="button">删除账号</button>
+        </div>
+        <div id="tsData" class="text-muted" style="margin-top:10px;white-space:pre-wrap;line-height:1.7;"></div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> 星光值规则说明</div>
         <p class="text-muted" style="margin-bottom:6px;">· 勾选「积极表现」加该标签设定值（默认 +2）；消极默认 +0。<br>
           · 删除记录会扣回该记录带来的星光值。<br>

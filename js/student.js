@@ -631,6 +631,7 @@ const state = {
   // 墙
   classes: [],
   currentClass: '',
+  includeTest: false,   // v195：?test=1 时把测试学生并入班级墙
   roster: [],
   records: [],
   detailName: '',
@@ -904,6 +905,10 @@ function enterWallFlow() {
   // 老师预览模式：?readonly=1&student=姓名 —— 自动以该学生身份打开，禁止提交
   state.readonly = params.get('readonly') === '1';
   state.previewName = (params.get('student') || '').trim();
+  // v195：测试模式 ?test=1 —— 把测试学生并入班级墙，可正常提交
+  state.includeTest = params.get('test') === '1';
+  const tBanner = document.getElementById('testModeBanner');
+  if (tBanner) tBanner.hidden = !state.includeTest;
 
   ensureMobileGate(); // v143：手机端未解锁一律先过秘钥门（含已保存身份与老师预览）
 
@@ -918,6 +923,8 @@ function enterWallFlow() {
     if (state.readonly && state.previewName) {
       showForm(state.previewName);
       applyReadonlyMode();
+    } else if (state.includeTest && state.previewName) {
+      showForm(state.previewName);   // 测试模式：以测试学生身份直接进入表单，可提交
     }
     // v179：本班全量预缓存原来挂在身份门确认之后，门去掉后挪到这里（每班每次进站一次）
     prefetchClassOnce(state.currentClass);
@@ -1090,8 +1097,8 @@ async function loadWall() {
 
   // v127+v145(RSK-15)：① 先渲染本地缓存 → 首屏秒开（网络数据随后静默刷新）
   let cache = null;
-  try { cache = await window.Offline.get('wall_' + cls); } catch (e) {}
-  if (!cache) { try { cache = JSON.parse(localStorage.getItem('sp_wall_cache_' + cls) || 'null'); } catch (e2) { cache = null; } }
+  try { cache = await window.Offline.get(wallKey(cls)); } catch (e) {}
+  if (!cache) { try { cache = JSON.parse(localStorage.getItem(wallCacheKey(cls)) || 'null'); } catch (e2) { cache = null; } }
   const hasCache = !!(cache && Array.isArray(cache.roster) && cache.roster.length);
   if (hasCache) {
     state.roster = cache.roster || [];
@@ -1119,7 +1126,7 @@ async function loadWall() {
   let wallData = null;
   try {
     if ((!window.Offline || window.Offline.online)) {
-      const r = await withTimeout(supabase.rpc('get_wall_data', (sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls }), DATA_TIMEOUT);
+      const r = await withTimeout(supabase.rpc('get_wall_data', Object.assign((sem && sem !== '全部') ? { p_class: cls, p_semester: sem } : { p_class: cls }, { p_include_test: !!state.includeTest })), DATA_TIMEOUT);
       if (r && !r.error && r.data && r.data.ok !== false) wallData = r.data;
     }
   } catch (e) { wallData = null; }
@@ -1136,8 +1143,8 @@ async function loadWall() {
     state.todayTaskDefs = wallData.tasks || [];
     state.todayTaskSubs = wallData.subs || [];
     if (wallData.progress && wallData.progress.ok !== false) state.classProgress = wallData.progress;
-    try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
-    await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now() });
+    try { localStorage.setItem(wallCacheKey(cls), JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+    await window.Offline.set(wallKey(cls), { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now() });
     if (!state.roster.length) {
       els.wallEmpty.hidden = false;
       return;
@@ -1185,8 +1192,16 @@ async function loadWall() {
     }
     return;   // 有缓存：静默保持已渲染的缓存界面
   }
-  state.roster = rosterRes.data || [];
-  state.records = recordRes.data || [];
+  // v195：RPC 不可用时的回退路径同样按测试口径过滤
+  const rawRoster = rosterRes.data || [];
+  const testRosterVisible = x => x.is_test && x.test_enabled &&
+    (state.includeTest || x.test_show_on_wall);
+  state.roster = rawRoster.filter(x => !x.is_test || testRosterVisible(x));
+  // 记录只在测试模式并入：普通模式下即使上墙也不参与平均星级/今日人数
+  const hiddenTest = new Set(rawRoster
+    .filter(x => x.is_test && !state.includeTest)
+    .map(x => x.student_name));
+  state.records = (recordRes.data || []).filter(r => !hiddenTest.has(r.student_name));
   try { await loadClassProgress(); } catch (e) {}
   // 座位表：只有在线真正拿到数据才重建；离线/失败保留缓存值（否则座位布局丢失且会被空表覆盖）
   try {
@@ -1209,8 +1224,8 @@ async function loadWall() {
     todayTaskSubs = (subRes && subRes.data) || [];
   }
   state.todayTaskSubs = todayTaskSubs;
-  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
-  await window.Offline.set('wall_' + cls, { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: todayTaskSubs, cachedAt: Date.now() });
+  try { localStorage.setItem(wallCacheKey(cls), JSON.stringify({ roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() })); } catch(e) {}
+  await window.Offline.set(wallKey(cls), { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, subs: todayTaskSubs, cachedAt: Date.now() });
   if (!state.roster.length) {
     els.wallEmpty.hidden = false;
     return;
@@ -1221,6 +1236,10 @@ async function loadWall() {
 // v161(⑤修复)：loadWallData 墙轻刷新钩子（原由分片脚本定义；分片停止加载后在此补回，
 // 供保存成功等回调刷新班级墙，避免陈旧展示）
 window.loadWallData = () => { try { loadWall(); } catch (e) { console.warn('loadWallData', e); } };
+
+// v195：测试模式（?test=1）用独立缓存键，测试名单不会写进普通学生的墙缓存
+function wallKey(cls) { return 'wall_' + cls + (state.includeTest ? '_test' : ''); }
+function wallCacheKey(cls) { return 'sp_wall_cache_' + cls + (state.includeTest ? '_test' : ''); }
 
 // v188：班级等级曲线（与 database/125-class-level-curve.sql 同口径）
 // 升到 2/3/4/5 级分别需 500 / 1000 / 1500 / 2000，5 级以后每级固定 2000，上限 99 级
@@ -1305,7 +1324,8 @@ function renderWall() {
   // v167.3：星光值榜 TOP5 角花装饰——只有真正获得过星光值（xp>0）的同学参与排名，
   //         全班都是 0 时不排名，避免开局人人挂角标。
   const rankMap = {};
-  const rankedRoster = state.roster.filter(x => (Number(x.xp) || 0) > 0)
+  // v195：测试学生不参与星光值排名（即使显示在墙上）
+  const rankedRoster = state.roster.filter(x => !x.is_test && (Number(x.xp) || 0) > 0)
     .sort((a,b) => (Number(b.xp)||0) - (Number(a.xp)||0));
   if (rankedRoster.length) {
     rankedRoster.slice(0,5).forEach((s,idx) => { rankMap[s.student_name] = idx + 1; });
@@ -1340,6 +1360,7 @@ function renderWall() {
       ? `<span class="mate-today" title="今日心情：${todayMood.label}">${I.mood(todayMood.lv)}</span>` : '';
 
     const rank = rankMap[s.student_name] || 0;   // v150：星光值榜名次（1-5）
+    const testTag = s.is_test ? '<span class="mate-test-tag">测试</span>' : '';
     // v191：移除 v155 的右上角魔法星空装饰（自适配差，卡角被裁切），只保留左上/右下金色角标
     // v173：个人卡片主题（未购买则不渲染角饰层）
     const ct = (s.card_theme && CARD_THEMES.some(t => t.key === s.card_theme)) ? s.card_theme : '';
@@ -1349,7 +1370,7 @@ function renderWall() {
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}${esc(s.student_name)}${lvBadge}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
+        <span class="mate-name">${moodInline}${esc(s.student_name)}${testTag}${lvBadge}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
       </button>`;
   });
 
@@ -1776,8 +1797,8 @@ function applyLocalSubmitFeedback(cls, name, items) {
   });
   renderTagGrid();
   const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
-  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap)); } catch (e) {}
-  window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+  try { localStorage.setItem(wallCacheKey(cls), JSON.stringify(wallSnap)); } catch (e) {}
+  window.Offline.set(wallKey(cls), Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
 }
 
 // 加载已提交过的二级项，历史唯一的标签置灰不可重复得分
@@ -1790,7 +1811,7 @@ async function loadDoneItems() {
   if (!window.Offline || !window.Offline.online) {
     // v124(Bug-10/11)：离线优先学生端最近的墙缓存（在线加载时实时刷新，最接近数据库），
     // 教师端预缓存快照仅作兜底，且超过 7 天视为过期（防止清理后残留测试项导致离线多置灰）
-    const w = await window.Offline.get('wall_' + cls);
+    const w = await window.Offline.get(wallKey(cls));
     rows = (w && w.records) || [];
     if (!rows.length) {
       let v = await window.Offline.get('records_all_' + cls);
@@ -1806,7 +1827,7 @@ async function loadDoneItems() {
         .limit(500);
       rows = data || [];
       if (!rows.length) {
-        const w = await window.Offline.get('wall_' + cls);
+        const w = await window.Offline.get(wallKey(cls));
         rows = (w && w.records) || [];
         if (!rows.length) {
           let v = await window.Offline.get('records_all_' + cls);
@@ -1815,7 +1836,7 @@ async function loadDoneItems() {
         }
       }
     } catch (e) {
-      const w = await window.Offline.get('wall_' + cls);
+      const w = await window.Offline.get(wallKey(cls));
       rows = (w && w.records) || [];
       if (!rows.length) {
         let v = await window.Offline.get('records_all_' + cls);
@@ -2192,8 +2213,8 @@ function persistWallCache() {
     roster: state.roster, records: state.records, seatMap: state.seatMap,
     tasks: state.todayTaskDefs, subs: state.todayTaskSubs, cachedAt: Date.now()
   };
-  try { localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(payload)); } catch (e) {}
-  try { if (window.Offline && window.Offline.set) window.Offline.set('wall_' + cls, payload); } catch (e) {}
+  try { localStorage.setItem(wallCacheKey(cls), JSON.stringify(payload)); } catch (e) {}
+  try { if (window.Offline && window.Offline.set) window.Offline.set(wallKey(cls), payload); } catch (e) {}
 }
 
 async function onChooseAvatar(key, btn) {
@@ -3323,7 +3344,7 @@ async function updateSubmitStatus() {
   const today = todayStr();
   let myToday = [];
   if (!window.Offline || !window.Offline.online) {
-    const v = await window.Offline.get('wall_' + cls);
+    const v = await window.Offline.get(wallKey(cls));
     myToday = ((v && v.records) || []).filter(r => r.student_name === name && r.record_date === today);
     if (!myToday.length) {
       const v2 = await window.Offline.get('records_all_' + cls);
@@ -3755,8 +3776,8 @@ async function onSubmit() {
     // v145(RSK-15)：提交成功即同步本地墙缓存（带 cachedAt，刷新不丢本次记录）
     try {
       const wallSnap = { roster: state.roster, records: state.records, seatMap: state.seatMap, tasks: state.todayTaskDefs, cachedAt: Date.now() };
-      localStorage.setItem('sp_wall_cache_' + cls, JSON.stringify(wallSnap));
-      window.Offline.set('wall_' + cls, Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
+      localStorage.setItem(wallCacheKey(cls), JSON.stringify(wallSnap));
+      window.Offline.set(wallKey(cls), Object.assign({}, wallSnap, { subs: state.todayTaskSubs }));
     } catch (eCache) {}
     loadProfile();// 成就/头像框（单请求，轻量）
     loadWallet();  // v167：同步星光值余额
@@ -3936,7 +3957,7 @@ async function loadStudentTask() {
   }
   if (!data) {
     // v114 兜底：个人任务缓存缺失时（如预缓存未完成），用班级墙里的今日任务定义，状态显示"还没做"
-    const w = await window.Offline.get('wall_' + cls);
+    const w = await window.Offline.get(wallKey(cls));
     const wt = (w && w.tasks) || [];
     if (wt.length) {
       data = { tasks: wt.map(t => ({ id: t.id, title: t.title, detail: t.detail, task_type: t.task_type, my_grade: 'none' })) };
