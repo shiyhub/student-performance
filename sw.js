@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v102';
+const CACHE = 'sp-cache-v103';
 const ASSETS = [
   './',
   './index.html',
@@ -321,6 +321,29 @@ const ASSETS = [
   './assets/themes/feather-night.webp',
   './assets/themes/feather-rose.webp',
   './assets/themes/sky-pastel.webp',
+  /* v203：18 套场景主题 + 2 张插画头像（512 主图 / 128 缩略图） */
+  './assets/themes/scene-tunnel.webp',
+  './assets/themes/scene-snow.webp',
+  './assets/themes/scene-moonrange.webp',
+  './assets/themes/scene-bamboo.webp',
+  './assets/themes/scene-lighthouse.webp',
+  './assets/themes/scene-stargirl.webp',
+  './assets/themes/scene-sakura.webp',
+  './assets/themes/scene-nightcat.webp',
+  './assets/themes/scene-meadow.webp',
+  './assets/themes/scene-ink.webp',
+  './assets/themes/scene-forest.webp',
+  './assets/themes/scene-cloudfield.webp',
+  './assets/themes/scene-iceblue.webp',
+  './assets/themes/scene-whitehair.webp',
+  './assets/themes/scene-sealight.webp',
+  './assets/themes/scene-valley.webp',
+  './assets/themes/scene-pink.webp',
+  './assets/themes/scene-lava.webp',
+  './assets/avatars/portrait1.webp',
+  './assets/avatars/portrait1-s.webp',
+  './assets/avatars/portrait2.webp',
+  './assets/avatars/portrait2-s.webp',
 ];
 
 /* v170：预缓存分层 + 限并发

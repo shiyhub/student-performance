@@ -1991,6 +1991,169 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 }
 .shop-item[data-ct-preview] { border-radius: 14px; }
 
+/* ============================================================
+   v203：18 套「场景」卡片主题（实景插画）
+   素材：assets/themes/scene-*.webp，统一 480×452（卡片比例 1.06）。
+   裁切规则：主要视觉主体已推到卡面横向 80%，落在头像圆（x27.5–72.5%、
+   y11.5–56.5%）的右侧之外，所以头像不会盖住人脸/主体。
+   配色：每套按「姓名所在底部条带」的实际明暗给出两组值——
+     暗底（白字 + 暗影） / 亮底（深梅字 + 白描边，靠描边隔离复杂底纹）。
+   注意：图案地址同样直写在 [data-t] 规则里，不能放进 CSS 变量（相对路径会 404）。
+   ============================================================ */
+.card-theme[data-t="scene-tunnel"]     { background-image: url("../assets/themes/scene-tunnel.webp"); }
+.card-theme[data-t="scene-snow"]       { background-image: url("../assets/themes/scene-snow.webp"); }
+.card-theme[data-t="scene-moonrange"]  { background-image: url("../assets/themes/scene-moonrange.webp"); }
+.card-theme[data-t="scene-bamboo"]     { background-image: url("../assets/themes/scene-bamboo.webp"); }
+.card-theme[data-t="scene-lighthouse"] { background-image: url("../assets/themes/scene-lighthouse.webp"); }
+.card-theme[data-t="scene-stargirl"]   { background-image: url("../assets/themes/scene-stargirl.webp"); }
+.card-theme[data-t="scene-sakura"]     { background-image: url("../assets/themes/scene-sakura.webp"); }
+.card-theme[data-t="scene-nightcat"]   { background-image: url("../assets/themes/scene-nightcat.webp"); }
+.card-theme[data-t="scene-meadow"]     { background-image: url("../assets/themes/scene-meadow.webp"); }
+.card-theme[data-t="scene-ink"]        { background-image: url("../assets/themes/scene-ink.webp"); }
+.card-theme[data-t="scene-forest"]     { background-image: url("../assets/themes/scene-forest.webp"); }
+.card-theme[data-t="scene-cloudfield"] { background-image: url("../assets/themes/scene-cloudfield.webp"); }
+.card-theme[data-t="scene-iceblue"]    { background-image: url("../assets/themes/scene-iceblue.webp"); }
+.card-theme[data-t="scene-whitehair"]  { background-image: url("../assets/themes/scene-whitehair.webp"); }
+.card-theme[data-t="scene-sealight"]   { background-image: url("../assets/themes/scene-sealight.webp"); }
+.card-theme[data-t="scene-valley"]     { background-image: url("../assets/themes/scene-valley.webp"); }
+.card-theme[data-t="scene-pink"]       { background-image: url("../assets/themes/scene-pink.webp"); }
+.card-theme[data-t="scene-lava"]       { background-image: url("../assets/themes/scene-lava.webp"); }
+
+/* 暗底八套：底部条带亮度 < .50，姓名用纯白 + 暗投影，星光徽标深紫底浅金字 */
+[data-ct="scene-tunnel"] {
+  --ct-bg: #0e1a12; --ct-line: rgba(190,235,200,.26);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(2,8,4,.94), 0 0 5px rgba(2,8,4,.62);
+  --ct-star-bg: rgba(14,22,16,.90); --ct-star-fg: #ffd9a0;
+  --ct-badge-bg: rgba(248,255,250,.95); --ct-badge-fg: #26543a; }
+[data-ct="scene-moonrange"] {
+  --ct-bg: #16232e; --ct-line: rgba(190,225,240,.26);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(4,10,16,.94), 0 0 5px rgba(4,10,16,.62);
+  --ct-star-bg: rgba(14,22,30,.90); --ct-star-fg: #d8ecff;
+  --ct-badge-bg: rgba(240,250,255,.95); --ct-badge-fg: #22475f; }
+[data-ct="scene-lighthouse"] {
+  --ct-bg: #0c1626; --ct-line: rgba(180,205,245,.26);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(2,6,16,.94), 0 0 5px rgba(2,6,16,.62);
+  --ct-star-bg: rgba(10,18,32,.90); --ct-star-fg: #ffe3a8;
+  --ct-badge-bg: rgba(244,249,255,.95); --ct-badge-fg: #1e3a5c; }
+[data-ct="scene-stargirl"] {
+  --ct-bg: #14204a; --ct-line: rgba(180,200,255,.28);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(4,8,26,.94), 0 0 5px rgba(4,8,26,.62);
+  --ct-star-bg: rgba(12,20,52,.90); --ct-star-fg: #ffd9a0;
+  --ct-badge-bg: rgba(242,246,255,.95); --ct-badge-fg: #2b3f7a; }
+[data-ct="scene-nightcat"] {
+  --ct-bg: #0d1712; --ct-line: rgba(170,215,190,.24);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(2,10,6,.94), 0 0 5px rgba(2,10,6,.62);
+  --ct-star-bg: rgba(10,20,15,.90); --ct-star-fg: #ffd9a0;
+  --ct-badge-bg: rgba(244,252,247,.95); --ct-badge-fg: #28503c; }
+[data-ct="scene-forest"] {
+  --ct-bg: #101c0d; --ct-line: rgba(190,225,170,.24);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(4,10,2,.94), 0 0 5px rgba(4,10,2,.62);
+  --ct-star-bg: rgba(12,22,10,.90); --ct-star-fg: #ffd9a0;
+  --ct-badge-bg: rgba(246,252,240,.95); --ct-badge-fg: #35521f; }
+[data-ct="scene-lava"] {
+  --ct-bg: #080406; --ct-line: rgba(255,150,120,.30);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(0,0,0,.96), 0 0 5px rgba(0,0,0,.7);
+  --ct-star-bg: rgba(20,8,10,.92); --ct-star-fg: #ffb59a;
+  --ct-badge-bg: rgba(255,246,242,.95); --ct-badge-fg: #6d2216; }
+
+/* 亮底十套：姓名深梅色 + 白描边，星光徽标白底深梅字 */
+[data-ct="scene-snow"] {
+  --ct-bg: #dbe4f0; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #38283a; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #6a4a72;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #5c4a68; }
+[data-ct="scene-bamboo"] {
+  --ct-bg: #f0c68c; --ct-line: rgba(255,255,255,.58);
+  --ct-fg: #4a2a18; --ct-fg-sh: 0 1px 0 rgba(255,246,232,.95), 0 0 4px rgba(255,246,232,.85);
+  --ct-star-bg: rgba(255,252,246,.95); --ct-star-fg: #8a4a1e;
+  --ct-badge-bg: rgba(255,252,246,.96); --ct-badge-fg: #7a4a22; }
+[data-ct="scene-sakura"] {
+  --ct-bg: #f2d6e4; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #43283c; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a4468;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #7a4260; }
+[data-ct="scene-meadow"] {
+  --ct-bg: #2f4c27; --ct-line: rgba(255,255,255,.34);
+  --ct-fg: #23301c; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.92), 0 0 4px rgba(255,255,255,.8);
+  --ct-star-bg: rgba(255,255,255,.94); --ct-star-fg: #3f5c2c;
+  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #3c5730; }
+[data-ct="scene-ink"] {
+  --ct-bg: #d9e0e2; --ct-line: rgba(255,255,255,.55);
+  --ct-fg: #2b2c33; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #44506a;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #3d4658; }
+[data-ct="scene-cloudfield"] {
+  --ct-bg: #2c5590; --ct-line: rgba(255,255,255,.40);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(8,18,44,.94), 0 0 5px rgba(8,18,44,.62);
+  --ct-star-bg: rgba(16,30,60,.90); --ct-star-fg: #cfe4ff;
+  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #2e4670; }
+[data-ct="scene-iceblue"] {
+  --ct-bg: #b9d6ef; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #2b3550; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #3a4c78;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #35486e; }
+[data-ct="scene-whitehair"] {
+  --ct-bg: #e6d2da; --ct-line: rgba(255,255,255,.60);
+  --ct-fg: #40222e; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a3f5c;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #703a52; }
+[data-ct="scene-sealight"] {
+  --ct-bg: #6d8fb8; --ct-line: rgba(255,255,255,.52);
+  --ct-fg: #243348; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.94), 0 0 4px rgba(255,255,255,.84);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #33486a;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #2f4463; }
+[data-ct="scene-valley"] {
+  --ct-bg: #457446; --ct-line: rgba(255,255,255,.40);
+  --ct-fg: #1f2e1e; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.92), 0 0 4px rgba(255,255,255,.8);
+  --ct-star-bg: rgba(255,255,255,.94); --ct-star-fg: #37542f;
+  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #34502c; }
+[data-ct="scene-pink"] {
+  --ct-bg: #f0d8e2; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #43263a; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a3f6a;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #7a3a5e; }
+
+/* 通用：场景主题的卡片、内容层级与可读性 */
+.mate[data-ct^="scene-"] {
+  overflow: hidden;
+  border: 1px solid var(--ct-line);
+  background: var(--ct-bg) !important;
+  box-shadow: 0 4px 14px rgba(24, 16, 22, .18);
+}
+/* 素材本身已按卡片比例重制，严格 cover，不再额外放大取景 */
+.mate[data-ct^="scene-"] .card-theme { filter: saturate(1.04); }
+.mate[data-ct^="scene-"] .mate-avatar {
+  z-index: 2;
+  outline: 1.5px solid rgba(255, 255, 255, .55);
+  outline-offset: 2px;
+}
+.mate[data-ct^="scene-"] .mate-avatar.framed { outline: none; }
+/* 姓名层级 4：必须高于角标 3，否则右下金色角花会压住星光值 */
+.mate[data-ct^="scene-"] .mate-name {
+  position: relative; z-index: 4;
+  color: var(--ct-fg);
+  text-shadow: var(--ct-fg-sh);
+}
+.mate[data-ct^="scene-"] .mate-star {
+  background: var(--ct-star-bg);
+  color: var(--ct-star-fg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 1px 3px rgba(20, 12, 20, .28);
+}
+.mate[data-ct^="scene-"] .mate-star .ms-n { color: var(--ct-star-fg); }
+.mate[data-ct^="scene-"] .mate-badge {
+  background: var(--ct-badge-bg);
+  color: var(--ct-badge-fg);
+  box-shadow: 0 1px 4px rgba(20, 12, 20, .22);
+  z-index: 3;
+}
+.mate[data-ct^="scene-"] .rank-corner { z-index: 3; }
+
+/* 商店缩略图：满幅方图用 cover 填满 1:1 格子 */
+.shop-thumb.theme-thumb[data-t^="scene-"] { background: #191620; }
+.shop-thumb.theme-thumb[data-t^="scene-"] img {
+  width: 100%; height: 100%; object-fit: cover; filter: none;
+}
+
 /* 主题商店：4 个分类时压缩内边距，避免文字换行 */
 .shop-tabs { gap: 6px; }
 .shop-tab { font-size: 13px; padding: 10px 2px; }

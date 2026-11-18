@@ -142,7 +142,9 @@ const AVATAR_SM_KEYS = new Set([
   'bunny','doll','flower','gothic','horn','lotus','twin',
   /* v194：10 张海报头像，512 主图 + 256 缩略图成对 */
   'poster1','poster2','poster3','poster4','poster5',
-  'poster6','poster7','poster8','poster9','poster10'
+  'poster6','poster7','poster8','poster9','poster10',
+  /* v203：两张横向插画裁出的头像，512 主图 + 128 缩略图成对 */
+  'portrait1','portrait2'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';
@@ -222,7 +224,27 @@ const CARD_THEMES = [
   { key: 'feather-violet', name: '紫羽流风', file: 'feather-violet.webp', desc: '薰衣草紫' },
   { key: 'feather-night',  name: '夜羽星尘', file: 'feather-night.webp',  desc: '雾蓝夜空' },
   { key: 'feather-rose',   name: '樱羽星砂', file: 'feather-rose.webp',   desc: '粉紫珠光' },
-  { key: 'sky-pastel',     name: '云海晨光', file: 'sky-pastel.webp',     desc: '粉蓝晴空' }
+  { key: 'sky-pastel',     name: '云海晨光', file: 'sky-pastel.webp',     desc: '粉蓝晴空' },
+  /* v203：18 套「场景」主题，素材是学生的实景插画，统一重制成卡片比例 480×452；
+     裁切时已把主要视觉主体推到卡面横向 80%（头像圆右边界之外），不会被人像挡住 */
+  { key: 'scene-tunnel',     name: '萤光隧道', file: 'scene-tunnel.webp',     desc: '林间绿光' },
+  { key: 'scene-snow',       name: '雪原红伞', file: 'scene-snow.webp',       desc: '雪野孤影' },
+  { key: 'scene-moonrange',  name: '月照苍山', file: 'scene-moonrange.webp',  desc: '雾山冷月' },
+  { key: 'scene-bamboo',     name: '竹影灯暖', file: 'scene-bamboo.webp',     desc: '暖橘竹灯' },
+  { key: 'scene-lighthouse', name: '星海灯塔', file: 'scene-lighthouse.webp', desc: '星海夜幕' },
+  { key: 'scene-stargirl',   name: '星夜少女', file: 'scene-stargirl.webp',   desc: '深蓝星河' },
+  { key: 'scene-sakura',     name: '樱湖远山', file: 'scene-sakura.webp',     desc: '粉樱湖光' },
+  { key: 'scene-nightcat',   name: '夜庭黑猫', file: 'scene-nightcat.webp',   desc: '夜色庭院' },
+  { key: 'scene-meadow',     name: '草地白猫', file: 'scene-meadow.webp',     desc: '森野草绿' },
+  { key: 'scene-ink',        name: '水墨剑影', file: 'scene-ink.webp',        desc: '水墨江湖' },
+  { key: 'scene-forest',     name: '林隙晨光', file: 'scene-forest.webp',     desc: '林间光束' },
+  { key: 'scene-cloudfield', name: '花田云海', file: 'scene-cloudfield.webp', desc: '蓝云暮色' },
+  { key: 'scene-iceblue',    name: '冰蓝幻境', file: 'scene-iceblue.webp',    desc: '冰蓝群像' },
+  { key: 'scene-whitehair',  name: '白夜回眸', file: 'scene-whitehair.webp',  desc: '白发粉霞' },
+  { key: 'scene-sealight',   name: '海天光柱', file: 'scene-sealight.webp',   desc: '海上晨光' },
+  { key: 'scene-valley',     name: '山谷村庄', file: 'scene-valley.webp',     desc: '青山雪顶' },
+  { key: 'scene-pink',       name: '粉樱少女', file: 'scene-pink.webp',       desc: '粉樱羽翼' },
+  { key: 'scene-lava',       name: '熔岩星尘', file: 'scene-lava.webp',       desc: '星球赤焰' }
 ];
 const CARD_THEME_BASE = 'assets/themes/';
 function cardThemeFile(key) {
@@ -308,10 +330,10 @@ const SOLO_AVATAR_KEYS = ['bunny','doll','flower','gothic','horn','lotus','twin'
 /* v197：补上 game18（像素·勇者）与 poster1-10（海报头像）——
    这两批是 129/130 号脚本后来上架的，正则没跟上，导致 isImgKey 判假、
    avatarForName 回退成按姓名哈希分配的小动物头像（像素勇者会显示成海豚/小狗）。 */
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|bunny|doll|flower|gothic|horn|lotus|twin)$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9])|bunny|doll|flower|gothic|horn|lotus|twin)$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9]))$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
