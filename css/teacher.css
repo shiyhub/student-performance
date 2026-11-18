@@ -707,3 +707,54 @@ html[data-device="pc"] #tabSeat { max-width: none; }
   .undo-row { flex-wrap: wrap; }
   .undo-items { flex: 1 1 100%; order: 3; white-space: normal; }
 }
+
+/* ============ v201：星光商店购买记录与回退 ============ */
+.shop-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.shop-stat { background: #f8fbfc; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.shop-stat .ss-label { font-size: 12px; color: var(--ink-2); }
+.shop-stat .ss-value { font-size: 18px; font-weight: 800; line-height: 1.35; }
+.shop-stat .ss-value small { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-left: 2px; }
+
+.shop-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.shop-table { min-width: 880px; }
+.shop-stu { display: flex; flex-direction: column; line-height: 1.3; }
+.shop-stu b { font-size: 13px; }
+.shop-stu span { font-size: 11.5px; color: var(--ink-2); }
+.shop-item-cell { display: flex; align-items: center; gap: 6px; }
+.shop-type {
+  display: inline-block; padding: 1px 6px; border-radius: 6px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: var(--violet-soft); color: #5b4bd6;
+}
+.shop-type[data-t="frame"] { background: var(--sky-soft); color: #2f6fd0; }
+.shop-type[data-t="daily"] { background: var(--warn-soft); color: #a3631b; }
+.shop-type[data-t="theme"] { background: var(--pink-soft); color: #c2417a; }
+.shop-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.shop-chip.ok { background: #e1fbf6; color: #0e8a7b; }
+.shop-chip.refunded { background: #f1f3f7; color: #7a869c; }
+.shop-chip.void { background: var(--danger-soft); color: #c0392b; }
+.shop-chip.none { background: #f7f9fc; color: #8a95ab; }
+.shop-star { font-weight: 800; color: #c9871b; white-space: nowrap; }
+.shop-star.zero { color: var(--ink-2); font-weight: 600; }
+.shop-pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.shop-pager .sp-info { font-size: 13px; color: var(--ink-2); }
+.shop-pager .sp-btns { display: flex; gap: 8px; }
+.shop-note { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.shop-empty { text-align: center; color: var(--ink-2); padding: 30px 10px; font-size: 14px; }
+
+.shop-impact { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.shop-impact-row { display: flex; gap: 12px; padding: 9px 12px; border-bottom: 1px solid #eef3f1; font-size: 13.5px; }
+.shop-impact-row:last-child { border-bottom: none; }
+.shop-impact-row .k { flex: 0 0 110px; color: var(--ink-2); }
+.shop-impact-row .v { flex: 1; min-width: 0; word-break: break-word; }
+.shop-impact-row .v b { color: var(--ink); }
+.shop-impact-order { background: #fbfcfe; }
+.shop-impact-head { font-size: 14.5px; font-weight: 800; margin-bottom: 8px; }
+.shop-refund-warn { margin-top: 12px; margin-bottom: 0; }
+.t-shop-refund { max-width: 520px; }
+
+@media (max-width: 720px) {
+  .shop-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shop-impact-row .k { flex: 0 0 86px; }
+  .t-shop-refund { max-width: 100%; }
+}

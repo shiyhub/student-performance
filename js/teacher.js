@@ -40,6 +40,7 @@ const Nav = (() => {
 window.addEventListener('popstate', e => Nav.onPop(e));
 
 function NavBack() {
+  if (els.shopRefundModal && els.shopRefundModal.classList.contains('show')) { closeShopRefund(); return true; }
   if (els.recordModal.classList.contains('show')) { closeRecordModal(); return true; }
   if (els.classQrModal.classList.contains('show')) { closeClassQr(); return true; }
   if (els.studentQrModal.classList.contains('show')) { closeStudentQr(); return true; }
@@ -203,6 +204,26 @@ const els = {
   btnArchive: $('#btnArchive'),
   archiveResult: $('#archiveResult'),
   archiveBatchList: $('#archiveBatchList'),
+  // v201：星光商店购买记录与回退
+  shopClass: $('#shopClass'),
+  shopStudent: $('#shopStudent'),
+  shopFrom: $('#shopFrom'),
+  shopTo: $('#shopTo'),
+  shopItemFilter: $('#shopItemFilter'),
+  shopStatus: $('#shopStatus'),
+  btnShopQuery: $('#btnShopQuery'),
+  btnShopReset: $('#btnShopReset'),
+  shopOrderSummary: $('#shopOrderSummary'),
+  shopOrderBox: $('#shopOrderBox'),
+  shopOrderPager: $('#shopOrderPager'),
+  shopAuditBox: $('#shopAuditBox'),
+  btnShopAuditRefresh: $('#btnShopAuditRefresh'),
+  shopRefundModal: $('#shopRefundModal'),
+  shopRefundImpact: $('#shopRefundImpact'),
+  shopRefundReason: $('#shopRefundReason'),
+  shopRefundError: $('#shopRefundError'),
+  btnShopRefundCancel: $('#btnShopRefundCancel'),
+  btnShopRefundConfirm: $('#btnShopRefundConfirm'),
   // 新增 / 修改记录
   btnAddRecord: $('#btnAddRecord'),
   recordModal: $('#recordModal'),
@@ -651,7 +672,7 @@ function switchTab(name) {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     personal: 'tabPersonal', challenge: 'tabChallenge',
     exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog',
-    star: 'tabStar', tools: 'tabTools', seat: 'tabSeat'
+    star: 'tabStar', shop: 'tabShop', tools: 'tabTools', seat: 'tabSeat'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
   //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
@@ -690,6 +711,7 @@ function switchTab(name) {
   if (name === 'stats') activateStatsTab();
   if (name === 'xpLog') fillXpLogClasses();
   if (name === 'star') activateStarTab();
+  if (name === 'shop') activateShopTab();
   if (name === 'seat') activateSeatTab();
 }
 
@@ -708,6 +730,7 @@ const PANE_DYNAMIC = {
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
   stats: ['statsOut'],
   star: ['starProgressBox', 'starDrawBox', 'archiveResult', 'archiveBatchList', 'shopAdminMsg'],
+  shop: ['shopOrderBox', 'shopOrderSummary', 'shopOrderPager', 'shopAuditBox'],
   tools: [],
   seat: ['seatBoard', 'seatPool']
 };
@@ -4575,3 +4598,482 @@ if (els.shopItemSel) els.shopItemSel.addEventListener('change', syncShopPriceInp
 if (els.btnShopPriceSave) els.btnShopPriceSave.addEventListener('click', saveShopPrice);
 if (els.btnCouponRefresh) els.btnCouponRefresh.addEventListener('click', () => loadTodayCoupons());
 if (els.btnArchive) els.btnArchive.addEventListener('click', doArchiveAll);
+
+/* ============================================================
+   v201：星光商店购买记录与回退（教师端）
+   ------------------------------------------------------------
+   数据来源：shop_order（135 号 SQL）+ shop_refund_audit
+   权限：仅登录教师（authenticated）可查可退，anon 一律拒绝
+   ============================================================ */
+const SHOP = { rows: [], total: 0, page: 0, size: 20, current: null, items: [], loaded: false };
+
+const SHOP_TYPE_TEXT = { avatar: '头像', frame: '头像框', daily: '日常卡', theme: '卡片主题' };
+const SHOP_STATUS_STYLE = {
+  active:   { text: '已生效', cls: 'ok' },
+  refunded: { text: '已回退', cls: 'refunded' },
+  void:     { text: '已作废', cls: 'void' }
+};
+const SHOP_REASON_TEXT = {
+  no_order: '订单不存在',
+  already_refunded: '该订单已经回退过',
+  order_not_active: '该订单当前不可回退',
+  coupon_used: '日常卡已被使用，不能回退',
+  no_reason: '必须填写回退原因',
+  unauthorized: '登录状态失效，请重新登录',
+  bad_item: '商品不存在或已下架'
+};
+
+function shopTypeText(t) { return SHOP_TYPE_TEXT[t] || '商品'; }
+
+function shopCanRefund(r) {
+  if (!r) return false;
+  if (r.status !== 'active') return false;
+  if (r.item_type === 'daily' && r.coupon_status === 'used') return false;
+  return true;
+}
+
+function shopBlockText(r) {
+  if (!r) return '';
+  if (r.status === 'refunded') return '已回退';
+  if (r.status === 'void') return '已作废';
+  if (r.status !== 'active') return '不可回退';
+  if (r.item_type === 'daily' && r.coupon_status === 'used') return '日常卡已使用';
+  return '—';
+}
+
+function shopNeedSql(msg) {
+  return /PGRST202|schema cache|does not exist|could not find the function|404/i.test(String(msg || ''));
+}
+
+/* ---------------- 筛选下拉 ---------------- */
+async function activateShopTab() {
+  await fillShopClasses();
+  await fillShopItems();
+  await loadShopOrders(0);
+  await loadShopAudit();
+}
+
+async function fillShopClasses() {
+  if (!els.shopClass) return;
+  const cur = els.shopClass.value;
+  let classes = [];
+  try {
+    const r = await supabase.from('student_info').select('class');
+    if (!r.error) classes = Array.from(new Set((r.data || []).map(x => x.class))).filter(Boolean).sort();
+  } catch (e) { /* 离线 */ }
+  if (!classes.length) {
+    try {
+      const v = await window.Offline.get('classes_all');
+      classes = Array.from(new Set(((v && v.data) || []).map(x => x.class))).filter(Boolean).sort();
+    } catch (e2) {}
+  }
+  els.shopClass.innerHTML = '<option value="">全部班级</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (cur) els.shopClass.value = cur;
+  await fillShopStudents();
+}
+
+async function fillShopStudents() {
+  if (!els.shopStudent) return;
+  const cls = (els.shopClass && els.shopClass.value) || '';
+  const cur = els.shopStudent.value;
+  let names = [];
+  if (cls) {
+    try {
+      const r = await supabase.from('student_info').select('student_name')
+        .eq('class', cls).order('student_name');
+      if (!r.error) names = (r.data || []).map(x => x.student_name).filter(Boolean);
+    } catch (e) {}
+  }
+  if (!cls) {
+    els.shopStudent.innerHTML = '<option value="">选择班级后可筛选学生</option>';
+    els.shopStudent.disabled = true;
+    return;
+  }
+  els.shopStudent.innerHTML = '<option value="">全部学生</option>' +
+    names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  els.shopStudent.disabled = false;
+  if (cur && names.includes(cur)) els.shopStudent.value = cur;
+}
+
+async function fillShopItems() {
+  if (!els.shopItemFilter) return;
+  const cur = els.shopItemFilter.value;
+  let items = SHOP.items;
+  if (!items.length) {
+    try {
+      const r = await supabase.from('shop_item')
+        .select('item_key,item_type,name,sort_order').order('sort_order');
+      if (!r.error) items = r.data || [];
+    } catch (e) {}
+    SHOP.items = items;
+  }
+  const order = ['avatar', 'frame', 'theme', 'daily'];
+  const groups = {};
+  items.forEach(x => {
+    const t = x.item_type || 'avatar';
+    (groups[t] = groups[t] || []).push(x);
+  });
+  const opts = `<option value="">全部商品</option>` +
+    order.filter(t => groups[t]).map(t =>
+      `<optgroup label="${shopTypeText(t)}">` +
+      groups[t].map(x => `<option value="${esc(x.item_key)}">${esc(x.name)}</option>`).join('') +
+      `</optgroup>`).join('');
+  els.shopItemFilter.innerHTML = opts;
+  if (cur) els.shopItemFilter.value = cur;
+}
+
+/* ---------------- 订单列表 ---------------- */
+async function loadShopOrders(offset) {
+  if (!els.shopOrderBox) return;
+  const page = Math.max(0, Math.floor(offset || 0));
+  const from = (els.shopFrom && els.shopFrom.value) || null;
+  const to = (els.shopTo && els.shopTo.value) || null;
+  if (from && to && from > to) { toast('开始日期不能晚于结束日期'); return; }
+
+  const params = {
+    p_class: (els.shopClass && els.shopClass.value) || null,
+    p_student: (els.shopStudent && els.shopStudent.value) || null,
+    p_from: from,
+    p_to: to,
+    p_item_key: (els.shopItemFilter && els.shopItemFilter.value) || null,
+    p_status: (els.shopStatus && els.shopStatus.value) || null,
+    p_limit: SHOP.size,
+    p_offset: page * SHOP.size
+  };
+
+  els.shopOrderBox.innerHTML = '<div class="shop-empty">正在查询…</div>';
+  if (els.shopOrderPager) els.shopOrderPager.innerHTML = '';
+  let d = null;
+  try {
+    const r = await supabase.rpc('get_shop_orders', params);
+    if (r.error) { renderShopError(r.error.message); return; }
+    d = r.data;
+  } catch (e) { renderShopError(e && e.message); return; }
+
+  if (!d || d.ok === false) {
+    renderShopError((d && d.reason) || '查询失败');
+    return;
+  }
+  SHOP.page = page;
+  SHOP.rows = d.rows || [];
+  SHOP.total = Number(d.total) || 0;
+  renderShopSummary(d);
+  renderShopRows();
+  renderShopPager();
+}
+
+function renderShopError(msg) {
+  const text = String(msg || '');
+  const hint = shopNeedSql(text)
+    ? '尚未安装商店订单功能：请先在 Supabase SQL Editor 执行 <b>database/135-shop-order-refund.sql</b>，再刷新本页。'
+    : (text === 'unauthorized'
+        ? '登录状态失效，请退出后重新登录教师端。'
+        : '查询失败：' + esc(text));
+  if (els.shopOrderBox) els.shopOrderBox.innerHTML = `<div class="banner banner-warn">${hint}</div>`;
+  if (els.shopOrderSummary) els.shopOrderSummary.innerHTML = '';
+  if (els.shopOrderPager) els.shopOrderPager.innerHTML = '';
+}
+
+function renderShopSummary(d) {
+  if (!els.shopOrderSummary) return;
+  const total = Number(d.total) || 0;
+  const star = Number(d.star_total) || 0;
+  const rc = Number(d.refunded_count) || 0;
+  const rs = Number(d.refunded_star) || 0;
+  const sc = Number(d.student_count) || 0;
+  els.shopOrderSummary.innerHTML = `
+    <div class="shop-stat"><div class="ss-label">购买记录</div><div class="ss-value">${total}<small>条</small></div></div>
+    <div class="shop-stat"><div class="ss-label">消耗星光合计</div><div class="ss-value">${star}<small>点</small></div></div>
+    <div class="shop-stat"><div class="ss-label">已回退</div><div class="ss-value">${rc}<small>条</small> <small>· ${rs} 点</small></div></div>
+    <div class="shop-stat"><div class="ss-label">涉及学生</div><div class="ss-value">${sc}<small>人</small></div></div>`;
+}
+
+function shopRowHTML(r) {
+  const st = SHOP_STATUS_STYLE[r.status] || { text: r.status || '—', cls: 'none' };
+  const refunded = r.refund_status === 'refunded';
+  const can = shopCanRefund(r);
+  const spent = Number(r.star_spent) || 0;
+  const op = can
+    ? `<button class="btn btn-ghost btn-sm" type="button" data-refund="${esc(r.id)}">
+         <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg> 回退</button>`
+    : `<span class="text-muted">${esc(shopBlockText(r))}</span>`;
+  return `<tr>
+    <td>${fmtTime(r.created_at)}</td>
+    <td><div class="shop-stu"><b>${esc(r.student_name)}</b><span>${esc(r.class || '')}</span></div></td>
+    <td><div class="shop-item-cell">
+      <span class="shop-type" data-t="${esc(r.item_type || '')}">${esc(shopTypeText(r.item_type))}</span>
+      <span>${esc(r.item_name || r.item_key)}</span></div></td>
+    <td>${Number(r.qty) || 1}</td>
+    <td><span class="shop-star${spent > 0 ? '' : ' zero'}">${spent} 点</span></td>
+    <td><span class="shop-chip ${st.cls}">${esc(st.text)}</span></td>
+    <td>${refunded
+      ? `<span class="shop-chip refunded">已回退</span>
+         <div class="shop-note">${fmtTime(r.refunded_at)}${r.refunded_by ? ' · ' + esc(r.refunded_by) : ''}</div>`
+      : '<span class="shop-chip none">未回退</span>'}</td>
+    <td>${op}</td>
+  </tr>`;
+}
+
+function renderShopRows() {
+  if (!els.shopOrderBox) return;
+  if (!SHOP.rows.length) {
+    els.shopOrderBox.innerHTML = '<div class="shop-empty">没有符合条件的购买记录</div>';
+    return;
+  }
+  els.shopOrderBox.innerHTML = `<div class="shop-table-wrap">
+    <table class="star-table shop-table">
+      <thead><tr>
+        <th>购买时间</th><th>学生</th><th>商品</th><th>数量</th>
+        <th>消耗星光</th><th>订单状态</th><th>回退状态</th><th>操作</th>
+      </tr></thead>
+      <tbody>${SHOP.rows.map(shopRowHTML).join('')}</tbody>
+    </table></div>`;
+}
+
+function renderShopPager() {
+  if (!els.shopOrderPager) return;
+  const from = SHOP.total ? SHOP.page * SHOP.size + 1 : 0;
+  const to = Math.min(SHOP.total, (SHOP.page + 1) * SHOP.size);
+  const hasPrev = SHOP.page > 0;
+  const hasNext = to < SHOP.total;
+  els.shopOrderPager.innerHTML =
+    `<span class="sp-info">第 ${from}–${to} 条 / 共 ${SHOP.total} 条</span>
+     <span class="sp-btns">
+       <button class="btn btn-ghost btn-sm" type="button" data-page="prev"${hasPrev ? '' : ' disabled'}>上一页</button>
+       <button class="btn btn-ghost btn-sm" type="button" data-page="next"${hasNext ? '' : ' disabled'}>下一页</button>
+     </span>`;
+}
+
+/* ---------------- 回退：影响预览 → 二次确认 → 执行 ---------------- */
+function showShopRefundError(msg) {
+  if (!els.shopRefundError) return;
+  els.shopRefundError.textContent = msg;
+  els.shopRefundError.hidden = !msg;
+}
+
+async function openShopRefund(orderId) {
+  if (!els.shopRefundModal || !orderId) return;
+  SHOP.current = null;
+  showShopRefundError('');
+  if (els.shopRefundReason) { els.shopRefundReason.value = ''; els.shopRefundReason.disabled = false; }
+  if (els.shopRefundImpact) els.shopRefundImpact.innerHTML = '<div class="text-muted">正在核对影响范围…</div>';
+  if (els.btnShopRefundConfirm) els.btnShopRefundConfirm.disabled = true;
+  els.shopRefundModal.classList.add('show');
+  Nav.push('shopRefund');
+
+  let d = null;
+  try {
+    const r = await supabase.rpc('shop_refund_impact', { p_order_id: orderId });
+    if (r.error) {
+      if (els.shopRefundImpact) {
+        els.shopRefundImpact.innerHTML = shopNeedSql(r.error.message)
+          ? '<div class="banner banner-warn">尚未安装 135 号 SQL，无法回退。请先执行 <b>database/135-shop-order-refund.sql</b>。</div>'
+          : `<div class="banner banner-error">读取失败：${esc(r.error.message)}</div>`;
+      }
+      return;
+    }
+    d = r.data;
+  } catch (e) {
+    if (els.shopRefundImpact) els.shopRefundImpact.innerHTML = '<div class="banner banner-error">网络异常，请重试。</div>';
+    return;
+  }
+
+  if (!d || d.ok === false) {
+    const why = SHOP_REASON_TEXT[(d && d.reason) || ''] || (d && d.reason) || '无法回退';
+    if (els.shopRefundImpact) els.shopRefundImpact.innerHTML = `<div class="banner banner-warn">${esc(why)}</div>`;
+    return;
+  }
+
+  SHOP.current = d;
+  renderShopRefundImpact(d);
+  if (els.btnShopRefundConfirm) els.btnShopRefundConfirm.disabled = !d.refundable;
+  if (d.refundable && els.shopRefundReason) els.shopRefundReason.focus();
+}
+
+function renderShopRefundImpact(d) {
+  if (!els.shopRefundImpact) return;
+  const o = d.order || {};
+  const line = (k, v) => `<div class="shop-impact-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const rows = [];
+
+  rows.push(`<div class="shop-impact-row shop-impact-order"><span class="k">订单</span>
+    <span class="v"><b>${esc(o.student_name || '')}</b> · ${esc(o.item_name || o.item_key || '')}
+    ${Number(o.qty) > 1 ? ' ×' + Number(o.qty) : ''}
+    <div class="shop-note">${esc(o.class || '')} · ${fmtTime(o.created_at)} · 单价 ${Number(o.unit_price) || 0} 点</div></span></div>`);
+
+  const head = `<div class="shop-impact-head">${esc(o.student_name || '')} · ${esc(o.item_name || '')}</div>
+    <div class="shop-impact">${rows.join('')}</div>`;
+
+  // 不可回退：只说清楚原因，不展示"会返还多少"这类不会发生的结果
+  if (!d.refundable) {
+    els.shopRefundImpact.innerHTML = head +
+      `<div class="banner banner-error shop-refund-warn">该订单不可回退：${esc(SHOP_REASON_TEXT[d.block_reason] || d.block_reason || '未知原因')}</div>`;
+    if (els.shopRefundReason) {
+      els.shopRefundReason.value = '';
+      els.shopRefundReason.disabled = true;
+    }
+    return;
+  }
+  if (els.shopRefundReason) els.shopRefundReason.disabled = false;
+
+  rows.push(line('返还星光值', (Number(d.stars) || 0) > 0
+    ? `<b class="shop-star">+${d.stars} 点</b>（余额 ${d.balance_before} → ${d.balance_after}）`
+    : '该单未消耗星光值（0 点）'));
+  rows.push(line('累计消费', `${d.total_spent_before} → ${d.total_spent_after} 点`));
+  rows.push(line('衣柜物品', d.inventory_action === 'removed' ? '从衣柜移除这件商品' : '衣柜中已无这件商品'));
+  rows.push(line('当前佩戴', d.equip_action
+    ? `正在佩戴，将自动卸下${d.equip_reset_to ? '（' + esc(d.equip_reset_to) + '）' : ''}`
+    : '当前未佩戴，无需处理'));
+  if (o.item_type === 'daily') {
+    rows.push(line('日常卡', d.coupon_action === 'removed'
+      ? '收回 1 张未使用的卡'
+      : (d.coupon_status === 'used'
+          ? '<b style="color:#c0392b">已被使用，不能回退</b>'
+          : '没有可收回的卡')));
+  }
+  rows.push(line('星光流水', (Number(d.stars) || 0) > 0 ? '新增 1 条回退流水（可追溯）' : '无需新增流水'));
+
+  els.shopRefundImpact.innerHTML =
+    `<div class="shop-impact-head">${esc(o.student_name || '')} · ${esc(o.item_name || '')}</div>
+     <div class="shop-impact">${rows.join('')}</div>
+     <div class="banner banner-warn shop-refund-warn">回退后不可撤销：星光值会立即退回学生余额，商品移出衣柜，学生需要重新兑换才能再次拥有。</div>`;
+}
+
+function closeShopRefund() {
+  if (els.shopRefundModal) els.shopRefundModal.classList.remove('show');
+  SHOP.current = null;
+  showShopRefundError('');
+  if (els.shopRefundReason) els.shopRefundReason.value = '';
+}
+
+async function doShopRefund() {
+  const d = SHOP.current;
+  if (!d || !d.order || !d.refundable) return toast('该订单当前不可回退');
+
+  const reason = ((els.shopRefundReason && els.shopRefundReason.value) || '').trim();
+  if (reason.length < 2) {
+    showShopRefundError('请填写回退原因（至少 2 个字），该原因会写入审计日志。');
+    if (els.shopRefundReason) els.shopRefundReason.focus();
+    return;
+  }
+  showShopRefundError('');
+
+  const o = d.order;
+  const stars = Number(d.stars) || 0;
+  const tip = `确认回退这笔购买？\n\n学生：${o.student_name}（${o.class}）\n商品：${o.item_name}\n` +
+    `返还星光：${stars} 点（余额 ${d.balance_before} → ${d.balance_after}）\n` +
+    (d.equip_action ? '该商品正在佩戴，将自动卸下\n' : '') +
+    (o.item_type === 'daily' && d.coupon_action === 'removed' ? '将收回 1 张未使用的日常卡\n' : '') +
+    `\n回退后不可撤销，确定继续吗？`;
+  if (!confirm(tip)) return;
+
+  const btn = els.btnShopRefundConfirm;
+  if (btn) btn.disabled = true;
+  try {
+    const r = await supabase.rpc('refund_shop_order', {
+      p_order_id: o.id,
+      p_operator: ((els.userEmail && els.userEmail.textContent) || '').trim() || null,
+      p_reason: reason
+    });
+    if (r.error) {
+      showShopRefundError(shopNeedSql(r.error.message)
+        ? '尚未安装 135 号 SQL，无法回退。'
+        : '回退失败：' + r.error.message);
+      return;
+    }
+    const res = r.data || {};
+    if (res.ok === false) {
+      showShopRefundError('回退失败：' + (SHOP_REASON_TEXT[res.reason] || res.reason || '未知原因'));
+      return;
+    }
+    closeShopRefund();
+    toast(`已回退：${res.student_name || o.student_name} · ${res.item_name || o.item_name}，返还 ${res.stars_refunded || stars} 点星光值`);
+    const target = (SHOP.rows.length === 1 && SHOP.page > 0) ? SHOP.page - 1 : SHOP.page;
+    await loadShopOrders(target);
+    await loadShopAudit();
+  } catch (e) {
+    showShopRefundError('回退失败，请检查网络后重试。');
+  } finally {
+    if (btn && els.shopRefundModal && els.shopRefundModal.classList.contains('show')) btn.disabled = false;
+  }
+}
+
+/* ---------------- 审计日志 ---------------- */
+async function loadShopAudit() {
+  if (!els.shopAuditBox) return;
+  const cls = (els.shopClass && els.shopClass.value) || null;
+  let d = null;
+  try {
+    const r = await supabase.rpc('get_shop_refund_audit', { p_class: cls, p_limit: 20, p_offset: 0 });
+    if (r.error) { renderShopAuditError(r.error.message); return; }
+    d = r.data;
+  } catch (e) { renderShopAuditError(e && e.message); return; }
+
+  if (!d || d.ok === false) { renderShopAuditError((d && d.reason) || '读取失败'); return; }
+  const rows = d.rows || [];
+  if (!rows.length) {
+    els.shopAuditBox.innerHTML = '<div class="text-muted">还没有回退记录</div>';
+    return;
+  }
+  els.shopAuditBox.innerHTML =
+    `<div class="text-muted" style="margin-bottom:8px;">共 ${Number(d.total) || rows.length} 条回退记录（显示最近 ${rows.length} 条）</div>
+     <div class="shop-table-wrap"><table class="star-table shop-table">
+       <thead><tr><th>操作时间</th><th>操作人</th><th>学生</th><th>商品</th><th>返还星光</th><th>回退原因</th></tr></thead>
+       <tbody>${rows.map(a => `<tr>
+         <td>${fmtTime(a.created_at)}</td>
+         <td>${esc(a.operator || '—')}</td>
+         <td><div class="shop-stu"><b>${esc(a.student_name || '')}</b><span>${esc(a.class || '')}</span></div></td>
+         <td><div class="shop-item-cell"><span class="shop-type" data-t="${esc(a.item_type || '')}">${esc(shopTypeText(a.item_type))}</span><span>${esc(a.item_name || a.item_key || '')}</span></div></td>
+         <td><span class="shop-star">+${Number(a.stars_refunded) || 0} 点</span></td>
+         <td>${esc(a.reason || '')}</td>
+       </tr>`).join('')}</tbody>
+     </table></div>`;
+}
+
+function renderShopAuditError(msg) {
+  if (!els.shopAuditBox) return;
+  const text = String(msg || '');
+  els.shopAuditBox.innerHTML = shopNeedSql(text)
+    ? '<div class="text-muted">尚未安装 135 号 SQL</div>'
+    : `<div class="text-muted">审计日志读取失败：${esc(text)}</div>`;
+}
+
+/* ---------------- 绑定 ---------------- */
+if (els.shopClass) els.shopClass.addEventListener('change', async () => {
+  await fillShopStudents();
+  loadShopOrders(0);
+  loadShopAudit();
+});
+if (els.shopStudent) els.shopStudent.addEventListener('change', () => loadShopOrders(0));
+if (els.shopStatus) els.shopStatus.addEventListener('change', () => loadShopOrders(0));
+if (els.shopItemFilter) els.shopItemFilter.addEventListener('change', () => loadShopOrders(0));
+if (els.shopFrom) els.shopFrom.addEventListener('change', () => loadShopOrders(0));
+if (els.shopTo) els.shopTo.addEventListener('change', () => loadShopOrders(0));
+if (els.btnShopQuery) els.btnShopQuery.addEventListener('click', () => loadShopOrders(0));
+if (els.btnShopReset) els.btnShopReset.addEventListener('click', async () => {
+  if (els.shopClass) els.shopClass.value = '';
+  if (els.shopFrom) els.shopFrom.value = '';
+  if (els.shopTo) els.shopTo.value = '';
+  if (els.shopItemFilter) els.shopItemFilter.value = '';
+  if (els.shopStatus) els.shopStatus.value = '';
+  await fillShopStudents();
+  await loadShopOrders(0);
+  await loadShopAudit();
+});
+if (els.shopOrderBox) els.shopOrderBox.addEventListener('click', e => {
+  const btn = e.target.closest('[data-refund]');
+  if (btn) openShopRefund(btn.dataset.refund);
+});
+if (els.shopOrderPager) els.shopOrderPager.addEventListener('click', e => {
+  const btn = e.target.closest('[data-page]');
+  if (!btn || btn.disabled) return;
+  if (btn.dataset.page === 'prev') loadShopOrders(Math.max(0, SHOP.page - 1));
+  else loadShopOrders(SHOP.page + 1);
+});
+if (els.btnShopAuditRefresh) els.btnShopAuditRefresh.addEventListener('click', loadShopAudit);
+if (els.btnShopRefundCancel) els.btnShopRefundCancel.addEventListener('click', closeShopRefund);
+if (els.btnShopRefundConfirm) els.btnShopRefundConfirm.addEventListener('click', doShopRefund);
+if (els.shopRefundModal) els.shopRefundModal.addEventListener('click', e => {
+  if (e.target === els.shopRefundModal) closeShopRefund();
+});

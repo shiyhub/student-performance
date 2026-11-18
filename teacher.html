@@ -146,6 +146,7 @@ addEventListener('DOMContentLoaded', function () {
       <button class="tab-btn" data-tab="stats"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart-bar"/></svg> 数据统计</button>
       <button class="tab-btn" data-tab="xpLog"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 星光记录</button>
       <button class="tab-btn" data-tab="star"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> 星光管理</button>
+      <button class="tab-btn" data-tab="shop"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-cart"/></svg> 商店订单</button>
       <button class="tab-btn" data-tab="tools"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-beaker"/></svg> 测试工具</button>
       <button class="tab-btn" data-tab="seat"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排</button>
     </nav>
@@ -808,6 +809,66 @@ addEventListener('DOMContentLoaded', function () {
         </div>
       </div>
     </section>
+    <section id="tabShop" hidden>
+      <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-cart"/></svg> 星光商店购买记录</div>
+        <p class="text-muted" style="margin-bottom:10px;">
+          按学生、时间、商品、订单状态查询兑换记录。学生误点兑换时，可对单条记录执行<b>回退</b>：
+          星光值退回余额、物品移出衣柜、正在佩戴的自动卸下，全过程写入审计日志。
+        </p>
+        <div class="exam-form-grid">
+          <div class="field">
+            <label for="shopClass">班级</label>
+            <select class="input" id="shopClass"></select>
+          </div>
+          <div class="field">
+            <label for="shopStudent">学生</label>
+            <select class="input" id="shopStudent"></select>
+          </div>
+          <div class="field">
+            <label for="shopFrom">开始日期</label>
+            <input class="input" id="shopFrom" type="date">
+          </div>
+          <div class="field">
+            <label for="shopTo">结束日期</label>
+            <input class="input" id="shopTo" type="date">
+          </div>
+          <div class="field">
+            <label for="shopItemFilter">商品</label>
+            <select class="input" id="shopItemFilter"></select>
+          </div>
+          <div class="field">
+            <label for="shopStatus">订单状态</label>
+            <select class="input" id="shopStatus">
+              <option value="">全部</option>
+              <option value="active">已生效</option>
+              <option value="refunded">已回退</option>
+              <option value="void">已作废</option>
+            </select>
+          </div>
+        </div>
+        <div class="filter-actions" style="margin-top:12px;">
+          <button class="btn btn-primary" id="btnShopQuery" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-search"/></svg> 查询</button>
+          <button class="btn btn-ghost" id="btnShopReset" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg> 重置</button>
+        </div>
+        <div id="shopOrderSummary" class="shop-summary" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-list"/></svg> 订单明细</div>
+        <div id="shopOrderBox"></div>
+        <div id="shopOrderPager" class="shop-pager"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 回退审计日志</div>
+        <p class="text-muted" style="margin-bottom:10px;">记录操作人、操作时间、回退原因与影响范围，用于事后追溯。</p>
+        <div class="filter-actions" style="margin-bottom:10px;">
+          <button class="btn btn-ghost" id="btnShopAuditRefresh" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg> 刷新日志</button>
+        </div>
+        <div id="shopAuditBox"></div>
+      </div>
+    </section>
     <section id="tabXpLog" hidden>
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 学生星光值日志</div>
@@ -1234,6 +1295,24 @@ addEventListener('DOMContentLoaded', function () {
       <button class="btn btn-ghost" id="btnStuQrDownload" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 下载二维码</button>
       <button class="btn btn-ghost" id="btnStuQrCopy" type="button">复制链接</button>
       <button class="btn btn-primary" id="btnStuQrClose" type="button">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 星光商店：回退订单（影响范围 + 二次确认） -->
+<div class="modal-mask" id="shopRefundModal">
+  <div class="modal t-shop-refund">
+    <h3><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg> 回退这笔购买</h3>
+    <div id="shopRefundImpact"></div>
+    <div class="field" style="margin-top:14px;">
+      <label for="shopRefundReason">回退原因（必填，写入审计日志）</label>
+      <textarea class="input" id="shopRefundReason" rows="3" maxlength="200"
+                placeholder="例如：学生误点兑换 / 家里已买过同样的装扮 / 兑换重复"></textarea>
+    </div>
+    <div id="shopRefundError" class="banner banner-error" hidden></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnShopRefundCancel" type="button">取消</button>
+      <button class="btn btn-danger" id="btnShopRefundConfirm" type="button">确认回退</button>
     </div>
   </div>
 </div>
