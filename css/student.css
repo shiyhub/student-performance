@@ -1598,7 +1598,12 @@ html[data-weather] .wall-view{background:transparent}
   display: inline-block; margin-left: 5px; font-size: 11px; font-weight: 800;
   color: #b8781a; background: #fff4dd; border-radius: 999px; padding: 0 6px;
   vertical-align: middle;
+  /* v202：窄卡上不许被 flex 压缩、也不许折行，否则"43"这类两位数会被裁掉半个；
+     图标与数字改成内部 flex 排布，宽度才按「图标 + 完整数字」计算 */
+  flex: 0 0 auto; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 2px;
 }
+.mate-star .ms-n { flex: 0 0 auto; display: inline-block; }
 
 /* ---------- 星光商店 ---------- */
 .shop-wallet-card { background: linear-gradient(135deg,#fff8e8,#ffeed6 52%,#f2ecff); text-align: center; }
@@ -1882,15 +1887,17 @@ html[data-weather] .wall-view{background:transparent}
 /* 五套主题：图片 + 底色 + 描边 + 强调色
    前四套素材中央是透明的，靠 --ct-bg 给整张卡片铺主题色调；
    云海晨光是满幅照片，底色只在圆角边缘露一点。 */
+/* v202：三套羽毛主题换成深色整幅素材（月牙羽翼 / 方框紫羽 / 四角环羽），
+   底色跟着压深，圆角边缘不会漏出浅色；描边与强调色改淡紫，压在深底上才亮。 */
 [data-ct="feather-moon"]   {
-  --ct-bg: linear-gradient(160deg, #fdf6e6 0%, #f4e9ff 54%, #e6f0ff 100%);
-  --ct-line: rgba(186, 164, 232, .55); --ct-accent: #8c6fd6; --ct-soft: #f3eeff; }
+  --ct-bg: radial-gradient(120% 92% at 68% 28%, #251a40 0%, #150f22 58%, #0c0914 100%);
+  --ct-line: rgba(198, 178, 255, .40); --ct-accent: #cbb8ff; --ct-soft: rgba(255, 255, 255, .10); }
 [data-ct="feather-violet"] {
-  --ct-bg: linear-gradient(160deg, #fbf3ff 0%, #ece0ff 52%, #e2eeff 100%);
-  --ct-line: rgba(168, 140, 226, .55); --ct-accent: #7b5cc9; --ct-soft: #f4edff; }
+  --ct-bg: radial-gradient(120% 92% at 72% 24%, #2b1c49 0%, #181029 58%, #0d0a18 100%);
+  --ct-line: rgba(190, 165, 255, .40); --ct-accent: #c6a8ff; --ct-soft: rgba(255, 255, 255, .10); }
 [data-ct="feather-night"]  {
-  --ct-bg: linear-gradient(160deg, #f3f0ff 0%, #e3dcfb 54%, #dde9fc 100%);
-  --ct-line: rgba(140, 124, 200, .55); --ct-accent: #6a58b8; --ct-soft: #ece7fb; }
+  --ct-bg: radial-gradient(120% 92% at 50% 38%, #21203c 0%, #13131f 58%, #0a0a12 100%);
+  --ct-line: rgba(170, 170, 235, .38); --ct-accent: #b9b6f5; --ct-soft: rgba(255, 255, 255, .10); }
 [data-ct="feather-rose"]   {
   --ct-bg: linear-gradient(160deg, #fff2f9 0%, #f9e7ff 54%, #eadfff 100%);
   --ct-line: rgba(226, 158, 198, .55); --ct-accent: #cf6f9f; --ct-soft: #fdeff6; }
@@ -1904,19 +1911,58 @@ html[data-weather] .wall-view{background:transparent}
   border: 1px solid var(--ct-line);
   background: var(--ct-bg) !important;
 }
-.mate[data-ct] .card-theme { filter: saturate(1.08); }
-/* 三套羽毛素材中央透明、装饰集中在四角，整幅 1:1 贴到横版卡片上会显得边饰太细，
-   所以放大到 118% 取景（双向等比，卡片比例 1.06 与素材比例 1.06 一致，几乎不产生变形），
-   装饰带变粗变明显，中央仍是透明区，不会压住头像。
-   樱羽星砂、云海晨光是满幅画面（无透明区），保持 cover 原样，放大反而会裁掉画面内容。 */
-.mate[data-ct="feather-moon"]   .card-theme,
-.mate[data-ct="feather-violet"] .card-theme,
-.mate[data-ct="feather-night"]  .card-theme { background-size: 118% 118%; }
+.mate[data-ct] .card-theme { filter: saturate(1.06); }
+/* v202：三套羽毛素材已换成「满幅深色画面」（黑紫底 + 银紫羽饰，四边都有内容），
+   素材本身按卡片比例重制成 480×452，所以严格 cover、不做放大取景——
+   放大 118% 只会把贴着边缘的边框花纹切掉。 */
 .mate[data-ct] .mate-avatar { z-index: 2; }
-/* 姓名照常压在背景上（不再做留白豁免），仅用极淡白描边保证在深色花纹上可读 */
-.mate[data-ct] .mate-name {
-  position: relative; z-index: 2;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, .85), 0 0 6px rgba(255, 255, 255, .6);
+/* 姓名/星光值整块压在背景之上；层级提到 4（高于角标 3），
+   否则右下角的金色角标花纹会压住星光值数字，深色主题下尤其明显 */
+.mate[data-ct] .mate-name { position: relative; z-index: 4; }
+
+/* ---------- v202：深色主题上的文字与控件可读性 ----------
+   背景是近黑的深紫，原来的深灰姓名、浅黄星光胶囊、浅绿角标都要重新配比：
+   姓名 → 纯白 + 暗投影（描边不再是白色，否则在深底上会糊成一团）；
+   星光值 → 半透明白底 + 浅金数字；
+   角标 → 高亮浅紫白胶囊，压在花纹上也清楚。 */
+.mate[data-ct="feather-moon"] .mate-name,
+.mate[data-ct="feather-violet"] .mate-name,
+.mate[data-ct="feather-night"] .mate-name {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(6, 3, 14, .9), 0 0 4px rgba(8, 4, 18, .55);
+}
+.mate[data-ct="feather-moon"] .mate-star,
+.mate[data-ct="feather-violet"] .mate-star,
+.mate[data-ct="feather-night"] .mate-star {
+  /* 右下角就是金色角标花纹，浅金胶囊叠上去会糊成一片，
+     改成不透明深紫底 + 浅金数字，两者层次分明 */
+  background: rgba(22, 15, 38, .92);
+  color: #ffd9a0;
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 148, .40), 0 1px 4px rgba(6, 3, 14, .55);
+}
+.mate[data-ct="feather-moon"] .mate-badge,
+.mate[data-ct="feather-violet"] .mate-badge,
+.mate[data-ct="feather-night"] .mate-badge {
+  background: rgba(248, 245, 255, .95);
+  color: #3a2c60;
+  box-shadow: 0 1px 4px rgba(6, 3, 14, .55);
+}
+/* 头像与深底拉开层次：outline 不参与布局，也不会顶掉心情档位的 box-shadow 光圈；
+   戴了头像框时由框自己撑开，不再叠白圈 */
+.mate[data-ct="feather-moon"] .mate-avatar,
+.mate[data-ct="feather-violet"] .mate-avatar,
+.mate[data-ct="feather-night"] .mate-avatar {
+  outline: 1.5px solid rgba(255, 255, 255, .42);
+  outline-offset: 2px;
+}
+.mate[data-ct="feather-moon"] .mate-avatar.framed,
+.mate[data-ct="feather-violet"] .mate-avatar.framed,
+.mate[data-ct="feather-night"] .mate-avatar.framed { outline: none; }
+/* 深色卡片用更深的外投影，避免和浅色卡片挤在一起时发灰 */
+.mate[data-ct="feather-moon"],
+.mate[data-ct="feather-violet"],
+.mate[data-ct="feather-night"] {
+  box-shadow: 0 5px 16px rgba(26, 16, 48, .22);
 }
 .mate[data-ct] .mate-badge { z-index: 3; }
 .mate[data-ct] .rank-corner { z-index: 3; }
@@ -1929,6 +1975,19 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 .shop-thumb.theme-thumb img {
   width: 122%; height: 122%; object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(122, 100, 190, .18));
+}
+/* v202：三套深色素材在浅色缩略图格里会露出生硬的深色方块，格子底色跟着压深；
+   素材本身是满幅方图，改用 100% contain，四边框饰完整不裁切。 */
+.shop-thumb.theme-thumb[data-t="feather-moon"],
+.shop-thumb.theme-thumb[data-t="feather-violet"],
+.shop-thumb.theme-thumb[data-t="feather-night"] {
+  background: radial-gradient(120% 120% at 50% 30%, #241a3c 0%, #100c1a 100%);
+}
+.shop-thumb.theme-thumb[data-t="feather-moon"] img,
+.shop-thumb.theme-thumb[data-t="feather-violet"] img,
+.shop-thumb.theme-thumb[data-t="feather-night"] img {
+  width: 100%; height: 100%;
+  filter: none;
 }
 .shop-item[data-ct-preview] { border-radius: 14px; }
 

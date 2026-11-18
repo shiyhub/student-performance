@@ -1302,7 +1302,7 @@ function renderWall() {
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}<span class="mate-name-t">${esc(s.student_name)}</span>${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
+        <span class="mate-name">${moodInline}<span class="mate-name-t">${esc(s.student_name)}</span>${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}<span class="ms-n">${Number(s.star) || 0}</span></span></span>
       </button>`;
   });
 
@@ -2773,8 +2773,8 @@ function shopItemTile(it) {
   } else if (it.item_type === 'theme') {
     const f = cardThemeFile(it.item_key);
     thumb = f
-      ? `<span class="shop-thumb theme-thumb"><img src="${f}" alt="" loading="lazy"></span>`
-      : `<span class="shop-thumb theme-thumb">${I.sparkle('ico-2x')}</span>`;
+      ? `<span class="shop-thumb theme-thumb" data-t="${it.item_key}"><img src="${f}" alt="" loading="lazy"></span>`
+      : `<span class="shop-thumb theme-thumb" data-t="${it.item_key}">${I.sparkle('ico-2x')}</span>`;
   } else {
     thumb = `<span class="shop-thumb frame-choice fc-${it.item_key}"><span class="fc-ring"></span></span>`;
   }
