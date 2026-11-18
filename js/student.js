@@ -231,10 +231,10 @@ function cardThemeName(key) {
   const t = CARD_THEMES.find(x => x.key === key);
   return t ? t.name : '';
 }
-// 卡片角饰层：上下各一条装饰带（等比缩放，不拉伸图案），中间保持干净
+// 卡片边饰层：九宫格 border-image 贴一圈羽饰边框（尺寸随卡片自适应，见 css v197 区块）
 function cardThemeHTML(key) {
   if (!CARD_THEMES.some(x => x.key === key)) return '';
-  return `<div class="card-theme" aria-hidden="true" data-t="${key}"><i class="ct-top"></i><i class="ct-bot"></i></div>`;
+  return `<div class="card-theme" aria-hidden="true" data-t="${key}"></div>`;
 }
 // 给容器套用/清除主题（data-ct 驱动 CSS 变量）
 function applyCardTheme(el, key) {
@@ -303,10 +303,13 @@ function ensureMobileGate() {
 }
 /* v170：追加 7 款独立命名头像（bunny/doll/flower/gothic/horn/lotus/twin） */
 const SOLO_AVATAR_KEYS = ['bunny','doll','flower','gothic','horn','lotus','twin'];
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|bunny|doll|flower|gothic|horn|lotus|twin)$/;
+/* v197：补上 game18（像素·勇者）与 poster1-10（海报头像）——
+   这两批是 129/130 号脚本后来上架的，正则没跟上，导致 isImgKey 判假、
+   avatarForName 回退成按姓名哈希分配的小动物头像（像素勇者会显示成海豚/小狗）。 */
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|bunny|doll|flower|gothic|horn|lotus|twin)$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-7])|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10))$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -1297,7 +1300,7 @@ function renderWall() {
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
         ${taskBadge}
-        <span class="mate-name">${moodInline}${esc(s.student_name)}${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
+        <span class="mate-name">${moodInline}<span class="mate-name-t">${esc(s.student_name)}</span>${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}${Number(s.star) || 0}</span></span>
       </button>`;
   });
 
@@ -2491,7 +2494,8 @@ async function loadProfile() {
     }
   }
   state.myCardTheme = (ctVal && CARD_THEMES.some(t => t.key === ctVal)) ? ctVal : null;
-  applyCardTheme(document.getElementById('identityCard'), state.myCardTheme);
+  // v197：主题只在星光墙的学生卡片上展示，个人主页身份卡不再套用（避免装饰压住头像与文字）
+  applyCardTheme(document.getElementById('identityCard'), null);
 
   const achs = data.achievements || [];
   renderAchievements(achs);
@@ -3012,11 +3016,12 @@ async function doChooseCardTheme(key) {
   state.myCardTheme = val;
   const row = currentRosterRow();
   if (row) row.card_theme = val;
-  applyCardTheme(document.getElementById('identityCard'), val);
+  // v197：个人主页不套主题，换完直接回星光墙看效果
+  applyCardTheme(document.getElementById('identityCard'), null);
   persistWallCache(); renderWall();
   await loadShopCatalog();
   if (els.shopView && !els.shopView.hidden) renderShop();
-  toast(val ? `已换上「${cardThemeName(val)}」` : '已取下卡片主题');
+  toast(val ? `已换上「${cardThemeName(val)}」，到星光墙就能看到` : '已取下卡片主题');
 }
 
 /* ---------------- 班级转盘抽奖 ---------------- */

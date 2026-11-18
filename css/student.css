@@ -172,6 +172,10 @@ body {
   margin-top: 22px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px;
 }
+/* v197：姓名单独成块才能在窄卡上省略号收尾（原来直接塞在 flex 里，会从左边被裁掉半个名字） */
+.mate-name-t {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .mate-badge {
   position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
   background: #e2f5ea; color: #177a55;
@@ -1850,28 +1854,27 @@ html[data-weather] .wall-view{background:transparent}
 }
 
 /* ============================================================
-   v173 · 卡片主题（三套水彩羽毛角饰）
+   v197 · 卡片主题（三套水彩羽毛）——只在星光墙的学生卡片上展示
    ------------------------------------------------------------
-   素材是「四角装饰 + 中央留白」的竖版整幅图。直接整幅铺进卡片，
-   卡片一窄就会把羽毛横向压扁。
-   所以只取图案最密的上下两条：顶部带 + 底部带，
-   宽度铺满、等比缩放（background-size:100% auto），图案不变形；
-   卡片中段保持干净，不压文字与头像。
+   口径调整（用户反馈：个人主页装饰过大、压住头像与文字）：
+     1) 个人主页身份卡不再套主题，装饰只出现在星光墙的学生卡片；
+     2) 墙上的卡片保留「主题底色 + 一圈羽饰描边」，用九宫格 border-image
+        把素材自带的边框花纹贴到卡片四边与四角，中间区域完全不动；
+     3) 边宽用百分比（border-image-width:12%），卡片多大边饰就多宽，
+        不随断点写死，圆角与斜切也不会把图案拉扁；
+     4) 边饰只占卡片最外一圈，头像、头像框、姓名层级更高（z-index 2/3），
+        内容永远压在装饰之上，不会被遮挡。
    ============================================================ */
 .card-theme {
   position: absolute; inset: 0; border-radius: inherit;
-  pointer-events: none; z-index: 0; overflow: hidden;
+  pointer-events: none; z-index: 0;
+  border: 0 solid transparent;
+  border-image-source: var(--ct-img);
+  border-image-slice: 22%;
+  border-image-width: 10%;
+  border-image-repeat: round;
+  opacity: .92;
 }
-.card-theme i {
-  position: absolute; left: 0; width: 100%;
-  height: 46%;
-  background-image: var(--ct-img);
-  background-repeat: no-repeat;
-  background-size: 100% auto;
-  opacity: .88;
-}
-.card-theme .ct-top { top: 0;    background-position: center top; }
-.card-theme .ct-bot { bottom: 0; background-position: center bottom; }
 
 /* 三套主题：图片 + 底色 + 描边 + 强调色 */
 [data-ct="feather-moon"]   { --ct-img: url("../assets/themes/feather-moon.webp");
@@ -1884,23 +1887,11 @@ html[data-weather] .wall-view{background:transparent}
   --ct-bg: linear-gradient(168deg, #f8f6ff 0%, #eae4fb 54%, #e5edfc 100%);
   --ct-line: rgba(140, 124, 200, .5); --ct-accent: #6a58b8; --ct-soft: #ece7fb; }
 
-/* 个人主页身份卡 */
-#identityCard[data-ct],
-.red-card[data-ct] {
-  position: relative; overflow: hidden;
-  background: var(--ct-bg) !important;
-  border-color: var(--ct-line) !important;
-}
-#identityCard[data-ct] > *:not(.card-theme),
-.red-card[data-ct] > *:not(.card-theme) { position: relative; z-index: 1; }
-#identityCard[data-ct] { box-shadow: 0 8px 26px rgba(124, 104, 200, .16); }
-#identityCard[data-ct] .red-title { color: var(--ct-accent) !important; }
-
-/* 班级墙上的同学卡片：角饰放大取景，只做轻点缀 */
+/* 个人主页：不再套用卡片主题（v197）——主题只属于星光墙的小卡片。
+   星光墙的学生卡片：主题底色 + 一圈羽饰边，内容层级更高，永远压在装饰之上。 */
 .mate[data-ct] { overflow: hidden; border: 1px solid var(--ct-line); background: var(--ct-bg) !important; }
-/* 小卡：只留上下两条细带，作为轻边框点缀 */
-.mate[data-ct] .card-theme i { height: 30%; opacity: .55; }
 .mate[data-ct] .mate-avatar { z-index: 2; }
+/* 姓名与星光值在装饰之上；星光值是浅色药丸底，正好压住角上的花纹，保证可读 */
 .mate[data-ct] .mate-name { position: relative; z-index: 2; }
 .mate[data-ct] .mate-badge { z-index: 3; }
 .mate[data-ct] .rank-corner { z-index: 3; }
@@ -1934,11 +1925,6 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 #wallView .wall-class-card { border-radius: 20px; }
 /* 顶部日期与说明文字提高一点可读性 */
 .s-date { color: #8493b0; }
-
-/* 紫羽流风：花纹集中在左上与右下，装饰带按这两角取景 */
-[data-ct="feather-violet"] .card-theme .ct-top { background-position: left top; }
-[data-ct="feather-violet"] .card-theme .ct-bot { background-position: right bottom; }
-[data-ct="feather-violet"] .card-theme i { height: 48%; opacity: 1; }
 
 /* ============ v178：五维成长（雷达 + 条形 + 本周维度勋章） ============
    配色沿用教师端 DIM_META：德红 / 智蓝 / 体绿 / 美紫 / 劳橙 */
