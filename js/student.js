@@ -220,7 +220,9 @@ const FRAMES = [
 const CARD_THEMES = [
   { key: 'feather-moon',   name: '月羽星穹', file: 'feather-moon.webp',   desc: '奶金与淡紫' },
   { key: 'feather-violet', name: '紫羽流风', file: 'feather-violet.webp', desc: '薰衣草紫' },
-  { key: 'feather-night',  name: '夜羽星尘', file: 'feather-night.webp',  desc: '雾蓝夜空' }
+  { key: 'feather-night',  name: '夜羽星尘', file: 'feather-night.webp',  desc: '雾蓝夜空' },
+  { key: 'feather-rose',   name: '樱羽星砂', file: 'feather-rose.webp',   desc: '粉紫珠光' },
+  { key: 'sky-pastel',     name: '云海晨光', file: 'sky-pastel.webp',     desc: '粉蓝晴空' }
 ];
 const CARD_THEME_BASE = 'assets/themes/';
 function cardThemeFile(key) {
@@ -231,7 +233,7 @@ function cardThemeName(key) {
   const t = CARD_THEMES.find(x => x.key === key);
   return t ? t.name : '';
 }
-// 卡片边饰层：九宫格 border-image 贴一圈羽饰边框（尺寸随卡片自适应，见 css v197 区块）
+// 卡片主题层：整幅羽饰图铺作卡片背景，中央靠柔光留白（见 css v198 区块）
 function cardThemeHTML(key) {
   if (!CARD_THEMES.some(x => x.key === key)) return '';
   return `<div class="card-theme" aria-hidden="true" data-t="${key}"></div>`;

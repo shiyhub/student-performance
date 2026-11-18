@@ -1854,45 +1854,70 @@ html[data-weather] .wall-view{background:transparent}
 }
 
 /* ============================================================
-   v197 · 卡片主题（三套水彩羽毛）——只在星光墙的学生卡片上展示
+   v199 · 卡片主题（五套）——整幅作为星光墙学生卡片的背景
    ------------------------------------------------------------
-   口径调整（用户反馈：个人主页装饰过大、压住头像与文字）：
-     1) 个人主页身份卡不再套主题，装饰只出现在星光墙的学生卡片；
-     2) 墙上的卡片保留「主题底色 + 一圈羽饰描边」，用九宫格 border-image
-        把素材自带的边框花纹贴到卡片四边与四角，中间区域完全不动；
-     3) 边宽用百分比（border-image-width:12%），卡片多大边饰就多宽，
-        不随断点写死，圆角与斜切也不会把图案拉扁；
-     4) 边饰只占卡片最外一圈，头像、头像框、姓名层级更高（z-index 2/3），
-        内容永远压在装饰之上，不会被遮挡。
+   口径（用户要求）：
+     1) 主题图整幅铺作卡片背景，不再贴一圈边框；
+     2) 星光墙卡片是「横版」（实测 1180px 窗口下 150×141，约 1.06），
+        所以素材统一重制成横版 480×452（≈1.06），与卡片同比例，
+        cover 铺满时几乎不裁切，四边四角的花纹完整、不变形；
+     3) 取消中央柔光：头像与姓名照常压在背景上，不再额外留白；
+     4) 图案地址直接写在 [data-t] 规则里（相对本 CSS 文件解析），
+        不走 CSS 变量——变量里的相对地址按页面位置解析会 404；
+     5) 装扮层 z-index 0，头像 2、姓名 2、角标 3，装饰永远在内容之下。
    ============================================================ */
 .card-theme {
   position: absolute; inset: 0; border-radius: inherit;
-  pointer-events: none; z-index: 0;
-  border: 0 solid transparent;
-  border-image-source: var(--ct-img);
-  border-image-slice: 22%;
-  border-image-width: 10%;
-  border-image-repeat: round;
-  opacity: .92;
+  pointer-events: none; z-index: 0; overflow: hidden;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
 }
+.card-theme[data-t="feather-moon"]   { background-image: url("../assets/themes/feather-moon.webp"); }
+.card-theme[data-t="feather-violet"] { background-image: url("../assets/themes/feather-violet.webp"); }
+.card-theme[data-t="feather-night"]  { background-image: url("../assets/themes/feather-night.webp"); }
+.card-theme[data-t="feather-rose"]   { background-image: url("../assets/themes/feather-rose.webp"); }
+.card-theme[data-t="sky-pastel"]     { background-image: url("../assets/themes/sky-pastel.webp"); }
 
-/* 三套主题：图片 + 底色 + 描边 + 强调色 */
-[data-ct="feather-moon"]   { --ct-img: url("../assets/themes/feather-moon.webp");
-  --ct-bg: linear-gradient(168deg, #fffdf5 0%, #f8f2ff 56%, #edf4ff 100%);
-  --ct-line: rgba(186, 164, 232, .5); --ct-accent: #8c6fd6; --ct-soft: #f3eeff; }
-[data-ct="feather-violet"] { --ct-img: url("../assets/themes/feather-violet.webp");
-  --ct-bg: linear-gradient(168deg, #fdfaff 0%, #f1eaff 52%, #e8f1ff 100%);
-  --ct-line: rgba(168, 140, 226, .5); --ct-accent: #7b5cc9; --ct-soft: #f4edff; }
-[data-ct="feather-night"]  { --ct-img: url("../assets/themes/feather-night.webp");
-  --ct-bg: linear-gradient(168deg, #f8f6ff 0%, #eae4fb 54%, #e5edfc 100%);
-  --ct-line: rgba(140, 124, 200, .5); --ct-accent: #6a58b8; --ct-soft: #ece7fb; }
+/* 五套主题：图片 + 底色 + 描边 + 强调色
+   前四套素材中央是透明的，靠 --ct-bg 给整张卡片铺主题色调；
+   云海晨光是满幅照片，底色只在圆角边缘露一点。 */
+[data-ct="feather-moon"]   {
+  --ct-bg: linear-gradient(160deg, #fdf6e6 0%, #f4e9ff 54%, #e6f0ff 100%);
+  --ct-line: rgba(186, 164, 232, .55); --ct-accent: #8c6fd6; --ct-soft: #f3eeff; }
+[data-ct="feather-violet"] {
+  --ct-bg: linear-gradient(160deg, #fbf3ff 0%, #ece0ff 52%, #e2eeff 100%);
+  --ct-line: rgba(168, 140, 226, .55); --ct-accent: #7b5cc9; --ct-soft: #f4edff; }
+[data-ct="feather-night"]  {
+  --ct-bg: linear-gradient(160deg, #f3f0ff 0%, #e3dcfb 54%, #dde9fc 100%);
+  --ct-line: rgba(140, 124, 200, .55); --ct-accent: #6a58b8; --ct-soft: #ece7fb; }
+[data-ct="feather-rose"]   {
+  --ct-bg: linear-gradient(160deg, #fff2f9 0%, #f9e7ff 54%, #eadfff 100%);
+  --ct-line: rgba(226, 158, 198, .55); --ct-accent: #cf6f9f; --ct-soft: #fdeff6; }
+[data-ct="sky-pastel"]     {
+  --ct-bg: linear-gradient(160deg, #eef7ff 0%, #e6f1ff 52%, #fdeff8 100%);
+  --ct-line: rgba(150, 180, 222, .55); --ct-accent: #6f9ad2; --ct-soft: #eef5ff; }
 
-/* 个人主页：不再套用卡片主题（v197）——主题只属于星光墙的小卡片。
-   星光墙的学生卡片：主题底色 + 一圈羽饰边，内容层级更高，永远压在装饰之上。 */
-.mate[data-ct] { overflow: hidden; border: 1px solid var(--ct-line); background: var(--ct-bg) !important; }
+/* 个人主页不套主题；星光墙卡片：主题渐变打底 + 整幅主题背景，内容层级更高 */
+.mate[data-ct] {
+  overflow: hidden;
+  border: 1px solid var(--ct-line);
+  background: var(--ct-bg) !important;
+}
+.mate[data-ct] .card-theme { filter: saturate(1.08); }
+/* 三套羽毛素材中央透明、装饰集中在四角，整幅 1:1 贴到横版卡片上会显得边饰太细，
+   所以放大到 118% 取景（双向等比，卡片比例 1.06 与素材比例 1.06 一致，几乎不产生变形），
+   装饰带变粗变明显，中央仍是透明区，不会压住头像。
+   樱羽星砂、云海晨光是满幅画面（无透明区），保持 cover 原样，放大反而会裁掉画面内容。 */
+.mate[data-ct="feather-moon"]   .card-theme,
+.mate[data-ct="feather-violet"] .card-theme,
+.mate[data-ct="feather-night"]  .card-theme { background-size: 118% 118%; }
 .mate[data-ct] .mate-avatar { z-index: 2; }
-/* 姓名与星光值在装饰之上；星光值是浅色药丸底，正好压住角上的花纹，保证可读 */
-.mate[data-ct] .mate-name { position: relative; z-index: 2; }
+/* 姓名照常压在背景上（不再做留白豁免），仅用极淡白描边保证在深色花纹上可读 */
+.mate[data-ct] .mate-name {
+  position: relative; z-index: 2;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, .85), 0 0 6px rgba(255, 255, 255, .6);
+}
 .mate[data-ct] .mate-badge { z-index: 3; }
 .mate[data-ct] .rank-corner { z-index: 3; }
 html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
