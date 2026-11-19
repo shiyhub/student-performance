@@ -709,6 +709,42 @@ html[data-device="pc"] #tabSeat { max-width: none; }
 }
 
 /* ============ v201：星光商店购买记录与回退 ============ */
+/* v107：增强筛选 —— 4 列紧凑网格 + 快捷时间 + 生效条件胶囊 */
+.shop-filter-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px;
+}
+.shop-filter-grid .full { grid-column: 1 / -1; }
+.shop-quick { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.shop-quick .sq-label { font-size: 12.5px; color: var(--ink-2); }
+.sq-btn {
+  border: 1px solid var(--line); background: #fff; color: #4a5a72;
+  border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.sq-btn:hover { border-color: #b9d3cb; background: #f4fbf9; }
+.sq-btn.on { background: #0e8a7b; border-color: #0e8a7b; color: #fff; }
+.shop-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.shop-chips:empty { display: none; }
+.shop-fchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eef7f4; border: 1px solid #cfe8e1; color: #2f6b5f;
+  border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 12.5px; font-weight: 600;
+}
+.shop-fchip b { font-weight: 800; color: #17655a; }
+.shop-fchip button {
+  border: none; background: rgba(14,138,123,.12); color: #17655a;
+  width: 17px; height: 17px; line-height: 1; border-radius: 50%;
+  cursor: pointer; font-size: 12px; padding: 0; display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.shop-fchip button:hover { background: rgba(192,57,43,.16); color: #c0392b; }
+.shop-clear { border: none; background: none; color: var(--ink-2); font-size: 12.5px; cursor: pointer; text-decoration: underline; padding: 2px 4px; }
+@media (max-width: 980px) {
+  .shop-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .shop-filter-grid { grid-template-columns: 1fr; }
+}
 .shop-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .shop-stat { background: #f8fbfc; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .shop-stat .ss-label { font-size: 12px; color: var(--ink-2); }

@@ -213,6 +213,15 @@ const els = {
   shopTo: $('#shopTo'),
   shopItemFilter: $('#shopItemFilter'),
   shopStatus: $('#shopStatus'),
+  shopKeyword: $('#shopKeyword'),
+  shopType: $('#shopType'),
+  shopRefund: $('#shopRefund'),
+  shopMinStar: $('#shopMinStar'),
+  shopMaxStar: $('#shopMaxStar'),
+  shopSort: $('#shopSort'),
+  shopQuick: $('#shopQuick'),
+  shopFilterChips: $('#shopFilterChips'),
+  btnShopExport: $('#btnShopExport'),
   btnShopQuery: $('#btnShopQuery'),
   btnShopReset: $('#btnShopReset'),
   shopOrderSummary: $('#shopOrderSummary'),
@@ -733,7 +742,7 @@ const PANE_DYNAMIC = {
   batch: ['awardOptionBox', 'awardDateChips', 'awardStudentBox', 'awardResult', 'taskGradeResult'],
   stats: ['statsOut'],
   star: ['starProgressBox', 'starDrawBox', 'archiveResult', 'archiveBatchList', 'shopAdminMsg'],
-  shop: ['shopOrderBox', 'shopOrderSummary', 'shopOrderPager', 'shopAuditBox'],
+  shop: ['shopOrderBox', 'shopOrderSummary', 'shopOrderPager', 'shopAuditBox', 'shopFilterChips'],
   tools: [],
   seat: ['seatBoard', 'seatPool']
 };
@@ -4722,8 +4731,10 @@ if (els.btnArchive) els.btnArchive.addEventListener('click', doArchiveAll);
    ------------------------------------------------------------
    数据来源：shop_order（135 号 SQL）+ shop_refund_audit
    权限：仅登录教师（authenticated）可查可退，anon 一律拒绝
+   v107：筛选增强 —— 关键字 / 商品类型 / 回退状态 / 星光区间 / 排序
+         依赖 138-shop-order-filters.sql 的 14 参 get_shop_orders
    ============================================================ */
-const SHOP = { rows: [], total: 0, page: 0, size: 20, current: null, items: [], loaded: false };
+const SHOP = { rows: [], total: 0, page: 0, size: 20, current: null, items: [], loaded: false, quick: 'all' };
 
 const SHOP_TYPE_TEXT = { avatar: '头像', frame: '头像框', daily: '日常卡', theme: '卡片主题' };
 const SHOP_STATUS_STYLE = {
@@ -4767,6 +4778,7 @@ function shopNeedSql(msg) {
 async function activateShopTab() {
   await fillShopClasses();
   await fillShopItems();
+  syncShopQuick();
   await loadShopOrders(0);
   await loadShopAudit();
 }
@@ -4827,8 +4839,10 @@ async function fillShopItems() {
     SHOP.items = items;
   }
   const order = ['avatar', 'frame', 'theme', 'daily'];
+  const typeFilter = (els.shopType && els.shopType.value) || '';
+  const list = typeFilter ? items.filter(x => (x.item_type || 'avatar') === typeFilter) : items;
   const groups = {};
-  items.forEach(x => {
+  list.forEach(x => {
     const t = x.item_type || 'avatar';
     (groups[t] = groups[t] || []).push(x);
   });
@@ -4842,23 +4856,44 @@ async function fillShopItems() {
 }
 
 /* ---------------- 订单列表 ---------------- */
+/* 把所有筛选控件收成一个 rpc 参数包；offset/size 供翻页与导出复用 */
+function shopParams(offset, size) {
+  const num = el => {
+    if (!el || el.value === '' || el.value == null) return null;
+    const n = parseInt(el.value, 10);
+    return isNaN(n) ? null : Math.max(0, n);
+  };
+  const kw = els.shopKeyword ? String(els.shopKeyword.value || '').trim() : '';
+  return {
+    p_class: (els.shopClass && els.shopClass.value) || null,
+    p_student: (els.shopStudent && els.shopStudent.value) || null,
+    p_from: (els.shopFrom && els.shopFrom.value) || null,
+    p_to: (els.shopTo && els.shopTo.value) || null,
+    p_item_key: (els.shopItemFilter && els.shopItemFilter.value) || null,
+    p_status: (els.shopStatus && els.shopStatus.value) || null,
+    p_keyword: kw || null,
+    p_item_type: (els.shopType && els.shopType.value) || null,
+    p_min_star: num(els.shopMinStar),
+    p_max_star: num(els.shopMaxStar),
+    p_refund: (els.shopRefund && els.shopRefund.value) || null,
+    p_sort: (els.shopSort && els.shopSort.value) || 'time_desc',
+    p_limit: size || SHOP.size,
+    p_offset: offset || 0
+  };
+}
+
 async function loadShopOrders(offset) {
   if (!els.shopOrderBox) return;
   const page = Math.max(0, Math.floor(offset || 0));
   const from = (els.shopFrom && els.shopFrom.value) || null;
   const to = (els.shopTo && els.shopTo.value) || null;
   if (from && to && from > to) { toast('开始日期不能晚于结束日期'); return; }
+  const p0 = shopParams(0, 1);
+  if (p0.p_min_star != null && p0.p_max_star != null && p0.p_min_star > p0.p_max_star) {
+    toast('星光下限不能大于上限'); return;
+  }
 
-  const params = {
-    p_class: (els.shopClass && els.shopClass.value) || null,
-    p_student: (els.shopStudent && els.shopStudent.value) || null,
-    p_from: from,
-    p_to: to,
-    p_item_key: (els.shopItemFilter && els.shopItemFilter.value) || null,
-    p_status: (els.shopStatus && els.shopStatus.value) || null,
-    p_limit: SHOP.size,
-    p_offset: page * SHOP.size
-  };
+  const params = shopParams(page * SHOP.size, SHOP.size);
 
   els.shopOrderBox.innerHTML = '<div class="shop-empty">正在查询…</div>';
   if (els.shopOrderPager) els.shopOrderPager.innerHTML = '';
@@ -4876,6 +4911,7 @@ async function loadShopOrders(offset) {
   SHOP.page = page;
   SHOP.rows = d.rows || [];
   SHOP.total = Number(d.total) || 0;
+  renderShopChips();
   renderShopSummary(d);
   renderShopRows();
   renderShopPager();
@@ -4884,13 +4920,163 @@ async function loadShopOrders(offset) {
 function renderShopError(msg) {
   const text = String(msg || '');
   const hint = shopNeedSql(text)
-    ? '尚未安装商店订单功能：请先在 Supabase SQL Editor 执行 <b>database/135-shop-order-refund.sql</b>，再刷新本页。'
+    ? '商店订单功能未安装或未升级：请按顺序在 Supabase SQL Editor 执行 '
+      + '<b>database/135-shop-order-refund.sql</b>（订单表与回退）和 '
+      + '<b>database/138-shop-order-filters.sql</b>（新增筛选），再刷新本页。'
     : (text === 'unauthorized'
         ? '登录状态失效，请退出后重新登录教师端。'
         : '查询失败：' + esc(text));
   if (els.shopOrderBox) els.shopOrderBox.innerHTML = `<div class="banner banner-warn">${hint}</div>`;
   if (els.shopOrderSummary) els.shopOrderSummary.innerHTML = '';
   if (els.shopOrderPager) els.shopOrderPager.innerHTML = '';
+}
+
+/* ---------------- 生效条件胶囊 ---------------- */
+const SHOP_QUICK_TEXT = { today: '今天', '7d': '近 7 天', '30d': '近 30 天' };
+
+function shopFilterList() {
+  const out = [];
+  const push = (key, val) => { if (val !== '' && val != null) out.push({ key, label: val }); };
+  const kw = els.shopKeyword ? String(els.shopKeyword.value || '').trim() : '';
+  push('kw', kw ? `关键字 ${kw}` : '');
+  push('class', els.shopClass && els.shopClass.value ? `班级 ${els.shopClass.value}` : '');
+  push('student', els.shopStudent && els.shopStudent.value ? `学生 ${els.shopStudent.value}` : '');
+  push('type', els.shopType && els.shopType.value ? `类型 ${SHOP_TYPE_TEXT[els.shopType.value] || ''}` : '');
+  push('item', els.shopItemFilter && els.shopItemFilter.value
+    ? `商品 ${(els.shopItemFilter.options[els.shopItemFilter.selectedIndex] || {}).text}` : '');
+  const f = (els.shopFrom && els.shopFrom.value) || '';
+  const t = (els.shopTo && els.shopTo.value) || '';
+  if (f || t) out.push({ key: 'range', label: `时间 ${f || '不限'} ~ ${t || '不限'}` });
+  push('status', els.shopStatus && els.shopStatus.value
+    ? `订单 ${(els.shopStatus.options[els.shopStatus.selectedIndex] || {}).text}` : '');
+  push('refund', els.shopRefund && els.shopRefund.value
+    ? `回退 ${(els.shopRefund.options[els.shopRefund.selectedIndex] || {}).text}` : '');
+  const mn = els.shopMinStar && els.shopMinStar.value;
+  const mx = els.shopMaxStar && els.shopMaxStar.value;
+  if (mn || mx) out.push({ key: 'star', label: `星光 ${mn || '0'} ~ ${mx || '不限'}` });
+  if (els.shopSort && els.shopSort.value && els.shopSort.value !== 'time_desc') {
+    out.push({ key: 'sort', label: `排序 ${(els.shopSort.options[els.shopSort.selectedIndex] || {}).text}` });
+  }
+  return out;
+}
+
+function renderShopChips() {
+  if (!els.shopFilterChips) return;
+  const list = shopFilterList();
+  if (!list.length) { els.shopFilterChips.innerHTML = ''; return; }
+  els.shopFilterChips.innerHTML = list.map(x =>
+    `<span class="shop-fchip"><b>${esc(x.label)}</b><button type="button" data-unfilter="${x.key}" title="移除此条件">×</button></span>`
+  ).join('') + `<button class="shop-clear" type="button" data-unfilter="all">清除全部</button>`;
+}
+
+function clearShopFilter(key) {
+  const clear = el => { if (el) el.value = ''; };
+  if (key === 'all') {
+    clear(els.shopKeyword); clear(els.shopStudent); clear(els.shopItemFilter);
+    clear(els.shopFrom); clear(els.shopTo); clear(els.shopStatus);
+    clear(els.shopType); clear(els.shopRefund); clear(els.shopMinStar); clear(els.shopMaxStar);
+    if (els.shopSort) els.shopSort.value = 'time_desc';
+    els.shopClass && (els.shopClass.value = '');
+    SHOP.quick = '';
+    fillShopStudents();
+    syncShopQuick();
+    fillShopItems();
+    return;
+  }
+  if (key === 'kw') clear(els.shopKeyword);
+  else if (key === 'class') { clear(els.shopClass); clear(els.shopStudent); fillShopStudents(); }
+  else if (key === 'student') clear(els.shopStudent);
+  else if (key === 'type') { clear(els.shopType); clear(els.shopItemFilter); fillShopItems(); }
+  else if (key === 'item') clear(els.shopItemFilter);
+  else if (key === 'range') { clear(els.shopFrom); clear(els.shopTo); SHOP.quick = ''; syncShopQuick(); }
+  else if (key === 'status') clear(els.shopStatus);
+  else if (key === 'refund') clear(els.shopRefund);
+  else if (key === 'star') { clear(els.shopMinStar); clear(els.shopMaxStar); }
+  else if (key === 'sort') { if (els.shopSort) els.shopSort.value = 'time_desc'; }
+}
+
+function syncShopQuick() {
+  if (!els.shopQuick) return;
+  els.shopQuick.querySelectorAll('[data-quick]').forEach(b => {
+    b.classList.toggle('on', b.dataset.quick === SHOP.quick);
+  });
+}
+
+function setShopQuick(q) {
+  SHOP.quick = q;
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const now = new Date();
+  let from = '', to = '';
+  if (q === 'today') { from = to = fmt(now); }
+  else if (q === '7d' || q === '30d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (q === '7d' ? 6 : 29));
+    from = fmt(d); to = fmt(now);
+  }
+  if (els.shopFrom) els.shopFrom.value = from;
+  if (els.shopTo) els.shopTo.value = to;
+  syncShopQuick();
+  loadShopOrders(0);
+}
+
+/* ---------------- 导出当前筛选结果 ---------------- */
+function shopCsvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+async function exportShopOrders() {
+  if (!SHOP.total) { toast('当前筛选没有记录可导出'); return; }
+  if (els.btnShopExport) { els.btnShopExport.disabled = true; els.btnShopExport.textContent = '导出中…'; }
+  const out = [];
+  try {
+    const pageSize = 200;
+    for (let off = 0; off < SHOP.total && off < 4000; off += pageSize) {
+      const r = await supabase.rpc('get_shop_orders', shopParams(off, pageSize));
+      if (r.error) { toast('导出失败：' + r.error.message); return; }
+      const d = r.data || {};
+      if (d.ok === false) { toast('导出失败：' + (d.reason || '未知原因')); return; }
+      const rows = d.rows || [];
+      out.push(...rows);
+      if (rows.length < pageSize) break;
+    }
+  } catch (e) {
+    toast('导出失败：' + ((e && e.message) || '网络异常'));
+    return;
+  } finally {
+    if (els.btnShopExport) { els.btnShopExport.disabled = false; els.btnShopExport.textContent = '导出当前结果 CSV'; }
+  }
+  if (!out.length) { toast('没有可导出的记录'); return; }
+  const head = ['购买时间', '班级', '学生', '商品类型', '商品', '数量', '单价', '消耗星光',
+    '订单状态', '回退状态', '回退时间', '操作人', '回退原因'];
+  const lines = [head.join(',')];
+  out.forEach(r => {
+    lines.push([
+      fmtTime(r.created_at),
+      r.class || '', r.student_name || '',
+      SHOP_TYPE_TEXT[r.item_type] || r.item_type || '',
+      r.item_name || r.item_key || '',
+      Number(r.qty) || 1, Number(r.unit_price) || 0, Number(r.star_spent) || 0,
+      (SHOP_STATUS_STYLE[r.status] || {}).text || r.status || '',
+      r.refund_status === 'refunded' ? '已回退' : '未回退',
+      r.refunded_at ? fmtTime(r.refunded_at) : '',
+      r.refunded_by || '', r.refund_reason || ''
+    ].map(shopCsvCell).join(','));
+  });
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `商店订单-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${out.length}条.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast(out.length < SHOP.total
+    ? `已导出前 ${out.length} 条（共 ${SHOP.total} 条，单次上限 4000）`
+    : `已导出 ${out.length} 条记录`);
 }
 
 function renderShopSummary(d) {
@@ -5166,8 +5352,33 @@ if (els.shopClass) els.shopClass.addEventListener('change', async () => {
 if (els.shopStudent) els.shopStudent.addEventListener('change', () => loadShopOrders(0));
 if (els.shopStatus) els.shopStatus.addEventListener('change', () => loadShopOrders(0));
 if (els.shopItemFilter) els.shopItemFilter.addEventListener('change', () => loadShopOrders(0));
-if (els.shopFrom) els.shopFrom.addEventListener('change', () => loadShopOrders(0));
-if (els.shopTo) els.shopTo.addEventListener('change', () => loadShopOrders(0));
+if (els.shopFrom) els.shopFrom.addEventListener('change', () => { SHOP.quick = ''; syncShopQuick(); loadShopOrders(0); });
+if (els.shopTo) els.shopTo.addEventListener('change', () => { SHOP.quick = ''; syncShopQuick(); loadShopOrders(0); });
+if (els.shopType) els.shopType.addEventListener('change', async () => {
+  await fillShopItems();
+  loadShopOrders(0);
+});
+if (els.shopRefund) els.shopRefund.addEventListener('change', () => loadShopOrders(0));
+if (els.shopSort) els.shopSort.addEventListener('change', () => loadShopOrders(0));
+if (els.shopKeyword) {
+  els.shopKeyword.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); loadShopOrders(0); }
+  });
+  els.shopKeyword.addEventListener('search', () => loadShopOrders(0)); // 点输入框右侧的 × 时
+}
+if (els.shopMinStar) els.shopMinStar.addEventListener('change', () => loadShopOrders(0));
+if (els.shopMaxStar) els.shopMaxStar.addEventListener('change', () => loadShopOrders(0));
+if (els.shopQuick) els.shopQuick.addEventListener('click', e => {
+  const btn = e.target.closest('[data-quick]');
+  if (btn) setShopQuick(btn.dataset.quick);
+});
+if (els.shopFilterChips) els.shopFilterChips.addEventListener('click', e => {
+  const btn = e.target.closest('[data-unfilter]');
+  if (!btn) return;
+  clearShopFilter(btn.dataset.unfilter);
+  loadShopOrders(0);
+});
+if (els.btnShopExport) els.btnShopExport.addEventListener('click', exportShopOrders);
 if (els.btnShopQuery) els.btnShopQuery.addEventListener('click', () => loadShopOrders(0));
 if (els.btnShopReset) els.btnShopReset.addEventListener('click', async () => {
   if (els.shopClass) els.shopClass.value = '';
@@ -5175,7 +5386,16 @@ if (els.btnShopReset) els.btnShopReset.addEventListener('click', async () => {
   if (els.shopTo) els.shopTo.value = '';
   if (els.shopItemFilter) els.shopItemFilter.value = '';
   if (els.shopStatus) els.shopStatus.value = '';
+  if (els.shopKeyword) els.shopKeyword.value = '';
+  if (els.shopType) els.shopType.value = '';
+  if (els.shopRefund) els.shopRefund.value = '';
+  if (els.shopMinStar) els.shopMinStar.value = '';
+  if (els.shopMaxStar) els.shopMaxStar.value = '';
+  if (els.shopSort) els.shopSort.value = 'time_desc';
+  SHOP.quick = '';
+  syncShopQuick();
   await fillShopStudents();
+  await fillShopItems();
   await loadShopOrders(0);
   await loadShopAudit();
 });

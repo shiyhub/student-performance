@@ -813,10 +813,16 @@ addEventListener('DOMContentLoaded', function () {
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-cart"/></svg> 星光商店购买记录</div>
         <p class="text-muted" style="margin-bottom:10px;">
-          按学生、时间、商品、订单状态查询兑换记录。学生误点兑换时，可对单条记录执行<b>回退</b>：
+          按关键字、班级、学生、时间、商品、订单/回退状态、星光区间组合筛选，可排序并导出 CSV。
+          学生误点兑换时，可对单条记录执行<b>回退</b>：
           星光值退回余额、物品移出衣柜、正在佩戴的自动卸下，全过程写入审计日志。
         </p>
-        <div class="exam-form-grid">
+        <div class="shop-filter-grid">
+          <div class="field full">
+            <label for="shopKeyword">关键字</label>
+            <input class="input" id="shopKeyword" type="search" autocomplete="off"
+                   placeholder="学生姓名 / 商品名，输入后回车查询">
+          </div>
           <div class="field">
             <label for="shopClass">班级</label>
             <select class="input" id="shopClass"></select>
@@ -824,6 +830,20 @@ addEventListener('DOMContentLoaded', function () {
           <div class="field">
             <label for="shopStudent">学生</label>
             <select class="input" id="shopStudent"></select>
+          </div>
+          <div class="field">
+            <label for="shopType">商品类型</label>
+            <select class="input" id="shopType">
+              <option value="">全部类型</option>
+              <option value="avatar">头像</option>
+              <option value="frame">头像框</option>
+              <option value="theme">卡片主题</option>
+              <option value="daily">日常卡</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="shopItemFilter">具体商品</label>
+            <select class="input" id="shopItemFilter"></select>
           </div>
           <div class="field">
             <label for="shopFrom">开始日期</label>
@@ -834,10 +854,6 @@ addEventListener('DOMContentLoaded', function () {
             <input class="input" id="shopTo" type="date">
           </div>
           <div class="field">
-            <label for="shopItemFilter">商品</label>
-            <select class="input" id="shopItemFilter"></select>
-          </div>
-          <div class="field">
             <label for="shopStatus">订单状态</label>
             <select class="input" id="shopStatus">
               <option value="">全部</option>
@@ -846,11 +862,48 @@ addEventListener('DOMContentLoaded', function () {
               <option value="void">已作废</option>
             </select>
           </div>
+          <div class="field">
+            <label for="shopRefund">回退状态</label>
+            <select class="input" id="shopRefund">
+              <option value="">全部</option>
+              <option value="none">未回退</option>
+              <option value="refunded">已回退</option>
+              <option value="refundable">可回退</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="shopMinStar">星光下限</label>
+            <input class="input" id="shopMinStar" type="number" min="0" step="1" placeholder="不限">
+          </div>
+          <div class="field">
+            <label for="shopMaxStar">星光上限</label>
+            <input class="input" id="shopMaxStar" type="number" min="0" step="1" placeholder="不限">
+          </div>
+          <div class="field">
+            <label for="shopSort">排序</label>
+            <select class="input" id="shopSort">
+              <option value="time_desc">时间 · 从新到旧</option>
+              <option value="time_asc">时间 · 从旧到新</option>
+              <option value="star_desc">星光 · 从高到低</option>
+              <option value="star_asc">星光 · 从低到高</option>
+            </select>
+          </div>
         </div>
+
+        <div class="shop-quick" id="shopQuick">
+          <span class="sq-label">快捷时间</span>
+          <button class="sq-btn" type="button" data-quick="today">今天</button>
+          <button class="sq-btn" type="button" data-quick="7d">近 7 天</button>
+          <button class="sq-btn" type="button" data-quick="30d">近 30 天</button>
+          <button class="sq-btn" type="button" data-quick="all">全部时间</button>
+        </div>
+
         <div class="filter-actions" style="margin-top:12px;">
           <button class="btn btn-primary" id="btnShopQuery" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-search"/></svg> 查询</button>
           <button class="btn btn-ghost" id="btnShopReset" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg> 重置</button>
+          <button class="btn btn-ghost" id="btnShopExport" type="button">导出当前结果 CSV</button>
         </div>
+        <div id="shopFilterChips" class="shop-chips"></div>
         <div id="shopOrderSummary" class="shop-summary" style="margin-top:12px;"></div>
       </div>
 
