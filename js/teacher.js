@@ -164,6 +164,8 @@ const els = {
   btnXpAnomaly: $('#btnXpAnomaly'),
   xpAnomalyHint: $('#xpAnomalyHint'),
   xpAnomalyList: $('#xpAnomalyList'),
+  btnSyncExamXpLog: $('#btnSyncExamXpLog'),
+  syncExamXpLogHint: $('#syncExamXpLogHint'),
   btnAllXpLogs: $('#btnAllXpLogs'),
   btnXpAnomalyZone: $('#btnXpAnomalyZone'),
   xpAnomalyZoneBadge: $('#xpAnomalyZoneBadge'),
@@ -501,6 +503,7 @@ function init() {
   if (els.btnXpLogQuery) els.btnXpLogQuery.addEventListener('click', queryXpLog);
   if (els.btnInjectXpLog) els.btnInjectXpLog.addEventListener('click', injectXpLog);
   if (els.btnXpAnomaly) els.btnXpAnomaly.addEventListener('click', scanXpAnomaly);
+  if (els.btnSyncExamXpLog) els.btnSyncExamXpLog.addEventListener('click', syncExamXpLog);
   if (els.btnAllXpLogs) els.btnAllXpLogs.addEventListener('click', loadAllStudentLogs);
   if (els.btnXpAnomalyZone) els.btnXpAnomalyZone.addEventListener('click', loadXpAnomalyZone);
   if (els.btnPreviewStudent) els.btnPreviewStudent.addEventListener('click', openStudentPreview);
@@ -1650,14 +1653,22 @@ async function loadStudents() {
       if (input == null) return;
       const newXp = parseInt(input, 10);
       if (isNaN(newXp) || newXp < 0) { toast('请输入 0 以上的数字'); return; }
+      // v204：必须带原因，服务端会把差额写进星光流水并留审计记录
+      const why = prompt('调整原因（会记入星光流水与审计，可留空）：', '教师手动调整');
+      if (why === null) return;
       const { data, error } = await supabase.rpc('set_student_xp', {
         p_class: btn.dataset.xpClass,
         p_student: btn.dataset.xpName,
-        p_xp: newXp
+        p_xp: newXp,
+        p_reason: why || null
       });
       if (error) { toast('调整失败：' + error.message); return; }
-      if (data && data.ok === false) { toast('没找到这个学生'); return; }
-      toast(`已设为 ${data.xp} 星光值`);
+      if (data && data.ok === false) {
+        toast(data.reason === 'teacher_only' ? '请先登录教师账号' : '没找到这个学生');
+        return;
+      }
+      const d = (data && data.delta) || 0;
+      toast(`已设为 ${data.xp} 星光值${d ? `（${d > 0 ? '+' : ''}${d} 已记入流水）` : ''}`);
       invalidateRecCache();
       loadStudents();
     });
@@ -2958,7 +2969,17 @@ async function onRecalcXp() {
   }
 }
 
-// v152.8：异常星光值排查（星光记录页）
+// v204：异常星光值排查（口径 v2）
+// 应得 = 表现/任务流水 + 考试实发 + 教师手动调整；考试分不再被当成异常
+const XP_KIND_META = {
+  positive: { label: '偏多', color: '#b84c3a', bg: '#fdecea' },
+  negative: { label: '偏少', color: '#a93b36', bg: '#fdecea' },
+  acked:    { label: '已核准', color: '#5b6472', bg: '#eef0f3' }
+};
+function xpKindChip(kind) {
+  const m = XP_KIND_META[kind] || { label: kind || '—', color: '#5b6472', bg: '#eef0f3' };
+  return `<span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:${m.color};background:${m.bg};">${m.label}</span>`;
+}
 async function scanXpAnomaly() {
   const btn = els.btnXpAnomaly, hint = els.xpAnomalyHint, box = els.xpAnomalyList;
   if (!btn || !box) return;
@@ -2970,50 +2991,139 @@ async function scanXpAnomaly() {
   try {
     const { data, error } = await supabase.rpc('get_xp_anomalies', { p_class: cls });
     if (error) {
-      box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(error.message)}（请确认已执行 88 号 SQL）</div>`;
+      box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(error.message)}（请确认已执行 137 号 SQL）</div>`;
       if (hint) hint.textContent = '';
       return;
     }
     const rows = (data && data.rows) || [];
+    const anom = (data && data.anomaly_count) || 0;
+    const acked = (data && data.acked_count) || 0;
+    const gapCnt = (data && data.exam_gap_count) || 0;
+    const sources = (data && data.log_sources) || [];
     if (hint) hint.textContent = '';
+
+    const banners = [];
+    if (!sources.length) {
+      banners.push(`<div class="banner banner-error" style="margin-bottom:8px;">本班还没有任何星光流水，扫描结果会全部显示为「偏多」。
+        请先到「测试工具 → 注入星光值流水」执行一次。</div>`);
+    }
+    if (gapCnt > 0) {
+      banners.push(`<div class="banner" style="margin-bottom:8px;">有 <b>${gapCnt}</b> 名学生的考试星光尚未写入流水。
+        这不影响上面的判定（考试分已单独计入应得），只是「流水合计」会偏低；
+        可点「补写考试流水」一次性补齐。</div>`);
+    }
+
     if (!rows.length) {
-      box.innerHTML = '<div class="banner">' + I['check-circle']() + ' 无异常差额</div>';
+      box.innerHTML = banners.join('') +
+        `<div class="banner">${I['check-circle']()} 无异常差额：当前星光值与应得完全一致。</div>`;
       return;
     }
+
     const rowsHtml = rows.map(r => {
       const d = r.diff || 0;
-      let reason;
-      if (r.log_total === 0) reason = '无流水记录（未注入或纯手动调整）';
-      else if (d > 0) reason = `星光值偏多 +${d}：可能手动调星光值 / 删除未回退`;
-      else reason = `星光值偏少 ${d}：可能删除回退过头 / 手动扣减`;
-      const color = d > 0 ? '#b84c3a' : '#a93b36';
+      const raw = r.diff_raw || 0;
+      const meta = XP_KIND_META[r.kind] || XP_KIND_META.positive;
+      const exam = (r.exam_total || 0) > 0
+        ? `${r.exam_total}${r.exam_log < r.exam_total ? '<span class="text-muted" style="font-size:12px;">（流水缺 ' + (r.exam_total - r.exam_log) + '）</span>' : ''}`
+        : '<span class="text-muted">—</span>';
+      const act = r.kind === 'acked'
+        ? `<button class="btn btn-ghost btn-sm" data-ack-revoke="${esc(r.student)}" type="button">撤销核准</button>`
+        : `<button class="btn btn-ghost btn-sm" data-ack="${esc(r.student)}" data-diff="${raw}" type="button">核准豁免</button>`;
       return `<tr>
         <td><b>${esc(r.student)}</b></td>
         <td style="text-align:right;">${r.cur_xp}</td>
-        <td style="text-align:right;">${r.log_total}</td>
-        <td style="text-align:right;color:${color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
-        <td style="font-size:13px;">${reason}</td>
+        <td style="text-align:right;">${r.expected}</td>
+        <td style="text-align:right;">${exam}</td>
+        <td style="text-align:right;color:${meta.color};font-weight:600;">${d > 0 ? '+' : ''}${d}</td>
+        <td style="text-align:center;">${xpKindChip(r.kind)}</td>
+        <td style="font-size:13px;">${esc(r.reason || '')}</td>
+        <td style="text-align:center;white-space:nowrap;">${act}</td>
       </tr>`;
     }).join('');
-    box.innerHTML = `
-      <div style="margin-bottom:8px;font-size:14px;">发现 <b>${rows.length}</b> 名星光值异常学生：</div>
-      <div style="max-height:400px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
+
+    box.innerHTML = banners.join('') + `
+      <div style="margin-bottom:8px;font-size:14px;">
+        待处理异常 <b style="color:#b84c3a;">${anom}</b> 名
+        ｜ 已核准 <b>${acked}</b> 名
+        <span class="text-muted">（同一条差额核准后不再计入异常；学生再有新增差额会重新报出）</span>
+      </div>
+      <div style="max-height:420px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead><tr style="background:#f4f4f5;">
             <th style="padding:8px 10px;text-align:left;">学生</th>
             <th style="padding:8px 10px;text-align:right;">当前星光值</th>
-            <th style="padding:8px 10px;text-align:right;">流水应得</th>
+            <th style="padding:8px 10px;text-align:right;">应得</th>
+            <th style="padding:8px 10px;text-align:right;">其中考试</th>
             <th style="padding:8px 10px;text-align:right;">差额</th>
-            <th style="padding:8px 10px;text-align:left;">可能原因</th>
+            <th style="padding:8px 10px;text-align:center;">判定</th>
+            <th style="padding:8px 10px;text-align:left;">说明</th>
+            <th style="padding:8px 10px;text-align:center;">处置</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
+
+    box.querySelectorAll('button[data-ack]').forEach(b => {
+      b.addEventListener('click', () => ackXpDiff(b.dataset.ack, Number(b.dataset.diff)));
+    });
+    box.querySelectorAll('button[data-ack-revoke]').forEach(b => {
+      b.addEventListener('click', () => revokeXpDiffAck(b.dataset.ackRevoke));
+    });
   } catch (e) {
     box.innerHTML = `<div class="banner banner-error">扫描失败：${esc(e.message)}</div>`;
   } finally {
     btn.disabled = false;
     if (hint && hint.textContent === '扫描中…') hint.textContent = '';
+  }
+}
+
+// v204：核准一条历史差额（人工确认后不再反复误报）
+async function ackXpDiff(student, diff) {
+  const reason = window.prompt(
+    `将「${student}」当前差额 ${diff > 0 ? '+' : ''}${diff} 标记为已核准。\n` +
+    '适用于：历史手动调分、导入数据、已核实的操作，且短期内不会再变化。\n\n请输入原因（可留空）：', '历史手动调整');
+  if (reason === null) return;
+  try {
+    const { data, error } = await supabase.rpc('ack_xp_diff', {
+      p_class: els.xpLogClass.value, p_student: student, p_diff: diff, p_reason: reason || null
+    });
+    if (error || !data || data.ok !== true) { toast('核准失败：' + ((error && error.message) || '仅登录教师可操作')); return; }
+    toast('已核准，后续不再计入异常');
+    scanXpAnomaly();
+  } catch (e) { toast('核准失败：' + e.message); }
+}
+
+async function revokeXpDiffAck(student) {
+  if (!window.confirm(`撤销「${student}」的差额核准？撤销后该差额会重新计入异常。`)) return;
+  try {
+    const { data, error } = await supabase.rpc('revoke_xp_diff_ack', {
+      p_class: els.xpLogClass.value, p_student: student
+    });
+    if (error || !data || data.ok !== true) { toast('撤销失败：' + ((error && error.message) || '仅登录教师可操作')); return; }
+    toast('已撤销核准');
+    scanXpAnomaly();
+  } catch (e) { toast('撤销失败：' + e.message); }
+}
+
+// v204：补写考试星光流水（历史数据一次性补齐）
+async function syncExamXpLog() {
+  const btn = els.btnSyncExamXpLog, hint = els.syncExamXpLogHint;
+  const cls = els.xpLogClass ? els.xpLogClass.value : '';
+  if (!window.confirm('把考试成绩的星光值补写进星光流水？' + (cls ? `（仅 ${cls}）` : '（全部班级）') + '\n可重复执行，不会重复加分。')) return;
+  if (btn) btn.disabled = true;
+  if (hint) hint.textContent = '补写中…';
+  try {
+    const { data, error } = await supabase.rpc('sync_exam_xp_log', { p_class: cls || null });
+    if (error) { if (hint) hint.textContent = '失败：' + error.message + '（请确认已执行 137 号 SQL）'; return; }
+    const ins = (data && data.injected) || 0;
+    const cln = (data && data.cleaned) || 0;
+    if (hint) hint.textContent = `完成：补写 ${ins} 条，清理失效 ${cln} 条`;
+    toast(`已补写 ${ins} 条考试流水`);
+    scanXpAnomaly();
+  } catch (e) {
+    if (hint) hint.textContent = '失败：' + e.message;
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -3081,6 +3191,7 @@ async function loadAllStudentLogs() {
 const XP_ANOMALY_TYPE = {
   missing_tag: '标签已删除',
   bad_xp_value: '星光值配置异常',
+  bad_dim: '五维配置异常',
   negative_clip: '扣减致负截断',
   xp_mismatch: '加分链路异常'
 };
@@ -3105,6 +3216,7 @@ async function loadXpAnomalyZone() {
       let extra = '';
       if (r.type === 'missing_tag' && d.tag_id) extra = '标签ID：<code>' + esc(String(d.tag_id).slice(0, 8)) + '</code>';
       if (r.type === 'bad_xp_value') extra = (esc(d.label || '') + ' = ' + (d.xp_value === undefined ? '' : d.xp_value) + ' xp');
+      if (r.type === 'bad_dim') extra = (esc(d.label || '') + ' 维度「' + esc(d.dim || '') + '」');
       if (r.type === 'negative_clip') extra = '原星光值 ' + d.before + '，扣 ' + d.delta;
       if (r.type === 'xp_mismatch') extra = '应得 ' + d.expected + '，实际 ' + d.actual;
       return `<tr>
@@ -3153,22 +3265,26 @@ async function resolveXpAnomaly(id) {
 }
 
 
-// v152.7：星光值流水注入（测试工具）
+// v152.7：星光值流水注入（测试工具）｜v204：含考试成绩补写
 async function injectXpLog() {
-  if (!confirm('把全部加分写入星光流水，可重复执行。继续？')) return;
+  if (!confirm('把全部加分（含考试成绩）写入星光流水，可重复执行、不会重复加分。继续？')) return;
   const btn = els.btnInjectXpLog, out = els.injectXpLogResult;
   if (btn) btn.disabled = true;
   if (out) out.textContent = '注入中…';
   try {
-    const { data, error } = await supabase.rpc('inject_xp_log');
+    let { data, error } = await supabase.rpc('rebuild_xp_log');
+    // 137 号未执行时退回旧入口（此时考试分补不进来，会提示）
+    if (error) ({ data, error } = await supabase.rpc('inject_xp_log'));
     if (error) { if (out) out.textContent = '失败：' + error.message; return; }
-    if (out) out.textContent = '注入完成，共写入 ' + ((data && data.injected) || 0) + ' 条星光记录';
+    const total = (data && data.injected) || 0;
+    const exam = (data && data.exam_injected) || 0;
+    if (out) out.textContent = `注入完成，共写入 ${total} 条星光记录${exam ? `（其中考试 ${exam} 条）` : ''}`;
   } catch (e) { if (out) out.textContent = '失败：' + e.message; }
   finally { if (btn) btn.disabled = false; }
 }
 
 // v152.7：星光记录查询
-const XP_LOG_SRC = { daily: '日常表现', task: '每日任务', personal: '个人任务', challenge: '挑战任务', manual: '手动任务' };
+const XP_LOG_SRC = { daily: '日常表现', task: '每日任务', personal: '个人任务', challenge: '挑战任务', manual: '手动任务', exam: '考试成绩', adjust: '教师调整' };
 const XP_LOG_DIM = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
 async function fillXpLogClasses() {
   if (!els.xpLogClass) return;
@@ -3194,7 +3310,7 @@ async function queryXpLog() {
   if (!box) return;
   box.innerHTML = '<div class="loading-row"><span class="spinner"></span>正在加载…</div>';
   const { data, error } = await supabase.rpc('get_xp_log', { p_class: cls, p_student: name });
-  if (error) { box.innerHTML = `<div class="banner banner-error">查询失败：${esc(error.message)}（请确认已执行 87 号 SQL）</div>`; return; }
+  if (error) { box.innerHTML = `<div class="banner banner-error">查询失败：${esc(error.message)}（请确认已执行 137 号 SQL）</div>`; return; }
   const rows = (data && data.rows) || [];
   const total = (data && data.total) || 0;
   let cur = 0;
@@ -3202,25 +3318,27 @@ async function queryXpLog() {
     .from('student_info').select('xp').eq('class', cls).eq('student_name', name).single();
   if (info) cur = info.xp || 0;
   if (!rows.length) {
-    box.innerHTML = '<div class="banner">暂无流水，需先在「测试工具」注入</div>';
+    box.innerHTML = '<div class="banner">该生暂无流水。若已有考试成绩或表现记录，请先到「测试工具 → 注入星光值流水」执行一次。</div>';
     return;
   }
   let acc = 0;
   const rowsHtml = rows.map(r => {
-    acc += (r.xp || 0);
+    const xp = r.xp || 0;
+    acc += xp;
+    const sign = xp < 0 ? '' : '+';
     return `<tr>
       <td style="white-space:nowrap;">${esc(r.date || '')}</td>
       <td>${XP_LOG_SRC[r.source] || r.source}</td>
       <td>${esc(r.label || '')}</td>
       <td style="text-align:center;">${XP_LOG_DIM[r.dim] || (r.dim ? r.dim : '—')}</td>
-      <td style="text-align:right;">+${r.xp}</td>
+      <td style="text-align:right;${xp < 0 ? 'color:#a93b36;' : ''}">${sign}${xp}</td>
       <td style="text-align:right;font-weight:600;">${acc}</td>
     </tr>`;
   }).join('');
   box.innerHTML = `
     <div style="margin-bottom:8px;font-size:14px;">
       流水合计 <b>${total} xp</b> ｜ 当前星光值 <b>${cur} xp</b> ｜ 差额 <b>${cur - total} xp</b>
-      <span class="text-muted">（差额为教师手动调整或删除回退等无流水操作；流水合计即「真实星光值」参照）</span>
+      <span class="text-muted">（差额为手动调分、删除回退等未留痕操作；考试成绩与教师调整已计入流水）</span>
     </div>
     <div style="max-height:480px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:8px;">
       <table style="width:100%;border-collapse:collapse;font-size:14px;">

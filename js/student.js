@@ -394,9 +394,23 @@ const WRITE_HANDLERS = {
   set_student_card_theme: p => supabase.rpc('set_student_card_theme', p),   // v173 卡片主题佩戴
   confirm_challenge_levels: p => supabase.rpc('confirm_challenge_levels', p) // v152 挑战任务多档位
 };
+// v204：任务提交被业务规则拒绝时的文案
+function taskFailText(res) {
+  const why = (res && res.reason) || '';
+  if (why === 'graded_locked') return '老师已经评定过这项任务，不能自行改动';
+  if (why === 'future_task') return '还没到任务日期，暂时不能提交';
+  if (why === 'class_mismatch') return '任务不属于本班，请刷新后重试';
+  if (why === 'no_student') return '这个名字不在名单里';
+  if (why === 'bad_grade') return '评级无效，请重新选择';
+  return '保存失败，请重试';
+}
+
 // 个别接口“HTTP 成功但业务失败”，沿用原有判定（判据与改版前逐字一致）
 const WRITE_OK_CHECK = {
-  set_student_avatar: d => !!(d && d.ok !== false)
+  set_student_avatar: d => !!(d && d.ok !== false),
+  // v204：教师已评级 / 任务未到日期 / 档位重复 等业务拒绝，不能当成保存成功
+  submit_task: d => !!(d && d.ok !== false),
+  confirm_challenge_levels: d => !!(d && d.ok !== false)
 };
 async function syncRunner(op) {
   const name = op && op.name;
@@ -422,7 +436,8 @@ async function runWrite(op) {
     if (r.ok) return { ok: true, queued: false, res: r.data };
     // SDK 网络失败不抛异常，而是返回 {data:null,error}（如 'Failed to fetch'）→ 同样自动入队，不丢数据
     if (isNetErr(r.error)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
-    return { ok: false, queued: false };
+    // v204：业务拒绝也把返回体带出去，调用方才能提示具体原因（如教师已评级）
+    return { ok: false, queued: false, res: r.data };
   } catch (e) {
     if (isNetErr(e)) { await window.Offline.enqueue(op); return { ok: true, queued: true }; }
     if (e && e.unregistered) return { ok: false, queued: false, reason: 'unregistered', error: e.message };
@@ -3532,7 +3547,7 @@ async function loadPastTasks() {
         if (state.readonly) { sfx.oops(); toast('预览模式不能提交哦～'); return; }
         const grade = btn.dataset.grade, taskId = btn.dataset.task;
         const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
-        if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
+        if (!wr.ok) { sfx.oops(); toast(taskFailText(wr.res)); return; }
         const d = wr.res || {};
         sfx.pick();
         const xpGain = (d.xp_delta || 0) > 0 ? ` 星光值+${d.xp_delta}` : '';
@@ -3660,6 +3675,8 @@ async function onSubmit() {
       if (subRes && subRes.reason === 'no_student') {
         toast('这个名字不在名单里');
         needIdentity();     // 保留已勾选的表现，换个名字就能提交
+      } else if (subRes && subRes.reason === 'empty_items') {
+        toast('请至少选择一项表现再提交');
       } else {
         toast('提交失败，请重试');
       }
@@ -3933,7 +3950,7 @@ async function onPickTaskGrade(grade, taskId, btn) {
   if (!cls || !name) { sfx.oops(); return needIdentity(() => onPickTaskGrade(grade, taskId, btn)); }
   // "还没做"也提交：用于撤销之前的评分、回退星光值
   const wr = await runWrite({ name: 'submit_task', params: { p_class: cls, p_student: name, p_task_id: taskId, p_grade: grade } });
-  if (!wr.ok) { sfx.oops(); toast('保存失败，请重试'); return; }
+  if (!wr.ok) { sfx.oops(); toast(taskFailText(wr.res)); return; }
   const d = wr.res || {};
   sfx.pick();
   // 已评(非"还没做")任务卡片置灰；撤销评分则恢复

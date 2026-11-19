@@ -872,7 +872,7 @@ addEventListener('DOMContentLoaded', function () {
     <section id="tabXpLog" hidden>
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg> 学生星光值日志</div>
-        <p class="text-muted" style="margin-bottom:10px;">查询学生加分流水（表现/每日任务/个人任务/挑战），带累计列；也可看全班总览与差额。需先执行 87 号 SQL 并注入。</p>
+        <p class="text-muted" style="margin-bottom:10px;">查询学生加分流水（表现 / 每日任务 / 个人任务 / 挑战 / <b>考试成绩</b> / <b>教师调整</b>），带累计列；也可看全班总览与差额。需先执行 137 号 SQL。</p>
         <div class="exam-form-grid">
           <div class="field">
             <label for="xpLogClass">班级</label>
@@ -904,9 +904,18 @@ addEventListener('DOMContentLoaded', function () {
 
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> 异常星光值排查</div>
-        <p class="text-muted" style="margin-bottom:10px;">比对「当前星光值」与「流水应得」，列出差额非零的学生。需先完成流水注入。</p>
-        <button class="btn btn-warn" id="btnXpAnomaly" type="button">扫描全班异常</button>
-        <span id="xpAnomalyHint" class="text-muted" style="margin-left:10px;"></span>
+        <p class="text-muted" style="margin-bottom:10px;">
+          应得 = 表现/任务流水 + <b>考试实发星光</b> + 教师手动调整。考试成绩按「分数 × 倍数」直接计入，
+          <b>不再要求先注入流水</b>，正常得分不会被判成异常。
+        </p>
+        <div class="filter-actions" style="margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+          <button class="btn btn-warn" id="btnXpAnomaly" type="button">扫描全班异常</button>
+          <button class="btn btn-ghost" id="btnSyncExamXpLog" type="button">
+            <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg> 补写考试流水
+          </button>
+          <span id="xpAnomalyHint" class="text-muted"></span>
+          <span id="syncExamXpLogHint" class="text-muted"></span>
+        </div>
         <div id="xpAnomalyList" style="margin-top:12px;"></div>
       </div>
     </section>
@@ -922,7 +931,7 @@ addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="card">
         <div class="card-title"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download"/></svg> 星光值流水注入（星光记录功能）</div>
-        <p class="text-muted" style="margin-bottom:10px;">把现有全部加分写入「星光记录」流水，可重复执行。</p>
+        <p class="text-muted" style="margin-bottom:10px;">把现有全部加分（含考试成绩）写入「星光记录」流水，可重复执行、不会重复加分。</p>
         <button class="btn btn-primary" id="btnInjectXpLog" type="button">注入星光值流水</button>
         <span id="injectXpLogResult" class="text-muted" style="margin-left:10px;"></span>
       </div>
