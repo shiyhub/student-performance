@@ -1992,12 +1992,18 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 .shop-item[data-ct-preview] { border-radius: 14px; }
 
 /* ============================================================
-   v203：18 套「场景」卡片主题（实景插画）
+   v203 / v205：18 套「场景」卡片主题（实景插画）
    素材：assets/themes/scene-*.webp，统一 480×452（卡片比例 1.06）。
-   裁切规则：主要视觉主体已推到卡面横向 80%，落在头像圆（x27.5–72.5%、
-   y11.5–56.5%）的右侧之外，所以头像不会盖住人脸/主体。
+   v205 取景口径：不再「把主体推到 80% 再大幅缩窗」（那会把电车、人物
+   切掉），改成「图宽 = 卡宽 × k，k 取 1.28–1.75」，左右只裁 11–43%
+   的无内容边角；图不够高时用原图边缘色拉伸补足，所以整幅主体基本完整。
+   多数 k=1.30（左右各裁 11.5%）；超宽风景图 k 加大到 1.45–1.75；
+   9/15 两张 1.48 比例的图 k=1.28（几乎满幅）；星空少女镜像后贴左，
+   让人物整体落在头像圆左侧。
    配色：每套按「姓名所在底部条带」的实际明暗给出两组值——
      暗底（白字 + 暗影） / 亮底（深梅字 + 白描边，靠描边隔离复杂底纹）。
+   v205 换素材后底带明暗有 4 套变化：草地白猫 / 水墨剑影 / 山谷村庄
+   改暗底白字，花田云海改亮底深字。
    注意：图案地址同样直写在 [data-t] 规则里，不能放进 CSS 变量（相对路径会 404）。
    ============================================================ */
 .card-theme[data-t="scene-tunnel"]     { background-image: url("../assets/themes/scene-tunnel.webp"); }
@@ -2073,20 +2079,20 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a4468;
   --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #7a4260; }
 [data-ct="scene-meadow"] {
-  --ct-bg: #2f4c27; --ct-line: rgba(255,255,255,.34);
-  --ct-fg: #23301c; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.92), 0 0 4px rgba(255,255,255,.8);
-  --ct-star-bg: rgba(255,255,255,.94); --ct-star-fg: #3f5c2c;
-  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #3c5730; }
+  --ct-bg: #1d3419; --ct-line: rgba(190,230,180,.28);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(4,12,4,.94), 0 0 5px rgba(4,12,4,.62);
+  --ct-star-bg: rgba(14,28,12,.90); --ct-star-fg: #ffe0a8;
+  --ct-badge-bg: rgba(248,255,246,.95); --ct-badge-fg: #2f4c22; }
 [data-ct="scene-ink"] {
-  --ct-bg: #d9e0e2; --ct-line: rgba(255,255,255,.55);
-  --ct-fg: #2b2c33; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
-  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #44506a;
-  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #3d4658; }
+  --ct-bg: #33373c; --ct-line: rgba(255,255,255,.34);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(10,12,16,.94), 0 0 5px rgba(10,12,16,.62);
+  --ct-star-bg: rgba(28,30,36,.90); --ct-star-fg: #ffe0b0;
+  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #3a3f48; }
 [data-ct="scene-cloudfield"] {
-  --ct-bg: #2c5590; --ct-line: rgba(255,255,255,.40);
-  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(8,18,44,.94), 0 0 5px rgba(8,18,44,.62);
-  --ct-star-bg: rgba(16,30,60,.90); --ct-star-fg: #cfe4ff;
-  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #2e4670; }
+  --ct-bg: #3d6499; --ct-line: rgba(255,255,255,.52);
+  --ct-fg: #22304a; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.94), 0 0 4px rgba(255,255,255,.84);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #2f4a72;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #2e4670; }
 [data-ct="scene-iceblue"] {
   --ct-bg: #b9d6ef; --ct-line: rgba(255,255,255,.62);
   --ct-fg: #2b3550; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
@@ -2103,10 +2109,10 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #33486a;
   --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #2f4463; }
 [data-ct="scene-valley"] {
-  --ct-bg: #457446; --ct-line: rgba(255,255,255,.40);
-  --ct-fg: #1f2e1e; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.92), 0 0 4px rgba(255,255,255,.8);
-  --ct-star-bg: rgba(255,255,255,.94); --ct-star-fg: #37542f;
-  --ct-badge-bg: rgba(255,255,255,.95); --ct-badge-fg: #34502c; }
+  --ct-bg: #24402a; --ct-line: rgba(255,255,255,.36);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(6,16,10,.94), 0 0 5px rgba(6,16,10,.62);
+  --ct-star-bg: rgba(16,30,20,.90); --ct-star-fg: #ffe0a8;
+  --ct-badge-bg: rgba(250,255,250,.95); --ct-badge-fg: #2f4a34; }
 [data-ct="scene-pink"] {
   --ct-bg: #f0d8e2; --ct-line: rgba(255,255,255,.62);
   --ct-fg: #43263a; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
@@ -2120,7 +2126,7 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   background: var(--ct-bg) !important;
   box-shadow: 0 4px 14px rgba(24, 16, 22, .18);
 }
-/* 素材本身已按卡片比例重制，严格 cover，不再额外放大取景 */
+/* v205：素材已按 480×452 出好（含边缘补边），这里严格 cover 即可，不再放大取景 */
 .mate[data-ct^="scene-"] .card-theme { filter: saturate(1.04); }
 .mate[data-ct^="scene-"] .mate-avatar {
   z-index: 2;
