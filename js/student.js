@@ -144,7 +144,9 @@ const AVATAR_SM_KEYS = new Set([
   'poster1','poster2','poster3','poster4','poster5',
   'poster6','poster7','poster8','poster9','poster10',
   /* v203：两张横向插画裁出的头像，512 主图 + 128 缩略图成对 */
-  'portrait1','portrait2'
+  'portrait1','portrait2',
+  /* v205：7 张漫画头像，512 主图 + 256 缩略图成对 */
+  'comic1','comic2','comic3','comic4','comic5','comic6','comic7'
 ]);
 function avatarFile(key, sm) {
   if (sm && AVATAR_SM_KEYS.has(key)) return key + '-s.webp';

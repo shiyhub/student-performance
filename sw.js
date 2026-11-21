@@ -2,7 +2,7 @@
  * 策略：网络优先 + 缓存兜底 —— 在线永远拿到最新版本（JS/CSS/页面），
  *       断网时自动回退到最近一次缓存的资源，避免"旧默认数据/旧代码"。
  */
-const CACHE = 'sp-cache-v107';
+const CACHE = 'sp-cache-v108';
 const ASSETS = [
   './',
   './index.html',
@@ -344,6 +344,20 @@ const ASSETS = [
   './assets/avatars/portrait1-s.webp',
   './assets/avatars/portrait2.webp',
   './assets/avatars/portrait2-s.webp',
+  './assets/avatars/comic1.webp',
+  './assets/avatars/comic1-s.webp',
+  './assets/avatars/comic2.webp',
+  './assets/avatars/comic2-s.webp',
+  './assets/avatars/comic3.webp',
+  './assets/avatars/comic3-s.webp',
+  './assets/avatars/comic4.webp',
+  './assets/avatars/comic4-s.webp',
+  './assets/avatars/comic5.webp',
+  './assets/avatars/comic5-s.webp',
+  './assets/avatars/comic6.webp',
+  './assets/avatars/comic6-s.webp',
+  './assets/avatars/comic7.webp',
+  './assets/avatars/comic7-s.webp',
 ];
 
 /* v170：预缓存分层 + 限并发
