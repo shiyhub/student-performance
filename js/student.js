@@ -246,7 +246,14 @@ const CARD_THEMES = [
   { key: 'scene-sealight',   name: '海天光柱', file: 'scene-sealight.webp',   desc: '海上晨光' },
   { key: 'scene-valley',     name: '山谷村庄', file: 'scene-valley.webp',     desc: '青山雪顶' },
   { key: 'scene-pink',       name: '粉樱少女', file: 'scene-pink.webp',       desc: '粉樱羽翼' },
-  { key: 'scene-lava',       name: '熔岩星尘', file: 'scene-lava.webp',       desc: '星球赤焰' }
+  { key: 'scene-lava',       name: '熔岩星尘', file: 'scene-lava.webp',       desc: '星球赤焰' },
+  /* v206：4 套「合影」主题，素材是五人横构图，统一 480×452。
+     原图一比一完整保留在卡面下半部，上方是同一张图模糊后的同色延伸（扩图，不裁人），
+     人脸落在头像圆之外，姓名带压在人物胸口/腿部。 */
+  { key: 'crew1', name: '彩泡欢歌', file: 'crew1.webp', desc: '白底彩泡' },
+  { key: 'crew2', name: '草间晴日', file: 'crew2.webp', desc: '草地午后' },
+  { key: 'crew3', name: '台前灯暖', file: 'crew3.webp', desc: '舞台灯火' },
+  { key: 'crew4', name: '猫耳浮光', file: 'crew4.webp', desc: '波点猫耳' }
 ];
 const CARD_THEME_BASE = 'assets/themes/';
 function cardThemeFile(key) {

@@ -2024,6 +2024,12 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 .card-theme[data-t="scene-valley"]     { background-image: url("../assets/themes/scene-valley.webp"); }
 .card-theme[data-t="scene-pink"]       { background-image: url("../assets/themes/scene-pink.webp"); }
 .card-theme[data-t="scene-lava"]       { background-image: url("../assets/themes/scene-lava.webp"); }
+/* v206：4 套「合影」主题。素材底图是原图 cover 模糊后的同色延伸，前景是完整合影照片，
+   所以卡片上看到的是整张图（人物一个不少），头像圆落在上方的柔光区。 */
+.card-theme[data-t="crew1"]            { background-image: url("../assets/themes/crew1.webp"); }
+.card-theme[data-t="crew2"]            { background-image: url("../assets/themes/crew2.webp"); }
+.card-theme[data-t="crew3"]            { background-image: url("../assets/themes/crew3.webp"); }
+.card-theme[data-t="crew4"]            { background-image: url("../assets/themes/crew4.webp"); }
 
 /* 暗底八套：底部条带亮度 < .50，姓名用纯白 + 暗投影，星光徽标深紫底浅金字 */
 [data-ct="scene-tunnel"] {
@@ -2119,44 +2125,82 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
   --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a3f6a;
   --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #7a3a5e; }
 
+/* v206：4 套合影主题。姓名带压在照片下部（人物胸口/腿部），
+   按底部条带的实际明暗分两组——白底/白裙（crew1、crew4）用深字 + 白描边，
+   草地深校服与舞台暗红毯（crew2、crew3）用白字 + 暗影。 */
+[data-ct="crew1"] {
+  --ct-bg: #f3e9ee; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #3d2430; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #8a4a68;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #74405e; }
+[data-ct="crew2"] {
+  --ct-bg: #16220f; --ct-line: rgba(200,235,180,.26);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(6,14,4,.94), 0 0 5px rgba(6,14,4,.62);
+  --ct-star-bg: rgba(14,24,10,.90); --ct-star-fg: #ffe0a8;
+  --ct-badge-bg: rgba(248,255,244,.95); --ct-badge-fg: #2f4a34; }
+[data-ct="crew3"] {
+  --ct-bg: #170d13; --ct-line: rgba(255,190,200,.26);
+  --ct-fg: #fff; --ct-fg-sh: 0 1px 2px rgba(10,4,8,.94), 0 0 5px rgba(10,4,8,.62);
+  --ct-star-bg: rgba(26,10,16,.90); --ct-star-fg: #ffd9a0;
+  --ct-badge-bg: rgba(255,248,250,.95); --ct-badge-fg: #5c2a3c; }
+[data-ct="crew4"] {
+  --ct-bg: #e9edf6; --ct-line: rgba(255,255,255,.62);
+  --ct-fg: #2f3450; --ct-fg-sh: 0 1px 0 rgba(255,255,255,.96), 0 0 4px rgba(255,255,255,.86);
+  --ct-star-bg: rgba(255,255,255,.95); --ct-star-fg: #4a5486;
+  --ct-badge-bg: rgba(255,255,255,.96); --ct-badge-fg: #414a72; }
+
 /* 通用：场景主题的卡片、内容层级与可读性 */
-.mate[data-ct^="scene-"] {
+.mate[data-ct^="scene-"],
+.mate[data-ct^="crew"] {
   overflow: hidden;
   border: 1px solid var(--ct-line);
   background: var(--ct-bg) !important;
   box-shadow: 0 4px 14px rgba(24, 16, 22, .18);
 }
 /* v205：素材已按 480×452 出好（含边缘补边），这里严格 cover 即可，不再放大取景 */
-.mate[data-ct^="scene-"] .card-theme { filter: saturate(1.04); }
-.mate[data-ct^="scene-"] .mate-avatar {
+.mate[data-ct^="scene-"] .card-theme,
+.mate[data-ct^="crew"] .card-theme { filter: saturate(1.04); }
+.mate[data-ct^="scene-"] .mate-avatar,
+.mate[data-ct^="crew"] .mate-avatar {
   z-index: 2;
   outline: 1.5px solid rgba(255, 255, 255, .55);
   outline-offset: 2px;
 }
-.mate[data-ct^="scene-"] .mate-avatar.framed { outline: none; }
+.mate[data-ct^="scene-"] .mate-avatar.framed,
+.mate[data-ct^="crew"] .mate-avatar.framed { outline: none; }
 /* 姓名层级 4：必须高于角标 3，否则右下金色角花会压住星光值 */
-.mate[data-ct^="scene-"] .mate-name {
+.mate[data-ct^="scene-"] .mate-name,
+.mate[data-ct^="crew"] .mate-name {
   position: relative; z-index: 4;
   color: var(--ct-fg);
   text-shadow: var(--ct-fg-sh);
 }
-.mate[data-ct^="scene-"] .mate-star {
+.mate[data-ct^="scene-"] .mate-star,
+.mate[data-ct^="crew"] .mate-star {
   background: var(--ct-star-bg);
   color: var(--ct-star-fg);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 1px 3px rgba(20, 12, 20, .28);
 }
-.mate[data-ct^="scene-"] .mate-star .ms-n { color: var(--ct-star-fg); }
-.mate[data-ct^="scene-"] .mate-badge {
+.mate[data-ct^="scene-"] .mate-star .ms-n,
+.mate[data-ct^="crew"] .mate-star .ms-n { color: var(--ct-star-fg); }
+.mate[data-ct^="scene-"] .mate-badge,
+.mate[data-ct^="crew"] .mate-badge {
   background: var(--ct-badge-bg);
   color: var(--ct-badge-fg);
   box-shadow: 0 1px 4px rgba(20, 12, 20, .22);
   z-index: 3;
 }
-.mate[data-ct^="scene-"] .rank-corner { z-index: 3; }
+.mate[data-ct^="scene-"] .rank-corner,
+.mate[data-ct^="crew"] .rank-corner { z-index: 3; }
 
 /* 商店缩略图：满幅方图用 cover 填满 1:1 格子 */
 .shop-thumb.theme-thumb[data-t^="scene-"] { background: #191620; }
 .shop-thumb.theme-thumb[data-t^="scene-"] img {
+  width: 100%; height: 100%; object-fit: cover; filter: none;
+}
+/* v206：合影主题同为 480×452 满幅，缩略图同样 cover */
+.shop-thumb.theme-thumb[data-t^="crew"] { background: #1b1712; }
+.shop-thumb.theme-thumb[data-t^="crew"] img {
   width: 100%; height: 100%; object-fit: cover; filter: none;
 }
 
