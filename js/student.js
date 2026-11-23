@@ -339,10 +339,10 @@ const SOLO_AVATAR_KEYS = ['bunny','doll','flower','gothic','horn','lotus','twin'
 /* v197：补上 game18（像素·勇者）与 poster1-10（海报头像）——
    这两批是 129/130 号脚本后来上架的，正则没跟上，导致 isImgKey 判假、
    avatarForName 回退成按姓名哈希分配的小动物头像（像素勇者会显示成海豚/小狗）。 */
-const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9])|bunny|doll|flower|gothic|horn|lotus|twin)$/;
+const IMG_KEY_RE = /^(girl[1-8]|boy[1-8]|neutral[1-8]|animal([1-9]|1[0-9]|2[0-4])|sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9])|comic[1-7]|bunny|doll|flower|gothic|horn|lotus|twin)$/;
 function isImgKey(k) { return IMG_KEY_RE.test(String(k || '')); }
 function isAnimalKey(k) { return /^animal([1-9]|1[0-9]|2[0-4])$/.test(String(k || '')); }
-function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9]))$/.test(String(k || '')); }
+function isNewKey(k) { return /^(sweet([1-9]|1[0-9]|2[0-2])|game([1-9]|1[0-8])|poster([1-9]|10)|nature[1-8]|mecha[1-5]|warrior[1-6]|fantasy([1-9]|1[0-1])|xian[1-5]|chibi[1-4]|moe([1-9]|10)|portrait([1-9]|1[0-9])|comic[1-7])$/.test(String(k || '')); }
 
 /* v140：旧 Q 版头像（cyber/mecha/rider/ultra×8）已删除，历史已选学生自动迁移到对应新款写实头像 */
 const LEGACY_AVATAR_MAP = {
@@ -1321,12 +1321,7 @@ function renderWall() {
     const todayRecs = mine.filter(r => r.record_date === today);
     const todayRec = todayRecs.length ? todayRecs[todayRecs.length - 1] : null;
     const todayMood = todayRec ? MOOD_MAP[todayRec.mood || (todayRec.behavior && todayRec.behavior.mood)] : null;
-    // 今日任务完成情况
-    const totalTasks = (state.todayTaskDefs || []).length;
-    const subMap = {};
-    (state.todayTaskSubs || []).forEach(x => { if (x.student_name === s.student_name && x.grade && x.grade !== 'none') subMap[x.task_id] = x.grade; });
-    const doneTasks = Object.keys(subMap).length;
-    const taskBadge = totalTasks ? `<span class="mate-badge task-badge" title="今日任务完成 ${doneTasks}/${totalTasks}">${doneTasks}/${totalTasks}</span>` : '';
+    // 卡片上不再贴「完成数/总数」胶囊角标：数字去除后，是否完成由教师端把控与查看
     const todayLevel = todayMood
       ? Number(Object.keys(MOOD_LEVELS).find(l => MOOD_LEVELS[l].key === todayMood.key)) || 3
       : 0;
@@ -1347,7 +1342,6 @@ function renderWall() {
         ${ct ? cardThemeHTML(ct) : ''}
         ${rank ? `<span class="rank-corner"><i>${rank}</i></span><span class="rank-corner rank-corner-br"></span>` : ''}
         <span class="mate-avatar${ringCls}${frameCls}${AVATAR_PARTICLES[av.key] ? ' ap-breathe' : ''} ${av.kind === 'img' ? 'is-img' : ''}" style="background:${av.bg};${AVATAR_PARTICLES[av.key] ? `--glow:${AVATAR_PARTICLES[av.key].glow};` : ''}">${avatarInner(av)}${avatarParticlesHTML(s.avatar)}${frameParticlesHTML(s.frame)}</span>
-        ${taskBadge}
         <span class="mate-name">${moodInline}<span class="mate-name-t">${esc(s.student_name)}</span>${testTag}<span class="mate-star" title="可消费星光值">${I.star('ico-xs')}<span class="ms-n">${Number(s.star) || 0}</span></span></span>
       </button>`;
   });
