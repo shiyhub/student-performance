@@ -765,7 +765,7 @@ function renderSummary(rows) {
       const target = neg ? negMap : posMap;
       if (it.type === 'text') {
         textItems.push({ label, value: it.value || '', date: r.record_date, neg });
-        const k = '' + I.edit() + ' ' + label;
+        const k = '✏️ ' + label;   // 这个 key 会经 esc() 输出到页面，不能混入 SVG 字符串
         target.set(k, (target.get(k) || 0) + 1);
       } else {
         const k = it.value ? `${label} · ${it.value}` : label;

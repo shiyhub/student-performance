@@ -4056,7 +4056,8 @@ function prefillIdentity() {
 /* ---------- 鼓励动画 ---------- */
 
 function celebrate(gainedXp) {
-  const emojis = ['' + I.star() + '', '' + I['star-fill']() + '', '' + I.sparkle() + '', '' + I.sparkle() + '', '' + I.heart() + '', '' + I.rainbow() + '', '' + I.thumb() + '', '' + I.school() + '', '' + I.book() + ''];
+  // 彩带是 textContent 写入的纯文本，必须放字符而不是 SVG 字符串，否则会显示成源码
+  const emojis = ['⭐', '🌟', '✨', '🎉', '💛', '🌈', '👏', '🚌', '📚'];
   els.confettiBox.innerHTML = '';
   for (let i = 0; i < 42; i++) {
     const piece = document.createElement('span');
