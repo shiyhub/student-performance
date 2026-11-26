@@ -4662,11 +4662,24 @@ function escapeHtml(s) {
 })();
 /* ============ v152.3：雏菊榜单（左：星光榜 / 右：挑战榜） ============ */
 let lbCurrentStudent = '';
+// v214：榜单不收录测试学生（131 的 is_test 标记）；按班级缓存名单，切班级重新取
+const lbTestCache = new Map();
+async function loadRankTestNames(cls) {
+  if (lbTestCache.has(cls)) return lbTestCache.get(cls);
+  const set = new Set();
+  try {
+    const r = await supabase.from('student_directory').select('student_name,is_test').eq('class', cls);
+    if (!r.error && Array.isArray(r.data)) r.data.forEach(s => { if (s.is_test === true) set.add(s.student_name); });
+  } catch (e) {}
+  lbTestCache.set(cls, set);
+  return set;
+}
 
 function openLeaderboard(kind) {
   const cls = (els.inpClass ? els.inpClass.value : '') || '';
   const name = (els.inpName ? els.inpName.value : '') || '';
   lbCurrentStudent = name;
+  lbTestCache.delete(cls);   // 每次开榜重取测试名单，教师端刚改的标记立即生效
   els.leaderboardModal.classList.add('show');
   if (kind === 'xp') {
     els.lbTitle.textContent = '星光榜';
@@ -4686,17 +4699,27 @@ async function loadLeaderboardXp(cls) {
   box.innerHTML = '<div class="lb-empty">正在加载…</div>';
   if (!cls) { box.innerHTML = '<div class="lb-empty">请先选择班级</div>'; return; }
   let rows = [];
+  // v214：student_info 对匿名用户是关闭的（建库时 revoke），改读只读视图 student_directory；
+  // 同时按 is_test 过滤，测试学生不进榜。
   try {
-    const r = await supabase
-      .from('student_info')
-      .select('student_name,xp,level')
+    let r = await supabase
+      .from('student_directory')
+      .select('student_name,xp,level,is_test')
       .eq('class', cls)
       .order('xp', { ascending: false });
+    if (r.error) {
+      // 旧库视图没有 is_test 列时退化处理
+      r = await supabase
+        .from('student_directory')
+        .select('student_name,xp,level')
+        .eq('class', cls)
+        .order('xp', { ascending: false });
+    }
     if (!r.error) rows = r.data || [];
   } catch (e) {}
   if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无学生数据</div>'; return; }
   // v167.3：没有星光值就不排名——只对有星光值（xp>0）的同学排位，相同星光值并列同名次
-  const ranked = rows.filter(s => (Number(s.xp) || 0) > 0);
+  const ranked = rows.filter(s => !s.is_test && (Number(s.xp) || 0) > 0);
   if (!ranked.length) {
     box.innerHTML = '<div class="lb-empty">暂无星光值，暂不排名</div>';
     return;
@@ -4730,6 +4753,11 @@ async function loadLeaderboardChallenge(cls) {
       .neq('status', 'cancelled');
     if (!r.error) rows = r.data || [];
   } catch (e) {}
+  // v214：挑战任务表没有 is_test 列，按班级测试学生名单剔除
+  if (rows.length) {
+    const testNames = await loadRankTestNames(cls);
+    if (testNames.size) rows = rows.filter(t => !testNames.has(t.student_name));
+  }
   if (!rows.length) { box.innerHTML = '<div class="lb-empty">暂无挑战任务</div>'; return; }
   const groups = new Map();
   rows.forEach(t => {
