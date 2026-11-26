@@ -2397,3 +2397,112 @@ html[data-weather] .mate[data-ct] { background: var(--ct-bg) !important; }
 #dimCard.card-folded .dim-body { display: none; }
 #achCard.card-folded .card-title,
 #dimCard.card-folded .dim-head { margin-bottom: 0; }
+
+/* ============ v213：班级打卡 / 座位点名 ============
+   入口在星光墙的班级头像（原转盘入口移入面板内）。
+   打卡项卡片按维度取色，座位板固定 6 列与教室一致（窄屏横向滚动，不换列）。 */
+.ci-head-icon { font-size: 22px; line-height: 1; display: grid; place-items: center; }
+
+.checkin-modal { max-width: 560px; }
+.ci-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  padding: 4px 2px 2px;
+}
+.ci-item {
+  --ci-c: #e67e22;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 12px; border: 1.5px solid color-mix(in srgb, var(--ci-c) 26%, #fff);
+  border-radius: 14px; background: color-mix(in srgb, var(--ci-c) 6%, #fff);
+  text-align: left; cursor: pointer; transition: transform .12s, box-shadow .18s, border-color .18s;
+  font: inherit; color: inherit;
+}
+.ci-item:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30,40,60,.10); }
+.ci-item:active { transform: scale(.98); }
+.ci-item .ci-ico {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 20px;
+  background: color-mix(in srgb, var(--ci-c) 14%, #fff);
+}
+.ci-item .ci-txt { min-width: 0; flex: 1 1 auto; }
+.ci-item .ci-name {
+  display: block; font-size: 14.5px; font-weight: 700; color: #2b3a35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ci-item .ci-meta {
+  display: flex; align-items: center; gap: 6px; margin-top: 3px;
+  font-size: 11.5px; color: #7d8b86;
+}
+.ci-item .ci-dim {
+  padding: 1px 6px; border-radius: 999px; font-weight: 700;
+  background: color-mix(in srgb, var(--ci-c) 16%, #fff); color: var(--ci-c);
+}
+.ci-item .ci-item-xp { font-weight: 700; color: #b4741f; white-space: nowrap; }
+.ci-item[data-dim="de"]  { --ci-c: #e74c3c; }
+.ci-item[data-dim="zhi"] { --ci-c: #2e86de; }
+.ci-item[data-dim="ti"]  { --ci-c: #27ae60; }
+.ci-item[data-dim="mei"] { --ci-c: #9b59b6; }
+.ci-item[data-dim="lao"] { --ci-c: #e67e22; }
+.ci-empty { grid-column: 1 / -1; padding: 22px 8px; text-align: center; color: #98a69f; font-size: 13px; }
+.ci-foot { display: flex; justify-content: center; padding: 12px 2px 2px; }
+.ci-wheel { font-size: 13.5px; }
+
+.cs-modal { max-width: 680px; }
+.cs-tools { display: flex; align-items: center; gap: 8px; padding: 2px 2px 8px; }
+.cs-tool {
+  border: 1px solid #dfe7e3; background: #fff; color: #4a5a54;
+  border-radius: 9px; padding: 5px 11px; font: inherit; font-size: 12.5px;
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.cs-tool:hover { background: #f2f8f5; border-color: #bcd8cc; }
+.cs-count { margin-left: auto; font-size: 12.5px; color: #6b7c76; font-weight: 700; }
+
+.cs-board-wrap { overflow-x: auto; padding-bottom: 4px; }
+.cs-board {
+  display: grid; grid-template-columns: repeat(6, minmax(72px, 1fr));
+  gap: 6px; min-width: 468px;
+}
+.cs-seat {
+  position: relative; min-height: 46px; padding: 4px 3px;
+  border: 1.5px solid #e2e9e5; border-radius: 10px; background: #fbfdfc;
+  display: grid; place-items: center; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: #40504a;
+  line-height: 1.2; text-align: center; word-break: break-all;
+  transition: background .14s, border-color .14s, transform .1s;
+}
+.cs-seat:hover { border-color: #b9d6c8; }
+.cs-seat:active { transform: scale(.97); }
+.cs-seat.empty { cursor: default; border-style: dashed; background: transparent; color: #cfd8d3; font-weight: 400; }
+.cs-seat.on {
+  background: #e2f6ea; border-color: #35b06a; color: #14713f;
+  box-shadow: inset 0 0 0 1px #35b06a;
+}
+.cs-seat.on::after {
+  content: ""; position: absolute; top: 3px; right: 3px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #35b06a url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/9px no-repeat;
+}
+.cs-seat .cs-done {
+  position: absolute; left: 4px; top: 2px; font-size: 9px; color: #b08a4a; font-weight: 700;
+}
+
+.cs-pool { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 2px 2px; }
+.cs-pool-tip { width: 100%; font-size: 11.5px; color: #98a69f; margin-bottom: 2px; }
+.cs-chip {
+  border: 1.5px solid #e2e9e5; background: #fbfdfc; color: #4a5a54;
+  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background .14s, border-color .14s;
+}
+.cs-chip.on { background: #e2f6ea; border-color: #35b06a; color: #14713f; font-weight: 700; }
+.cs-foot { display: flex; justify-content: flex-end; padding: 12px 2px 2px; }
+.cs-foot .btn { min-width: 132px; }
+
+@media (max-width: 520px) {
+  .ci-grid { grid-template-columns: 1fr; }
+  .checkin-modal, .cs-modal { max-width: 100%; }
+}
+
+/* v213：五维口径说明（归一显示后告诉用户 60 是班均） */
+#dimCard .dim-note {
+  margin: 6px 2px 2px; font-size: 11.5px; line-height: 1.5;
+  color: #8a9a94; text-align: center;
+}

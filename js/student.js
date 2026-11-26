@@ -43,6 +43,8 @@ window.addEventListener('popstate', e => Nav.onPop(e));
 
 // 学生端回退：按当前 UI 状态回退最深一层（幂等，只操作 UI，不产生新 push）
 function NavBack() {
+  if (els.checkinSeatModal && els.checkinSeatModal.classList.contains('show')) { els.checkinSeatModal.classList.remove('show'); return true; }
+  if (els.checkinModal && els.checkinModal.classList.contains('show')) { els.checkinModal.classList.remove('show'); return true; }
   if (els.detailModal.classList.contains('show')) { els.detailModal.classList.remove('show'); return true; }
   if (els.avatarModal.classList.contains('show')) { els.avatarModal.classList.remove('show'); return true; }
   if (els.successOverlay.classList.contains('show')) { els.successOverlay.classList.remove('show'); return true; }
@@ -605,7 +607,15 @@ const els = {
   pastTaskBody: $('#pastTaskBody'),
   achCard: $('#achCard'), achGrid: $('#achGrid'), achCount: $('#achCount'),
   // v178：五维成长（雷达 + 条形 + 本周维度勋章）
-  dimCard: $('#dimCard'), dimRadar: $('#dimRadar'), dimBars: $('#dimBars'), dimMedal: $('#dimMedal')
+  dimCard: $('#dimCard'), dimRadar: $('#dimRadar'), dimBars: $('#dimBars'), dimMedal: $('#dimMedal'),
+  // v213：班级打卡 / 座位点名
+  dimNote: $('#dimNote'),
+  checkinModal: $('#checkinModal'), ciGrid: $('#ciGrid'), ciSub: $('#ciSub'), ciHeadIcon: $('#ciHeadIcon'),
+  btnCheckinClose: $('#btnCheckinClose'), btnCheckinLottery: $('#btnCheckinLottery'),
+  checkinSeatModal: $('#checkinSeatModal'), csTitle: $('#csTitle'), csSub: $('#csSub'),
+  csHeadIcon: $('#csHeadIcon'), csBoard: $('#csBoard'), csPool: $('#csPool'),
+  csCount: $('#csCount'), csAll: $('#csAll'), csNone: $('#csNone'), csSubmit: $('#csSubmit'),
+  btnCsClose: $('#btnCsClose')
 };
 
 const state = {
@@ -1376,7 +1386,7 @@ function renderWall() {
   const classSlot = document.getElementById('wallClassCard');
   if (classSlot) {
     const avBtn = classSlot.querySelector('[data-classdraw]');
-    if (avBtn) avBtn.addEventListener('click', () => { sfx.tap(); openLottery(); });
+    if (avBtn) avBtn.addEventListener('click', () => { sfx.tap(); openCheckin(); });   // v213：原转盘入口改为打卡面板
     const detailBtn = classSlot.querySelector('[data-detail="__all__"]');
     if (detailBtn) detailBtn.addEventListener('click', () => { sfx.tap(); openClassDetail(classAvg, classToday); });
   }
@@ -1951,6 +1961,42 @@ function bindEvents() {
     try { localStorage.setItem('sp_semester', els.wallSemester.value); } catch(e){}
     loadWall();
   });
+  // v213：班级打卡（入口在班级头像，原转盘移入面板）
+  els.btnCheckinClose.addEventListener('click', () => { sfx.back(); closeCheckin(); });
+  els.checkinModal.addEventListener('click', e => { if (e.target === els.checkinModal) { sfx.back(); closeCheckin(); } });
+  els.ciGrid.addEventListener('click', e => {
+    const b = e.target.closest('.ci-item');
+    if (b && b.dataset.id) openCheckinSeat(b.dataset.id);
+  });
+  els.btnCheckinLottery.addEventListener('click', () => { closeCheckin(); openLottery(); });
+  els.btnCsClose.addEventListener('click', () => { sfx.back(); closeCheckinSeat(); });
+  els.checkinSeatModal.addEventListener('click', e => { if (e.target === els.checkinSeatModal) { sfx.back(); closeCheckinSeat(); } });
+  els.csBoard.addEventListener('click', e => {
+    const b = e.target.closest('.cs-seat');
+    if (!b || b.classList.contains('empty')) return;
+    const n = b.dataset.name;
+    if (!n) return;
+    if (checkinState.picked.has(n)) checkinState.picked.delete(n); else checkinState.picked.add(n);
+    b.classList.toggle('on', checkinState.picked.has(n));
+    updateCsCount();
+  });
+  els.csPool.addEventListener('click', e => {
+    const b = e.target.closest('.cs-chip');
+    if (!b) return;
+    const n = b.dataset.name;
+    if (!n) return;
+    if (checkinState.picked.has(n)) checkinState.picked.delete(n); else checkinState.picked.add(n);
+    b.classList.toggle('on', checkinState.picked.has(n));
+    updateCsCount();
+  });
+  els.csAll.addEventListener('click', () => {
+    (state.roster || []).map(r => r.student_name).filter(Boolean)
+      .forEach(n => { if (!checkinState.done.has(n)) checkinState.picked.add(n); });
+    renderCsBoard();
+  });
+  els.csNone.addEventListener('click', () => { checkinState.picked.clear(); renderCsBoard(); });
+  els.csSubmit.addEventListener('click', submitCs);
+
   // 详情弹窗
   els.btnDetailClose.addEventListener('click', () => { sfx.back(); closeDetail(); });
   els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) { sfx.back(); closeDetail(); } });
@@ -2644,10 +2690,20 @@ function renderDims(dims) {
   if (!els.dimCard || !els.dimBars) return;
   if (!dims || dims.ok === false) { els.dimCard.hidden = true; return; }
   const total = dims.total || {};
+  const normObj = dims.norm || null;
+  const hasNorm = !!(normObj && Object.keys(normObj).length);
   const vals = DIMS.map(d => Number(total[d.key]) || 0);
-  const maxV = Math.max.apply(null, vals.concat([50]));
-  const scale = Math.ceil(maxV / 50) * 50;          // 雷达与条形同一刻度，便于横向比较
   const sum = vals.reduce((a, b) => a + b, 0);
+
+  // v213：不再拿「五维最大值」当尺子。
+  // 有 norm 就用它（按班级同维度均值归一，60 = 班均，封顶 100），刻度固定 100；
+  // 旧库没跑 140 脚本时回退到原来的 max 基准，保证这块不消失。
+  const maxV = Math.max.apply(null, vals.concat([50]));
+  const scale = Math.ceil(maxV / 50) * 50;
+  const display = DIMS.map(d => {
+    if (hasNorm) return Math.min(100, Math.max(0, Number(normObj[d.key]) || 0));
+    return Math.min(100, (Number(total[d.key]) || 0) / scale * 100);
+  });
 
   // 雷达：五边形，外圈 = scale
   const cx = 60, cy = 62, R = 42;
@@ -2656,7 +2712,7 @@ function renderDims(dims) {
     return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
   };
   const poly = k => DIMS.map((d, i) => pt(i, R * k).map(n => n.toFixed(1)).join(',')).join(' ');
-  const shape = DIMS.map((d, i) => pt(i, R * Math.min(1, (Number(total[d.key]) || 0) / scale)).map(n => n.toFixed(1)).join(',')).join(' ');
+  const shape = DIMS.map((d, i) => pt(i, R * display[i] / 100).map(n => n.toFixed(1)).join(',')).join(' ');
   const axes = DIMS.map((d, i) => {
     const [x, y] = pt(i, R), [lx, ly] = pt(i, R + 11);
     return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="dr-axis"/>` +
@@ -2671,16 +2727,26 @@ function renderDims(dims) {
     `<polygon points="${shape}" class="dr-shape"/>` +
     `</svg>`;
 
-  // 条形：同刻度，末端显示真实数值
+  // 条形：与雷达同口径（归一值），末端仍显示真实累计分
   els.dimBars.innerHTML = DIMS.map(d => {
     const v = Number(total[d.key]) || 0;
-    const pct = Math.min(100, v / scale * 100);
+    const pct = display[DIMS.indexOf(d)];
     return `<div class="dim-row" style="--dim-c:${d.color}">
       <span class="dim-tag">${I[d.icon]()}</span>
       <span class="dim-track"><i style="width:${pct.toFixed(1)}%"></i></span>
       <b class="dim-val">${v}</b>
     </div>`;
   }).join('');
+
+  // v213：把算法口径写出来，避免家长/学生以为图缩水了
+  if (els.dimNote) {
+    if (hasNorm) {
+      els.dimNote.hidden = false;
+      els.dimNote.textContent = '按班级平均水平均衡显示：60 = 班均，满分 100';
+    } else {
+      els.dimNote.hidden = true;
+    }
+  }
 
   // 本周维度勋章：本周得分最高的维度（低于门槛则显示还差多少）
   const medalEl = els.dimMedal;
@@ -3585,6 +3651,209 @@ function showWall() {
   window.scrollTo({ top: 0 });
   loadWall();
 }
+/* ---------------- v213：班级打卡 + 座位点名 ----------------
+   入口：星光墙的班级头像（原转盘入口移入面板底部）。
+   加分口径：打卡项自带 dim 与 xp，提交后由 submit_checkin 在同一事务里
+   写 checkin_log、加 student_info.xp 与对应维度列，不落 daily_record。
+   同一天同一项同一人只记一次，重复提交由数据库唯一索引挡住。 */
+const CI_DIM_LABEL = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
+const CI_ICON_RULES = [
+  { kw: ['劳动', '卫生', '扫地', '打扫', '值日'], icon: '🧹' },
+  { kw: ['作业', '学习', '阅读', '朗读', '背诵', '写字'], icon: '📘' },
+  { kw: ['牛奶', '奶箱', '课间奶'], icon: '🥛' },
+  { kw: ['佳肴', '午餐', '餐桶', '饭菜', '送餐'], icon: '🍱' }
+];
+function ciIcon(it) {
+  const ic = String((it && it.icon) || '').trim();
+  // 教师直接填 emoji 时优先用它；字母串视为图标键，走下面的名称匹配
+  if (ic && !/^[a-z0-9_-]+$/i.test(ic)) return ic;
+  const n = String((it && it.name) || '');
+  for (const r of CI_ICON_RULES) if (r.kw.some(k => n.includes(k))) return r.icon;
+  return '✅';
+}
+
+const checkinState = { items: [], item: null, picked: new Set(), done: new Set(), dayMap: {} };
+
+async function openCheckin(reopen) {
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!cls) { toast('请先选择班级'); return; }
+  if (!reopen) {
+    sfx.tap();
+    els.checkinModal.classList.add('show');
+    Nav.push('checkin');
+  }
+  els.ciHeadIcon.textContent = '🧹';
+  els.ciSub.textContent = cls + ' · ' + todayStr();
+  els.ciGrid.innerHTML = '<div class="ci-empty"><span class="spinner"></span>正在加载打卡项…</div>';
+
+  if (!ready) {
+    els.ciGrid.innerHTML = '<div class="ci-empty">系统还没连上，暂时打不了卡</div>';
+    return;
+  }
+
+  let items = [];
+  try {
+    const r = await withTimeout(supabase.rpc('get_checkin_items'), DATA_TIMEOUT);
+    if (r && r.error) throw r.error;
+    if (r && r.data && r.data.ok !== false) items = r.data.items || [];
+  } catch (e) {
+    els.ciGrid.innerHTML = '<div class="ci-empty">打卡功能还没启用<br>' +
+      '<span style="font-size:12px;color:#a9b6b0">请先在 Supabase 执行 database/140-checkin-and-dim-norm.sql</span></div>';
+    return;
+  }
+
+  let dayMap = {};
+  try {
+    const d = await withTimeout(supabase.rpc('get_checkin_day', { p_class: cls }), DATA_TIMEOUT);
+    if (d && !d.error && d.data && d.data.ok) {
+      (d.data.items || []).forEach(g => { dayMap[g.id] = g.names || []; });
+    }
+  } catch (e) { /* 今日记录拿不到不影响打卡 */ }
+
+  checkinState.items = items;
+  checkinState.dayMap = dayMap;
+  renderCheckinItems();
+}
+
+function renderCheckinItems() {
+  const items = checkinState.items;
+  if (!items.length) {
+    els.ciGrid.innerHTML = '<div class="ci-empty">还没有打卡项<br>' +
+      '<span style="font-size:12px;color:#a9b6b0">请老师在教师端「打卡管理」里添加</span></div>';
+    return;
+  }
+  els.ciGrid.innerHTML = items.map(it => {
+    const cnt = (checkinState.dayMap[it.id] || []).length;
+    return `<button class="ci-item" type="button" data-id="${esc(it.id)}" data-dim="${esc(it.dim)}">
+      <span class="ci-ico">${ciIcon(it)}</span>
+      <span class="ci-txt">
+        <span class="ci-name">${esc(it.name)}</span>
+        <span class="ci-meta">
+          <span class="ci-dim">${esc(CI_DIM_LABEL[it.dim] || '劳')}</span>
+          <span class="ci-item-xp">+${Number(it.xp) || 0} 星光</span>
+          ${cnt ? `<span>今日 ${cnt} 人</span>` : ''}
+        </span>
+      </span>
+    </button>`;
+  }).join('');
+}
+
+function openCheckinSeat(itemId) {
+  const it = checkinState.items.find(x => x && x.id === itemId);
+  if (!it) return;
+  sfx.tap();
+  checkinState.item = it;
+  checkinState.picked = new Set();
+  checkinState.done = new Set(checkinState.dayMap[it.id] || []);
+  els.csTitle.textContent = it.name;
+  els.csSub.textContent = `计入${CI_DIM_LABEL[it.dim] || '劳'}育 · 每人 +${Number(it.xp) || 0} 星光`;
+  els.csHeadIcon.textContent = ciIcon(it);
+  renderCsBoard();
+  els.checkinModal.classList.remove('show');
+  els.checkinSeatModal.classList.add('show');
+  Nav.push('checkinSeat');
+}
+
+function renderCsBoard() {
+  const names = (state.roster || []).map(r => r.student_name).filter(Boolean);
+  if (!names.length) {
+    els.csBoard.innerHTML = '<div class="ci-empty" style="grid-column:1/-1">还没读到同学名单，先回班级墙刷新一下</div>';
+    els.csPool.hidden = true;
+    els.csPool.innerHTML = '';
+    updateCsCount();
+    return;
+  }
+
+  const seatMap = state.seatMap || {};
+  const slot2name = Object.create(null);
+  Object.keys(seatMap).forEach(n => {
+    const s = Number(seatMap[n]);
+    if (Number.isFinite(s) && s >= 0) slot2name[s] = n;
+  });
+  const hasSeat = Object.keys(slot2name).length > 0;
+  let maxSlot = 0;
+  Object.keys(slot2name).forEach(k => { maxSlot = Math.max(maxSlot, Number(k)); });
+
+  const cols = 6;
+  const rows = hasSeat
+    ? Math.max(7, Math.floor(maxSlot / cols) + 1)
+    : Math.max(7, Math.ceil(names.length / cols));
+
+  let html = '';
+  const placed = new Set();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const nm = hasSeat ? slot2name[r * cols + c] : names[r * cols + c];
+      if (!nm) { html += '<div class="cs-seat empty">·</div>'; continue; }
+      placed.add(nm);
+      const on = checkinState.picked.has(nm) ? ' on' : '';
+      const done = checkinState.done.has(nm) ? '<span class="cs-done">已记</span>' : '';
+      html += `<button class="cs-seat${on}" type="button" data-name="${esc(nm)}">${done}${esc(nm)}</button>`;
+    }
+  }
+  els.csBoard.innerHTML = html;
+
+  const rest = names.filter(n => !placed.has(n));
+  if (rest.length) {
+    els.csPool.hidden = false;
+    els.csPool.innerHTML = `<div class="cs-pool-tip">未排座位（${rest.length} 人）</div>` +
+      rest.map(n => `<button class="cs-chip${checkinState.picked.has(n) ? ' on' : ''}" type="button" data-name="${esc(n)}">${esc(n)}</button>`).join('');
+  } else {
+    els.csPool.hidden = true;
+    els.csPool.innerHTML = '';
+  }
+  updateCsCount();
+}
+
+function updateCsCount() {
+  const n = checkinState.picked.size;
+  els.csCount.textContent = `已选 ${n} 人`;
+  els.csSubmit.disabled = n === 0;
+  els.csSubmit.textContent = n ? `提交打卡（${n} 人）` : '提交打卡';
+}
+
+function closeCheckin() { els.checkinModal.classList.remove('show'); }
+function closeCheckinSeat() {
+  els.checkinSeatModal.classList.remove('show');
+  // 从点名面板退出时回到打卡项面板，而不是直接掉回星光墙
+  if (els.checkinModal) els.checkinModal.classList.add('show');
+}
+
+async function submitCs() {
+  const it = checkinState.item;
+  const picked = Array.from(checkinState.picked);
+  if (!it || !picked.length) { toast('先点座位选人'); return; }
+  const cls = state.currentClass || (els.inpClass.value || '').trim();
+  if (!cls) { toast('请先选择班级'); return; }
+
+  els.csSubmit.disabled = true;
+  els.csSubmit.textContent = '正在提交…';
+  try {
+    const r = await withTimeout(supabase.rpc('submit_checkin', {
+      p_class: cls, p_item_id: it.id, p_students: picked
+    }), 30000);
+    if (r.error) throw r.error;
+    const d = r.data || {};
+    if (!d.ok) {
+      const why = { item_disabled: '这项打卡已停用', no_item: '打卡项不存在', no_students: '还没有选人' }[d.reason] || '提交失败';
+      toast(why);
+      updateCsCount();
+      return;
+    }
+    let msg = `已给 ${d.added} 人记上「${it.name}」`;
+    if (d.skipped) msg += `，${d.skipped} 人今天已记过`;
+    if (d.missing) msg += `，${d.missing} 人不在名单`;
+    toast(msg);
+    sfx.tap();
+    els.checkinSeatModal.classList.remove('show');
+    await openCheckin(true);     // 回到打卡面板，今日人数即时刷新
+    loadWall();                  // 星光值变了，顺手刷新班级墙
+  } catch (e) {
+    toast('提交失败，检查网络后再试一次');
+    updateCsCount();
+  }
+}
+
 function closeDetail() { els.detailModal.classList.remove('show'); }
 
 async function onSubmit() {

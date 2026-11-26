@@ -149,6 +149,7 @@ addEventListener('DOMContentLoaded', function () {
       <button class="tab-btn" data-tab="shop"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-cart"/></svg> 商店订单</button>
       <button class="tab-btn" data-tab="tools"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-beaker"/></svg> 测试工具</button>
       <button class="tab-btn" data-tab="seat"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-seat"/></svg> 座位编排</button>
+      <button class="tab-btn" data-tab="checkin"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 打卡管理</button>
     </nav>
 
     <div class="side-foot">
@@ -1279,6 +1280,46 @@ addEventListener('DOMContentLoaded', function () {
       <div id="seatBoard" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:900px;"></div>
       <h3 style="margin:16px 0 8px;">未安排学生（拖动到座位）</h3>
       <div id="seatPool" style="display:flex;flex-wrap:wrap;gap:8px;max-width:900px;"></div>
+    </section>
+
+    <section id="tabCheckin" hidden>
+      <h2><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-checklist"/></svg> 打卡管理</h2>
+      <p class="text-muted">学生端点一下班级头像就能看到这些打卡项。每人每次加多少星光、计入哪一维，都在这里改。</p>
+
+      <div class="ck-bar">
+        <label>班级</label><select class="input" id="checkinClass" style="max-width:200px;"></select>
+        <label>日期</label><input class="input" type="date" id="checkinDate" style="max-width:170px;">
+        <button class="btn btn-primary" id="btnCheckinRefresh" type="button"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-search"/></svg> 查看当天记录</button>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="margin:0 0 4px;">打卡项目</h3>
+        <p class="text-muted" style="margin:0 0 10px;">改完点该行的「保存」。有历史记录的项不建议删除，取消「启用」即可停用。</p>
+        <div id="checkinItemList" class="ck-list"></div>
+        <form id="addCheckinForm" class="ck-add">
+          <input class="input" id="addCkName" placeholder="名称，如 劳动打卡" maxlength="20" required>
+          <select class="input" id="addCkDim">
+            <option value="lao">劳</option><option value="zhi">智</option>
+            <option value="de">德</option><option value="ti">体</option><option value="mei">美</option>
+          </select>
+          <input class="input" id="addCkXp" type="number" min="0" max="50" value="2" title="每次加的星光值">
+          <input class="input" id="addCkIcon" placeholder="图标(可空)" maxlength="4">
+          <input class="input" id="addCkSort" type="number" value="50" title="排序，小的在前">
+          <button class="btn btn-primary" type="submit">添加</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="margin:0 0 8px;">当天记录 <span id="checkinDayTotal" class="text-muted"></span></h3>
+        <div id="checkinDayBox"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 4px;">五维权重</h3>
+        <p class="text-muted" style="margin:0 0 10px;">雷达图按「个人分 ÷ 班级同维度平均分」画，60 分代表刚好到班均。权重放大或缩小某一维，默认都是 1。</p>
+        <div id="dimWeightBox" class="ck-weight"></div>
+        <button class="btn btn-primary" id="btnDimWeightSave" type="button" style="margin-top:10px;">保存权重</button>
+      </div>
     </section>
   </main>
 </div>

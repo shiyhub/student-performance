@@ -684,7 +684,8 @@ function switchTab(name) {
     records: 'tabRecords', students: 'tabStudents', tags: 'tabTags', auto: 'tabAuto',
     personal: 'tabPersonal', challenge: 'tabChallenge',
     exam: 'tabExam', task: 'tabTask', batch: 'tabBatch', stats: 'tabStats', xpLog: 'tabXpLog',
-    star: 'tabStar', shop: 'tabShop', tools: 'tabTools', seat: 'tabSeat'
+    star: 'tabStar', shop: 'tabShop', tools: 'tabTools', seat: 'tabSeat',
+    checkin: 'tabCheckin'
   };
   // ① 先处理显示与清空：非当前页双重隐藏（hidden + 内联 display 兜底）+ 清空动态内容容器，
   //    彻底防止旧模块 DOM 残留叠加到新页面上方；当前页解除隐藏
@@ -725,6 +726,7 @@ function switchTab(name) {
   if (name === 'star') activateStarTab();
   if (name === 'shop') activateShopTab();
   if (name === 'seat') activateSeatTab();
+  if (name === 'checkin') activateCheckinTab();
 }
 
 /* 各页 JS 动态渲染的内容容器（切走时清空，防止旧 DOM 残留；静态骨架表单保留不动）。
@@ -744,7 +746,8 @@ const PANE_DYNAMIC = {
   star: ['starProgressBox', 'starDrawBox', 'archiveResult', 'archiveBatchList', 'shopAdminMsg'],
   shop: ['shopOrderBox', 'shopOrderSummary', 'shopOrderPager', 'shopAuditBox', 'shopFilterChips'],
   tools: [],
-  seat: ['seatBoard', 'seatPool']
+  seat: ['seatBoard', 'seatPool'],
+  checkin: ['checkinItemList', 'checkinDayBox', 'dimWeightBox']
 };
 function clearPaneDynamics(key) {
   (PANE_DYNAMIC[key] || []).forEach(id => {
@@ -4334,6 +4337,222 @@ async function runStats() {
       <span>${I.trophy('ico-xs')} 完美A+：<b style="color:#f1c40f;">${gradeCount.perfect}</b></span>
     </div>
     ${timelineHtml}`;
+}
+
+/* ---------------- v213：打卡管理 ----------------
+   打卡项与记录都在 checkin_item / checkin_log 两张表里，
+   增删改与撤销走 RPC（RPC 内部用 shop_admin_guard 校验教师身份）。 */
+const CK_DIM = { de: '德', zhi: '智', ti: '体', mei: '美', lao: '劳' };
+const CK_DIM_COLOR = { de: '#e74c3c', zhi: '#2e86de', ti: '#27ae60', mei: '#9b59b6', lao: '#e67e22' };
+const ckState = { items: [], day: null, bound: false };
+
+function todayISO() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function activateCheckinTab() {
+  const sel = document.getElementById('checkinClass');
+  if (sel && !sel.options.length) {
+    const { data } = await supabase.from('student_info').select('class').order('class');
+    const cls = [...new Set((data || []).map(s => s.class).filter(Boolean))];
+    sel.innerHTML = cls.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  }
+  const dt = document.getElementById('checkinDate');
+  if (dt && !dt.value) dt.value = todayISO();
+  bindCheckinAdmin();
+  await loadCheckinAdmin();
+}
+
+function bindCheckinAdmin() {
+  if (ckState.bound) return;
+  ckState.bound = true;
+  document.getElementById('btnCheckinRefresh').addEventListener('click', loadCheckinAdmin);
+  document.getElementById('checkinClass').addEventListener('change', loadCheckinAdmin);
+  document.getElementById('checkinDate').addEventListener('change', loadCheckinAdmin);
+  document.getElementById('addCheckinForm').addEventListener('submit', onAddCheckinItem);
+  document.getElementById('btnDimWeightSave').addEventListener('click', saveDimWeights);
+  document.getElementById('checkinItemList').addEventListener('click', e => {
+    const row = e.target.closest('.ck-row');
+    if (!row) return;
+    if (e.target.closest('.ck-save')) saveCheckinRow(row);
+    else if (e.target.closest('.ck-del')) delCheckinRow(row);
+  });
+  document.getElementById('checkinDayBox').addEventListener('click', e => {
+    const chip = e.target.closest('.ck-chip');
+    if (!chip) return;
+    cancelCheckinLog(chip.dataset.id, chip.dataset.name, chip.dataset.item);
+  });
+}
+
+async function loadCheckinAdmin() {
+  const clsEl = document.getElementById('checkinClass');
+  const dateEl = document.getElementById('checkinDate');
+  const cls = clsEl ? clsEl.value : '';
+  const date = (dateEl && dateEl.value) ? dateEl.value : todayISO();
+
+  const r1 = await supabase.rpc('get_checkin_items', { p_all: true });
+  if (r1.error) {
+    document.getElementById('checkinItemList').innerHTML =
+      '<p class="text-muted">打卡功能还没启用：请先在 Supabase 执行 database/140-checkin-and-dim-norm.sql。</p>';
+    document.getElementById('checkinDayBox').innerHTML = '';
+    document.getElementById('dimWeightBox').innerHTML = '';
+    return;
+  }
+  ckState.items = (r1.data && r1.data.items) || [];
+  renderCheckinItemRows();
+
+  if (cls) {
+    const r2 = await supabase.rpc('get_checkin_day', { p_class: cls, p_date: date });
+    ckState.day = (r2 && !r2.error && r2.data && r2.data.ok) ? r2.data : null;
+  } else {
+    ckState.day = null;
+  }
+  renderCheckinDayBox();
+  await loadDimWeights();
+}
+
+function renderCheckinItemRows() {
+  const box = document.getElementById('checkinItemList');
+  if (!box) return;
+  if (!ckState.items.length) {
+    box.innerHTML = '<p class="text-muted">还没有打卡项，用下面的表单添加。</p>';
+    return;
+  }
+  box.innerHTML = ckState.items.map(it => `
+    <div class="ck-row" data-id="${esc(it.id)}">
+      <input class="input ck-name" value="${esc(it.name)}" maxlength="20" title="名称">
+      <select class="input ck-dim" title="计入哪一维">
+        ${Object.keys(CK_DIM).map(k => `<option value="${k}"${k === it.dim ? ' selected' : ''}>${CK_DIM[k]}</option>`).join('')}
+      </select>
+      <input class="input ck-xp" type="number" min="0" max="50" value="${Number(it.xp) || 0}" title="每次加的星光值">
+      <input class="input ck-icon" value="${esc(it.icon || '')}" maxlength="4" placeholder="图标" title="可填 emoji，如 🧹">
+      <input class="input ck-sort" type="number" value="${Number(it.sort_order) || 0}" title="排序，小的在前">
+      <label class="ck-en"><input type="checkbox" class="ck-enabled"${it.enabled ? ' checked' : ''}> 启用</label>
+      <button class="btn btn-primary ck-save" type="button">保存</button>
+      <button class="btn ck-del" type="button">删除</button>
+    </div>`).join('');
+}
+
+function renderCheckinDayBox() {
+  const box = document.getElementById('checkinDayBox');
+  const total = document.getElementById('checkinDayTotal');
+  if (!box) return;
+  const d = ckState.day;
+  if (!d || !d.items || !d.items.length) {
+    if (total) total.textContent = '';
+    box.innerHTML = '<p class="text-muted">这一天还没有打卡记录。</p>';
+    return;
+  }
+  if (total) total.textContent = `· ${d.date} 共 ${d.total} 条（点名字可撤销）`;
+  box.innerHTML = d.items.map(g => `
+    <div class="ck-day">
+      <div class="ck-day-head">
+        <b>${esc(g.name)}</b>
+        <span class="ck-dim-tag" style="color:${CK_DIM_COLOR[g.dim] || '#e67e22'}">${CK_DIM[g.dim] || '劳'}</span>
+        <span class="text-muted">+${Number(g.xp) || 0} 星光 · ${Number(g.cnt) || 0} 人</span>
+      </div>
+      <div class="ck-day-names">
+        ${(g.students || []).map(s => `<button class="ck-chip" type="button" data-id="${esc(s.id)}" data-name="${esc(s.name)}" data-item="${esc(g.name)}" title="点击撤销这条">${esc(s.name)}</button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+async function saveCheckinRow(row) {
+  const p_item = {
+    id: row.dataset.id,
+    name: (row.querySelector('.ck-name').value || '').trim(),
+    dim: row.querySelector('.ck-dim').value,
+    xp: Number(row.querySelector('.ck-xp').value) || 0,
+    icon: (row.querySelector('.ck-icon').value || '').trim(),
+    sort_order: Number(row.querySelector('.ck-sort').value) || 0,
+    enabled: row.querySelector('.ck-enabled').checked
+  };
+  if (!p_item.name) { toast('名称不能为空'); return; }
+  const { data, error } = await supabase.rpc('save_checkin_item', { p_item });
+  if (error) { toast('保存失败：' + error.message); return; }
+  if (!data || !data.ok) {
+    const why = { dup_name: '已经有同名打卡项', bad_xp: '星光值要在 0–50 之间', bad_dim: '维度不合法', no_name: '名称不能为空' }[data && data.reason] || '保存失败';
+    toast(why);
+    return;
+  }
+  toast('已保存');
+  loadCheckinAdmin();
+}
+
+async function delCheckinRow(row) {
+  const name = (row.querySelector('.ck-name').value || '').trim();
+  if (!confirm(`删除打卡项「${name}」？\n有历史记录时只会停用，记录仍可追溯。`)) return;
+  const { data, error } = await supabase.rpc('delete_checkin_item', { p_id: row.dataset.id });
+  if (error) { toast('删除失败：' + error.message); return; }
+  if (!data || !data.ok) { toast('删除失败'); return; }
+  toast(data.disabled ? `「${name}」已有 ${data.used} 条记录，已改为停用` : `「${name}」已删除`);
+  loadCheckinAdmin();
+}
+
+async function onAddCheckinItem(e) {
+  e.preventDefault();
+  const name = (document.getElementById('addCkName').value || '').trim();
+  if (!name) { toast('先填个名称'); return; }
+  const p_item = {
+    name,
+    dim: document.getElementById('addCkDim').value,
+    xp: Number(document.getElementById('addCkXp').value) || 0,
+    icon: (document.getElementById('addCkIcon').value || '').trim(),
+    sort_order: Number(document.getElementById('addCkSort').value) || 0,
+    enabled: true
+  };
+  const { data, error } = await supabase.rpc('save_checkin_item', { p_item });
+  if (error) { toast('添加失败：' + error.message); return; }
+  if (!data || !data.ok) {
+    const why = { dup_name: '已经有同名打卡项', bad_xp: '星光值要在 0–50 之间' }[data && data.reason] || '添加失败';
+    toast(why);
+    return;
+  }
+  toast(`已添加「${name}」`);
+  document.getElementById('addCheckinForm').reset();
+  document.getElementById('addCkXp').value = 2;
+  document.getElementById('addCkSort').value = 50;
+  loadCheckinAdmin();
+}
+
+async function cancelCheckinLog(id, name, item) {
+  if (!id) return;
+  if (!confirm(`撤销「${item}」里 ${name} 的这条记录？\n这一条加上的星光值会一并扣回。`)) return;
+  const { data, error } = await supabase.rpc('cancel_checkin', { p_id: id });
+  if (error) { toast('撤销失败：' + error.message); return; }
+  if (!data || !data.ok) { toast('撤销失败'); return; }
+  toast(`已撤销 ${name}，扣回 ${data.xp} 星光`);
+  loadCheckinAdmin();
+}
+
+async function loadDimWeights() {
+  const box = document.getElementById('dimWeightBox');
+  if (!box) return;
+  const { data, error } = await supabase.from('dim_weight').select('dim,weight');
+  if (error) {
+    box.innerHTML = '<p class="text-muted">权重表还没建，请先执行 140 号脚本。</p>';
+    return;
+  }
+  const map = {};
+  (data || []).forEach(r => { map[r.dim] = r.weight; });
+  box.innerHTML = Object.keys(CK_DIM).map(k => `
+    <label class="ck-w">
+      <span class="ck-w-lab" style="color:${CK_DIM_COLOR[k]}">${CK_DIM[k]}</span>
+      <input class="input ck-w-in" data-dim="${k}" type="number" step="0.1" min="0.2" max="3" value="${(map[k] == null ? 1 : Number(map[k]))}">
+    </label>`).join('');
+}
+
+async function saveDimWeights() {
+  const ins = Array.from(document.querySelectorAll('.ck-w-in'));
+  let ok = 0, bad = 0;
+  for (const el of ins) {
+    const w = Number(el.value) || 1;
+    const { data, error } = await supabase.rpc('set_dim_weight', { p_dim: el.dataset.dim, p_weight: w });
+    if (!error && data && data.ok) ok++; else bad++;
+  }
+  toast(bad ? `${ok} 项已保存，${bad} 项失败` : `五维权重已保存（${ok} 项）`);
 }
 
 /* ---------------- 座位编排 ---------------- */

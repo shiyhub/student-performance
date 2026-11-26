@@ -159,6 +159,7 @@ addEventListener('DOMContentLoaded', function () {
       <div class="dim-radar" id="dimRadar"></div>
       <div class="dim-bars" id="dimBars"></div>
     </div>
+    <div class="dim-note" id="dimNote" hidden></div>
   </section>
 
   <!-- 今日心情（由勾选项自动算出，5 档）——填写页不显示，只在班级墙头像预览 -->
@@ -381,6 +382,48 @@ addEventListener('DOMContentLoaded', function () {
     <div id="detailBody" class="detail-body"></div>
     <div class="detail-foot" id="detailFoot" hidden>
       <button class="btn btn-warn" id="btnDetailWrite"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg> 这是我，记录今天的表现</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 班级打卡面板 ================= -->
+<div class="modal-mask" id="checkinModal">
+  <div class="modal checkin-modal">
+    <div class="detail-head">
+      <div class="detail-avatar ci-head-icon" id="ciHeadIcon">🧹</div>
+      <div class="detail-who">
+        <h3>班级打卡</h3>
+        <div class="text-muted" id="ciSub">选一项，按座位点名</div>
+      </div>
+      <button class="detail-close" id="btnCheckinClose" type="button" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="ci-grid" id="ciGrid"></div>
+    <div class="ci-foot">
+      <button class="btn btn-ghost ci-wheel" id="btnCheckinLottery" type="button">🎡 班级转盘</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 打卡点名（按座位多选） ================= -->
+<div class="modal-mask" id="checkinSeatModal">
+  <div class="modal cs-modal">
+    <div class="detail-head">
+      <div class="detail-avatar ci-head-icon" id="csHeadIcon">🧹</div>
+      <div class="detail-who">
+        <h3 id="csTitle">劳动打卡</h3>
+        <div class="text-muted" id="csSub">点座位选人，可多选</div>
+      </div>
+      <button class="detail-close" id="btnCsClose" type="button" aria-label="关闭"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="cs-tools">
+      <button class="cs-tool" id="csAll" type="button">全选</button>
+      <button class="cs-tool" id="csNone" type="button">清空</button>
+      <span class="cs-count" id="csCount">已选 0 人</span>
+    </div>
+    <div class="cs-board-wrap"><div class="cs-board" id="csBoard"></div></div>
+    <div class="cs-pool" id="csPool" hidden></div>
+    <div class="cs-foot">
+      <button class="btn btn-warn" id="csSubmit" type="button">提交打卡</button>
     </div>
   </div>
 </div>

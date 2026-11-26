@@ -794,3 +794,50 @@ html[data-device="pc"] #tabSeat { max-width: none; }
   .shop-impact-row .k { flex: 0 0 86px; }
   .t-shop-refund { max-width: 100%; }
 }
+
+/* ============ v213：打卡管理 ============ */
+.ck-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ck-bar label { font-size: 13px; color: #6b5c52; }
+
+.ck-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.ck-row {
+  display: grid; align-items: center; gap: 6px;
+  grid-template-columns: minmax(110px, 1.5fr) 66px 68px 74px 62px auto auto auto;
+  padding: 8px; border: 1px solid #eee5dc; border-radius: 10px; background: #fdfaf7;
+  overflow-x: auto;
+}
+.ck-row .input { min-width: 0; padding: 5px 7px; font-size: 13px; }
+.ck-row .ck-xp, .ck-row .ck-sort { text-align: center; }
+.ck-en { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: #6b5c52; white-space: nowrap; }
+.ck-row .btn { padding: 5px 10px; font-size: 12.5px; white-space: nowrap; }
+.ck-row .ck-del { background: #fff; border: 1px solid #e6d3d3; color: #b05252; }
+.ck-row .ck-del:hover { background: #fdf0f0; }
+.ck-row.off { opacity: .58; }
+
+.ck-add {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding-top: 10px; border-top: 1px dashed #e8ded4;
+}
+.ck-add .input { max-width: 160px; padding: 6px 8px; font-size: 13px; }
+.ck-add #addCkName { max-width: 200px; }
+.ck-add #addCkXp, .ck-add #addCkSort { max-width: 84px; text-align: center; }
+.ck-add #addCkIcon { max-width: 96px; }
+
+.ck-day { padding: 9px 0; border-bottom: 1px dashed #eee5dc; }
+.ck-day:last-child { border-bottom: 0; }
+.ck-day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13.5px; }
+.ck-day-head b { color: #3d3028; }
+.ck-dim-tag { font-weight: 700; font-size: 12px; }
+.ck-day-names { display: flex; flex-wrap: wrap; gap: 6px; }
+.ck-chip {
+  border: 1px solid #dfe7e3; background: #fff; color: #46564f;
+  border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.ck-chip:hover { background: #fdf0f0; border-color: #e0b4b4; color: #a83f3f; }
+.ck-chip::after { content: " ×"; font-size: 11px; opacity: .55; }
+
+.ck-weight { display: flex; flex-wrap: wrap; gap: 12px; }
+.ck-w { display: inline-flex; align-items: center; gap: 6px; }
+.ck-w-lab { width: 18px; text-align: center; font-weight: 700; font-size: 14px; }
+.ck-w .ck-w-in { width: 68px; padding: 5px 7px; font-size: 13px; text-align: center; }
